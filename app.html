@@ -66,9 +66,12 @@
         }
         .tooltip:hover .tooltip-text { visibility: visible; opacity: 1; transform: translateX(-50%) scale(1); }
 
-        /* ปรับแต่งจอแชร์หน้าจอของ Agora */
         #screen-share-stage div { border-radius: 8px; overflow: hidden; }
         #screen-share-stage video { object-fit: contain !important; }
+        
+        /* สไตล์กระดานวาดรูป */
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 2px solid #2b2d31; border-radius: 6px; }
     </style>
 </head>
 <body class="bg-[#0e0f11] text-gray-300 h-screen flex overflow-hidden">
@@ -111,6 +114,8 @@
                 <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">เครื่องมือ</h2>
                 <ul class="space-y-0.5">
                     <li><a href="#" data-view="board" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">📋</span> Task Board</a></li>
+                    <li><a href="#" data-view="whiteboard" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">🎨</span> กระดานไอเดีย</a></li>
+                    
                     <li><a href="settings.html" class="block px-3 py-1.5 rounded-md text-[#80848e] hover:bg-[#1c1d21] hover:text-[#dbdee1] font-medium text-[15px] transition flex items-center"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">⚙️</span> Settings</a></li>
                     <li><a href="admin.html" id="admin-menu-btn" class="hidden block px-3 py-1.5 rounded-md text-[#da373c] hover:bg-[#da373c]/10 font-medium text-[15px] transition mt-2 flex items-center"><span class="mr-1.5 text-lg leading-none">🛡️</span> Admin Panel</a></li>
                 </ul>
@@ -186,6 +191,36 @@
             </div>
         </div>
 
+        <div id="view-whiteboard" class="hidden flex-1 flex flex-col h-full bg-[#151619]">
+            <header class="p-3 border-b border-[#1e1f22] flex justify-between items-center shadow-sm bg-[#0f1013] z-10 overflow-x-auto">
+                <div class="flex items-center flex-shrink-0">
+                    <button class="open-menu md:hidden mr-3 text-gray-500 text-2xl">☰</button>
+                    <h2 class="text-md font-bold text-[#e4e5e7] flex items-center"><span class="mr-2 text-xl">🎨</span> กระดานไอเดีย</h2>
+                </div>
+                <div class="flex items-center space-x-4 bg-[#1a1b1e] p-1.5 px-3 rounded-lg border border-[#2b2d31] ml-4 flex-shrink-0">
+                    <div class="flex items-center space-x-2 tooltip" title="เปลี่ยนสี">
+                        <span class="tooltip-text">เลือกสีปากกา</span>
+                        <input type="color" id="wb-color" value="#5865F2" class="w-7 h-7 rounded cursor-pointer bg-transparent border-none p-0 outline-none">
+                    </div>
+                    <div class="h-6 w-px bg-[#35373c]"></div>
+                    <div class="flex items-center space-x-2 tooltip" title="ขนาดเส้น">
+                        <span class="tooltip-text">ปรับขนาดเส้น</span>
+                        <input type="range" id="wb-size" min="1" max="30" value="3" class="w-20 md:w-28 cursor-pointer accent-[#5865F2]">
+                    </div>
+                    <div class="h-6 w-px bg-[#35373c]"></div>
+                    <button id="wb-clear" class="bg-[#da373c]/10 text-[#da373c] hover:bg-[#da373c] hover:text-white px-3 py-1 rounded-md text-[13px] font-bold transition flex items-center">
+                        <span class="mr-1">🗑️</span> ล้างกระดาน
+                    </button>
+                </div>
+            </header>
+            
+            <div class="flex-1 relative overflow-hidden bg-[#e4e5e7] cursor-crosshair shadow-inner" id="canvas-container" style="background-image: radial-gradient(#b5bac1 1.5px, transparent 1.5px); background-size: 25px 25px;">
+                <div id="wb-status" class="absolute top-4 left-4 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full font-bold backdrop-blur-sm z-20 transition-opacity duration-300 opacity-0"></div>
+                
+                <canvas id="whiteboard-canvas" class="absolute top-0 left-0 w-full h-full z-10"></canvas>
+            </div>
+        </div>
+
         <div id="view-voice" class="hidden flex-1 flex flex-col h-full bg-[#0e0f11] relative">
             <header class="p-4 flex justify-between items-center shadow-md bg-[#0f1013] z-20 border-b border-[#151619]">
                 <div class="flex items-center">
@@ -199,7 +234,7 @@
             </header>
 
             <div id="screen-share-stage" class="hidden w-full h-[55vh] bg-[#050505] border-b border-[#1e1f22] p-2 md:p-6 flex items-center justify-center relative z-10 shadow-inner">
-                </div>
+            </div>
 
             <div id="voice-grid" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 auto-rows-max content-start z-10 bg-[#0e0f11] transition-all">
                 <div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]">
@@ -248,7 +283,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        // 🚨 อัปเดตบรรทัดนี้: เพิ่ม setDoc สำหรับเซฟรูปลงฐานข้อมูล 🚨
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // ==========================================
         // 🚨 1. ตั้งค่า Firebase & Agora
@@ -272,15 +308,14 @@
         let localTracks = { audioTrack: null };
         let isMuted = false;
         let myNumericUid = null;
-
-        // 🌟 ตัวแปรเก็บหน้าจอที่แชร์
         let screenTrack = null;
         let isSharingScreen = false;
 
         // ==========================================
         // 🌟 2. ระบบสลับหน้าต่าง (Navigation)
         // ==========================================
-        const views = { chat: document.getElementById('view-chat'), board: document.getElementById('view-board'), voice: document.getElementById('view-voice') };
+        // ✨ เพิ่ม whiteboard เข้าไปในตัวแปร views
+        const views = { chat: document.getElementById('view-chat'), board: document.getElementById('view-board'), voice: document.getElementById('view-voice'), whiteboard: document.getElementById('view-whiteboard') };
         const membersSidebar = document.getElementById('members-sidebar');
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('overlay');
@@ -318,6 +353,12 @@
                         renderMessages();
                     }
                 } else { membersSidebar.classList.add('hidden', 'md:hidden'); }
+                
+                // 🎨 ถ้ากดเปิดหน้ากระดานไอเดีย ให้ปรับขนาดผ้าใบให้เต็มจอพอดี
+                if (view === 'whiteboard') {
+                    setTimeout(initCanvasSize, 100); 
+                }
+
                 sidebar.classList.remove('open'); overlay.classList.remove('active');
             });
         });
@@ -421,7 +462,131 @@
         });
 
         // ==========================================
-        // 🎙️ 4. ระบบห้องคุยเสียง (Voice + 🖥️ Screen Share)
+        // 🎨 4.5 ระบบกระดานไอเดีย (Shared Whiteboard Real-time)
+        // ==========================================
+        const canvas = document.getElementById('whiteboard-canvas');
+        const ctx = canvas.getContext('2d');
+        const canvasContainer = document.getElementById('canvas-container');
+        const wbStatus = document.getElementById('wb-status');
+        
+        let isDrawing = false;
+        let wbColor = document.getElementById('wb-color');
+        let wbSize = document.getElementById('wb-size');
+
+        // ฟังก์ชันตั้งค่าขนาด Canvas ให้พอดีกับหน้าจอ
+        function initCanvasSize() {
+            if(canvas.width !== canvasContainer.clientWidth || canvas.height !== canvasContainer.clientHeight) {
+                // เซฟภาพเดิมไว้ก่อนปรับขนาด
+                const tempImage = canvas.toDataURL(); 
+                canvas.width = canvasContainer.clientWidth;
+                canvas.height = canvasContainer.clientHeight;
+                
+                // วาดภาพเดิมกลับคืน
+                if(tempImage !== "data:,") {
+                    const img = new Image();
+                    img.onload = () => ctx.drawImage(img, 0, 0);
+                    img.src = tempImage;
+                }
+            }
+        }
+        window.addEventListener('resize', initCanvasSize);
+
+        // ฟังก์ชันดึงพิกัดเมาส์ (รองรับทั้งคอมและมือถือ)
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function startDrawing(e) {
+            if(e.type === 'touchstart') e.preventDefault();
+            isDrawing = true;
+            draw(e);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            if(e.type === 'touchmove') e.preventDefault();
+            
+            const pos = getMousePos(e);
+            ctx.lineWidth = wbSize.value;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = wbColor.value;
+
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        function stopDrawing() {
+            if (!isDrawing) return;
+            isDrawing = false;
+            ctx.beginPath();
+            syncWhiteboard(); // 🌟 อัปโหลดภาพขึ้น Firebase ทันทีที่ยกเมาส์/นิ้ว
+        }
+
+        // ดักจับ Event
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        canvas.addEventListener('touchstart', startDrawing, {passive: false});
+        canvas.addEventListener('touchmove', draw, {passive: false});
+        canvas.addEventListener('touchend', stopDrawing);
+
+        // ปุ่มล้างกระดาน
+        document.getElementById('wb-clear').addEventListener('click', () => {
+            if(confirm("คุณแน่ใจหรือไม่ที่จะลบกระดานทั้งหมด? (เพื่อนทุกคนจะโดนลบด้วย)")) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                syncWhiteboard(true);
+            }
+        });
+
+        // 🌟 ฟังก์ชันส่งข้อมูลภาพวาดไปให้เพื่อนทุกคน
+        async function syncWhiteboard(isClear = false) {
+            if(!currentUserId) return;
+            const dataUrl = isClear ? "" : canvas.toDataURL(); // ถ้ากดล้าง จะส่งข้อมูลว่างๆ ไป
+            
+            // ใช้ setDoc แบบ merge เพื่ออัปเดตไฟล์เดียวให้ทุกคนดูพร้อมกัน
+            await setDoc(doc(db, "appData", "whiteboard"), { 
+                image: dataUrl, 
+                updatedBy: currentUsername, 
+                timestamp: serverTimestamp() 
+            }, { merge: true });
+        }
+
+        // 🌟 รับข้อมูลภาพวาดเวลามีเพื่อนคนอื่นวาด
+        onSnapshot(doc(db, "appData", "whiteboard"), (docSnap) => {
+            if (docSnap.exists() && !isDrawing) {
+                const data = docSnap.data();
+                
+                // แจ้งเตือนเล็กๆ ว่าใครเพิ่งวาด
+                if (data.updatedBy && data.updatedBy !== currentUsername) {
+                    wbStatus.textContent = `✏️ ${data.updatedBy} เพิ่งอัปเดตกระดาน`;
+                    wbStatus.classList.remove('opacity-0');
+                    setTimeout(() => wbStatus.classList.add('opacity-0'), 3000);
+                }
+
+                if(data.image) {
+                    const img = new Image();
+                    img.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                    };
+                    img.src = data.image;
+                } else {
+                    // ถ้าข้อมูลว่างเปล่า (มีคนกดล้างกระดาน)
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+        });
+
+
+        // ==========================================
+        // 🎙️ 5. ระบบห้องคุยเสียง (Voice & Screen)
         // ==========================================
         const joinBtn = document.getElementById('join-voice-btn');
         const leaveBtn = document.getElementById('leave-voice-btn');
@@ -468,15 +633,10 @@
                     });
                 });
 
-                // 🌟 รับข้อมูลเมื่อเพื่อนพูด หรือเพื่อนแชร์หน้าจอ
                 rtcClient.on("user-published", async (user, mediaType) => { 
                     await rtcClient.subscribe(user, mediaType); 
-                    
-                    if (mediaType === "audio") {
-                        user.audioTrack.play(); 
-                    }
+                    if (mediaType === "audio") { user.audioTrack.play(); }
                     if (mediaType === "video") {
-                        // 🖥️ เพื่อนแชร์หน้าจอมา ให้เปิดเวทีแล้วฉายภาพ
                         screenShareStage.classList.remove('hidden');
                         let playerContainer = document.createElement("div");
                         playerContainer.id = `video-wrapper-${user.uid}`;
@@ -486,39 +646,27 @@
                     }
                 });
 
-                // 🌟 รับข้อมูลเมื่อเพื่อนเลิกแชร์หน้าจอ
                 rtcClient.on("user-unpublished", async (user, mediaType) => {
                     if (mediaType === "video") {
                         const playerContainer = document.getElementById(`video-wrapper-${user.uid}`);
                         if (playerContainer) playerContainer.remove();
-                        if (screenShareStage.children.length === 0) {
-                            screenShareStage.classList.add('hidden'); // ปิดเวทีถ้าไม่มีใครแชร์
-                        }
+                        if (screenShareStage.children.length === 0) { screenShareStage.classList.add('hidden'); }
                     }
                 });
 
             } catch (err) { alert("เกิดข้อผิดพลาดในการเชื่อมต่อไมค์"); joinBtn.innerHTML = '<span class="text-xl mr-2">📞</span> เข้าร่วมการแชทด้วยเสียง'; }
         }
 
-        // 🖥️ ฟังก์ชันกดปุ่มแชร์หน้าจอ
         screenShareBtn.onclick = async () => {
             if (!isSharingScreen) {
                 try {
-                    // เรียกหน้าต่างให้เลือกแชร์จอ
-                    screenTrack = await AgoraRTC.createScreenVideoTrack({
-                        encoderConfig: "1080p_1",
-                        optimizationMode: "detail"
-                    });
-                    
-                    // ส่งภาพหน้าจอขึ้นเซิร์ฟเวอร์
+                    screenTrack = await AgoraRTC.createScreenVideoTrack({ encoderConfig: "1080p_1", optimizationMode: "detail" });
                     await rtcClient.publish(screenTrack);
                     isSharingScreen = true;
                     
-                    // เปลี่ยนปุ่มเป็นสีเขียว
                     screenShareBtn.classList.replace('bg-[#151619]', 'bg-[#23a559]');
                     screenShareBtn.classList.replace('text-gray-300', 'text-white');
                     
-                    // เปิดเวทีดูจอตัวเอง
                     screenShareStage.classList.remove('hidden');
                     let playerContainer = document.createElement("div");
                     playerContainer.id = `video-wrapper-local`;
@@ -526,43 +674,24 @@
                     screenShareStage.appendChild(playerContainer);
                     screenTrack.play(playerContainer);
 
-                    // ถ้ายกเลิกแชร์จากปุ่มของเบราว์เซอร์
                     screenTrack.on("track-ended", stopScreenShare);
 
-                } catch (err) {
-                    console.log("ยกเลิกการแชร์หน้าจอ หรือ Error", err);
-                }
-            } else {
-                await stopScreenShare(); // กดอีกรอบเพื่อเลิกแชร์
-            }
+                } catch (err) { console.log("ยกเลิกแชร์หน้าจอ"); }
+            } else { await stopScreenShare(); }
         };
 
-        // 🖥️ ฟังก์ชันหยุดแชร์หน้าจอ
         async function stopScreenShare() {
-            if (screenTrack) {
-                await rtcClient.unpublish(screenTrack);
-                screenTrack.stop();
-                screenTrack.close();
-                screenTrack = null;
-            }
+            if (screenTrack) { await rtcClient.unpublish(screenTrack); screenTrack.stop(); screenTrack.close(); screenTrack = null; }
             isSharingScreen = false;
-            
-            // คืนสีปุ่มเดิม
             screenShareBtn.classList.replace('bg-[#23a559]', 'bg-[#151619]');
             screenShareBtn.classList.replace('text-white', 'text-gray-300');
-            
-            // ลบจอของตัวเองออก
             const localPlayer = document.getElementById(`video-wrapper-local`);
             if (localPlayer) localPlayer.remove();
-            
-            // ปิดเวทีถ้าโล่ง
-            if (screenShareStage.children.length === 0) {
-                screenShareStage.classList.add('hidden');
-            }
+            if (screenShareStage.children.length === 0) { screenShareStage.classList.add('hidden'); }
         }
 
         async function leaveVoice() {
-            if (isSharingScreen) await stopScreenShare(); // ปิดจอก่อนวางสาย
+            if (isSharingScreen) await stopScreenShare(); 
             if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); }
             await rtcClient.leave();
             if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); }
@@ -585,7 +714,7 @@
         });
 
         // ==========================================
-        // 💬 5. ระบบแชท 
+        // 💬 6. ระบบแชท 
         // ==========================================
         onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => {
             allMessages = []; snapshot.forEach((docSnap) => { allMessages.push(docSnap.data()); });
@@ -661,7 +790,7 @@
         });
 
         // ==========================================
-        // 📋 6. ระบบกระดานงาน (Task Board)
+        // 📋 7. ระบบกระดานงาน (Task Board)
         // ==========================================
         const zones = { 'todo': document.getElementById('todo'), 'in_progress': document.getElementById('in_progress'), 'done': document.getElementById('done') };
 
