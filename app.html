@@ -10,100 +10,99 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
         
-        /* สกอร์บาร์แบบซ่อนเนียนๆ */
+        /* สกอร์บาร์มืดกลืนไปกับจอ */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+        ::-webkit-scrollbar-thumb:hover { background: #35373c; }
 
-        /* แถบสลับหน้า */
-        .channel-active { background-color: #404249; color: #f2f3f5; }
-        .channel-inactive { color: #949ba4; }
-        .channel-inactive:hover { background-color: #35373c; color: #dbdee1; }
+        /* แถบสลับหน้า (ปรับให้ละมุนตาขึ้น) */
+        .channel-active { background-color: #232429; color: #e4e5e7; }
+        .channel-inactive { color: #80848e; }
+        .channel-inactive:hover { background-color: #1c1d21; color: #dbdee1; }
         
-        /* 🌟 ขีดสถานะเมนูด้านซ้ายแบบ Discord (Pill Indicator) */
+        /* ขีดสถานะเมนูด้านซ้าย */
         .nav-item { position: relative; }
         .nav-item::before {
             content: ''; position: absolute; left: -8px; top: 50%; transform: translateY(-50%);
-            width: 4px; height: 0px; background: white; border-radius: 0 4px 4px 0; transition: height 0.2s ease, background 0.2s;
+            width: 4px; height: 0px; background: #e4e5e7; border-radius: 0 4px 4px 0; transition: height 0.2s ease, background 0.2s;
         }
-        .nav-item.channel-active::before { height: 32px; background: white; }
-        .nav-item.channel-inactive:hover::before { height: 20px; background: #949ba4; }
+        .nav-item.channel-active::before { height: 32px; background: #e4e5e7; }
+        .nav-item.channel-inactive:hover::before { height: 20px; background: #80848e; }
 
         .sidebar-mobile { transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .sidebar-mobile.open { transform: translateX(0); }
-        .overlay { display: none; background: rgba(0,0,0,0.7); backdrop-filter: blur(3px); }
+        .overlay { display: none; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
         .overlay.active { display: block; animation: fadeIn 0.3s ease-out forwards; }
         
-        /* อนิเมชัน Fade in พื้นฐาน */
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* 🌟 อนิเมชันตอนแชทเด้ง (Smooth Message Slide Up) */
+        /* อนิเมชันตอนแชทเด้ง */
         .msg-enter { animation: slideUpFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes slideUpFade {
             0% { opacity: 0; transform: translateY(12px) scale(0.98); }
             100% { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        .drop-zone-active { background-color: #383a40 !important; border-color: #5865F2 !important; border-style: dashed; border-width: 2px;}
+        .drop-zone-active { background-color: #1a1b1e !important; border-color: #5865F2 !important; border-style: dashed; border-width: 2px;}
 
-        /* 🌟 วงแหวนสี Blurple เรืองแสงตอนพูด */
+        /* วงแหวนสี Blurple เรืองแสงตอนพูด */
         .speaking-ring {
             outline: 3px solid #5865F2;
             outline-offset: 2px;
-            box-shadow: 0 0 15px rgba(88, 101, 242, 0.6);
+            box-shadow: 0 0 15px rgba(88, 101, 242, 0.5);
             animation: pulse-ring 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
         }
         @keyframes pulse-ring {
-            0% { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0.5); }
+            0% { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0.4); }
             70% { box-shadow: 0 0 0 10px rgba(88, 101, 242, 0); outline-color: #7280fe; }
             100% { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0); outline-color: #5865F2; }
         }
 
-        /* ปุ่มเครื่องมือ Tooltip */
+        /* Tooltip */
         .tooltip .tooltip-text {
-            visibility: hidden; width: max-content; background-color: #111214; color: #fff; text-align: center;
+            visibility: hidden; width: max-content; background-color: #050505; color: #e4e5e7; text-align: center;
             border-radius: 6px; padding: 6px 10px; position: absolute; z-index: 50; top: -40px; left: 50%;
             transform: translateX(-50%) scale(0.9); opacity: 0; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-            font-size: 12px; font-weight: bold; box-shadow: 0 8px 16px rgba(0,0,0,0.4); pointer-events: none;
+            font-size: 12px; font-weight: bold; box-shadow: 0 8px 16px rgba(0,0,0,0.5); pointer-events: none;
         }
         .tooltip .tooltip-text::after {
             content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px;
-            border-width: 5px; border-style: solid; border-color: #111214 transparent transparent transparent;
+            border-width: 5px; border-style: solid; border-color: #050505 transparent transparent transparent;
         }
         .tooltip:hover .tooltip-text { visibility: visible; opacity: 1; transform: translateX(-50%) scale(1); }
     </style>
 </head>
-<body class="bg-[#1e1f22] text-gray-100 h-screen flex overflow-hidden">
+<body class="bg-[#0e0f11] text-gray-300 h-screen flex overflow-hidden">
 
     <div id="overlay" class="overlay fixed inset-0 z-40 md:hidden"></div>
 
-    <aside id="sidebar" class="sidebar-mobile fixed inset-y-0 left-0 z-50 w-64 bg-[#2b2d31] flex flex-col md:relative md:translate-x-0 border-r border-[#1e1f22] shadow-[2px_0_8px_rgba(0,0,0,0.2)]">
-        <div class="p-4 border-b border-[#1e1f22] flex items-center justify-between shadow-sm bg-[#2b2d31] hover:bg-[#35373c] cursor-pointer transition">
+    <aside id="sidebar" class="sidebar-mobile fixed inset-y-0 left-0 z-50 w-64 bg-[#151619] flex flex-col md:relative md:translate-x-0 border-r border-[#0a0a0c] shadow-[2px_0_8px_rgba(0,0,0,0.3)]">
+        <div class="p-4 border-b border-[#0a0a0c] flex items-center justify-between shadow-sm bg-[#151619] hover:bg-[#1c1d21] cursor-pointer transition">
             <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 rounded-[10px] bg-[#5865F2] flex items-center justify-center font-extrabold text-lg shadow-inner">D</div>
+                <div class="w-9 h-9 rounded-[10px] bg-[#5865F2] flex items-center justify-center font-extrabold text-lg text-white shadow-inner">D</div>
                 <div>
-                    <h1 class="text-[15px] font-extrabold text-[#f2f3f5] tracking-wide">DOSH Server</h1>
+                    <h1 class="text-[15px] font-extrabold text-[#e4e5e7] tracking-wide">DOSH Server</h1>
                 </div>
             </div>
-            <button id="close-menu" class="md:hidden text-gray-400 hover:text-white text-xl">✕</button>
+            <button id="close-menu" class="md:hidden text-gray-500 hover:text-gray-300 text-xl">✕</button>
         </div>
 
         <nav class="flex-1 overflow-y-auto p-3 space-y-5">
             <div>
-                <h2 class="text-[11px] font-bold text-[#949ba4] uppercase tracking-wider mb-1.5 px-2">ช่องข้อความ</h2>
+                <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">ช่องข้อความ</h2>
                 <ul class="space-y-0.5" id="channel-list">
-                    <li><a href="#" data-view="chat" data-channel="general" data-name="ประกาศทั่วไป" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-active font-medium text-[15px]"><span class="text-[#80848e] mr-1.5 text-lg leading-none">#</span>ประกาศทั่วไป</a></li>
-                    <li><a href="#" data-view="chat" data-channel="project" data-name="อัปเดตงานโปรเจกต์" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px]"><span class="text-[#80848e] mr-1.5 text-lg leading-none">#</span>อัปเดตงานโปรเจกต์</a></li>
+                    <li><a href="#" data-view="chat" data-channel="general" data-name="ประกาศทั่วไป" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-active font-medium text-[15px]"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">#</span>ประกาศทั่วไป</a></li>
+                    <li><a href="#" data-view="chat" data-channel="project" data-name="อัปเดตงานโปรเจกต์" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px]"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">#</span>อัปเดตงานโปรเจกต์</a></li>
                 </ul>
             </div>
 
             <div>
-                <h2 class="text-[11px] font-bold text-[#949ba4] uppercase tracking-wider mb-1.5 px-2">ช่องสำหรับพูด</h2>
+                <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">ช่องสำหรับพูด</h2>
                 <ul class="space-y-0.5">
                     <li>
                         <a href="#" data-view="voice" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center">
-                            <span class="text-[#80848e] mr-1.5 text-lg leading-none">🔊</span> ห้องนั่งเล่นคุยงาน
+                            <span class="text-[#5c6069] mr-1.5 text-lg leading-none">🔊</span> ห้องนั่งเล่นคุยงาน
                         </a>
                         <div id="voice-active-users" class="pl-8 pt-1 pb-1 space-y-0.5"></div>
                     </li>
@@ -111,28 +110,28 @@
             </div>
 
             <div>
-                <h2 class="text-[11px] font-bold text-[#949ba4] uppercase tracking-wider mb-1.5 px-2">เครื่องมือ</h2>
+                <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">เครื่องมือ</h2>
                 <ul class="space-y-0.5">
-                    <li><a href="#" data-view="board" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center"><span class="text-[#80848e] mr-1.5 text-lg leading-none">📋</span> Task Board</a></li>
-                    <li><a href="settings.html" class="block px-3 py-1.5 rounded-md text-[#949ba4] hover:bg-[#35373c] hover:text-[#dbdee1] font-medium text-[15px] transition flex items-center"><span class="text-[#80848e] mr-1.5 text-lg leading-none">⚙️</span> Settings</a></li>
-                    <li><a href="admin.html" id="admin-menu-btn" class="hidden block px-3 py-1.5 rounded-md text-[#f23f43] hover:bg-[#f23f43]/10 font-medium text-[15px] transition mt-2 flex items-center"><span class="mr-1.5 text-lg leading-none">🛡️</span> Admin Panel</a></li>
+                    <li><a href="#" data-view="board" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">📋</span> Task Board</a></li>
+                    <li><a href="settings.html" class="block px-3 py-1.5 rounded-md text-[#80848e] hover:bg-[#1c1d21] hover:text-[#dbdee1] font-medium text-[15px] transition flex items-center"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">⚙️</span> Settings</a></li>
+                    <li><a href="admin.html" id="admin-menu-btn" class="hidden block px-3 py-1.5 rounded-md text-[#da373c] hover:bg-[#da373c]/10 font-medium text-[15px] transition mt-2 flex items-center"><span class="mr-1.5 text-lg leading-none">🛡️</span> Admin Panel</a></li>
                 </ul>
             </div>
         </nav>
 
-        <div class="p-2 bg-[#232428] flex items-center justify-between border-t border-[#1e1f22]">
-            <div class="flex items-center space-x-2.5 hover:bg-[#3b3d44] p-1.5 rounded-md cursor-pointer transition flex-1 overflow-hidden">
+        <div class="p-2 bg-[#0a0a0c] flex items-center justify-between border-t border-[#050506]">
+            <div class="flex items-center space-x-2.5 hover:bg-[#1a1b1e] p-1.5 rounded-md cursor-pointer transition flex-1 overflow-hidden">
                 <div class="relative flex-shrink-0">
-                    <img id="current-user-avatar" src="" class="w-8 h-8 rounded-full bg-gray-700 object-cover">
-                    <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#23a559] rounded-full border-[3px] border-[#232428]"></div>
+                    <img id="current-user-avatar" src="" class="w-8 h-8 rounded-full bg-gray-800 object-cover opacity-90">
+                    <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#23a559] rounded-full border-[3px] border-[#0a0a0c]"></div>
                 </div>
                 <div class="overflow-hidden">
-                    <p id="current-user-name" class="text-[13px] font-bold text-[#f2f3f5] truncate leading-tight">Loading...</p>
-                    <p class="text-[11px] text-[#949ba4] truncate leading-none mt-0.5">ออนไลน์</p>
+                    <p id="current-user-name" class="text-[13px] font-bold text-[#d1d3d6] truncate leading-tight">Loading...</p>
+                    <p class="text-[11px] text-[#6d717a] truncate leading-none mt-0.5">ออนไลน์</p>
                 </div>
             </div>
             <div class="flex items-center space-x-1 pl-1 pr-1">
-                <button id="logout-btn" class="text-[#b5bac1] hover:text-[#f23f43] p-1.5 hover:bg-[#3b3d44] rounded-md transition tooltip relative" title="ออกจากระบบ">
+                <button id="logout-btn" class="text-[#80848e] hover:text-[#da373c] p-1.5 hover:bg-[#1a1b1e] rounded-md transition tooltip relative" title="ออกจากระบบ">
                     <span class="tooltip-text">ออกจากระบบ</span>
                     <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                 </button>
@@ -140,90 +139,90 @@
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col bg-[#313338] relative overflow-hidden">
+    <main class="flex-1 flex flex-col bg-[#0f1013] relative overflow-hidden">
         
         <div id="view-chat" class="flex-1 flex flex-col h-full">
-            <header class="p-3.5 border-b border-[#2b2d31] flex justify-between items-center shadow-sm bg-[#313338] z-10">
+            <header class="p-3.5 border-b border-[#151619] flex justify-between items-center shadow-sm bg-[#0f1013] z-10">
                 <div class="flex items-center space-x-3">
-                    <button class="open-menu md:hidden text-gray-400 hover:text-white text-2xl transition">☰</button>
-                    <h2 class="text-base font-bold text-white flex items-center"><span class="text-[#80848e] text-2xl mr-2 font-light">#</span><span id="chat-header-title">ประกาศทั่วไป</span></h2>
+                    <button class="open-menu md:hidden text-gray-500 hover:text-gray-300 text-2xl transition">☰</button>
+                    <h2 class="text-base font-bold text-[#e4e5e7] flex items-center"><span class="text-[#5c6069] text-2xl mr-2 font-light">#</span><span id="chat-header-title">ประกาศทั่วไป</span></h2>
                 </div>
-                <button id="open-members" class="md:hidden text-[#b5bac1] hover:text-white text-xl transition">👥</button>
+                <button id="open-members" class="md:hidden text-[#80848e] hover:text-gray-300 text-xl transition">👥</button>
             </header>
             
             <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-2 relative scroll-smooth"></div>
             
-            <div class="px-4 pb-6 pt-2 bg-[#313338]">
-                <div class="flex items-center bg-[#383a40] rounded-xl px-4 py-2.5 shadow-sm border border-transparent focus-within:border-[#5865F2] transition duration-200">
+            <div class="px-4 pb-6 pt-2 bg-[#0f1013]">
+                <div class="flex items-center bg-[#1a1b1e] rounded-xl px-4 py-2.5 shadow-sm border border-transparent focus-within:border-[#5865F2]/50 transition duration-200">
                     <input type="file" id="file-input" accept="image/png, image/jpeg, image/gif" class="hidden">
-                    <button id="attach-btn" class="text-[#b5bac1] hover:text-[#dbdee1] mr-3 bg-[#404249] hover:bg-[#4e5058] w-7 h-7 rounded-full flex items-center justify-center font-bold text-lg transition tooltip relative">
+                    <button id="attach-btn" class="text-[#80848e] hover:text-[#d1d3d6] mr-3 bg-[#232429] hover:bg-[#2b2d33] w-7 h-7 rounded-full flex items-center justify-center font-bold text-lg transition tooltip relative">
                         <span class="tooltip-text">แนบไฟล์รูปภาพ</span>+
                     </button>
-                    <input id="chat-input" type="text" placeholder="ส่งข้อความถึง #ห้องแชท" class="flex-1 bg-transparent border-none focus:outline-none text-[15px] text-[#dbdee1] placeholder-[#80848e]">
-                    <button id="send-btn" class="ml-2 bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-1.5 rounded text-[14px] font-bold transition shadow-sm hidden md:block">ส่ง</button>
+                    <input id="chat-input" type="text" placeholder="ส่งข้อความถึง #ห้องแชท" class="flex-1 bg-transparent border-none focus:outline-none text-[15px] text-[#dbdee1] placeholder-[#5c6069]">
+                    <button id="send-btn" class="ml-2 bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-1.5 rounded text-[14px] font-bold transition shadow-sm hidden md:block opacity-90 hover:opacity-100">ส่ง</button>
                 </div>
             </div>
         </div>
 
         <div id="view-board" class="hidden flex-1 flex flex-col h-full">
-            <header class="p-4 border-b border-[#2b2d31] flex justify-between items-center shadow-sm bg-[#313338]">
+            <header class="p-4 border-b border-[#151619] flex justify-between items-center shadow-sm bg-[#0f1013]">
                 <div class="flex items-center">
-                    <button class="open-menu md:hidden mr-3 text-gray-400 text-2xl">☰</button>
-                    <h2 class="text-lg font-bold text-white flex items-center">📋 Task Board</h2>
+                    <button class="open-menu md:hidden mr-3 text-gray-500 text-2xl">☰</button>
+                    <h2 class="text-lg font-bold text-[#e4e5e7] flex items-center">📋 Task Board</h2>
                 </div>
-                <button id="add-task-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-4 py-1.5 rounded-md text-sm font-bold transition shadow-sm">+ สร้างงานใหม่</button>
+                <button id="add-task-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-4 py-1.5 rounded-md text-sm font-bold transition shadow-sm opacity-90 hover:opacity-100">+ สร้างงานใหม่</button>
             </header>
-            <div class="flex-1 overflow-x-auto p-6 flex space-x-5 items-start bg-[#2b2d31]">
-                <div class="w-80 flex-shrink-0 flex flex-col bg-[#1e1f22] rounded-xl p-3 max-h-full shadow-lg border border-[#3f4147]/40">
-                    <h3 class="font-bold text-[#b5bac1] text-xs uppercase mb-3 px-2 flex justify-between items-center"><span>📌 ต้องทำ (TO DO)</span></h3>
+            <div class="flex-1 overflow-x-auto p-6 flex space-x-5 items-start bg-[#0f1013]">
+                <div class="w-80 flex-shrink-0 flex flex-col bg-[#151619] rounded-xl p-3 max-h-full shadow-lg border border-[#1e1f22]">
+                    <h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex justify-between items-center"><span>📌 ต้องทำ (TO DO)</span></h3>
                     <div id="todo" class="drop-zone space-y-2 overflow-y-auto min-h-[150px] p-1 scroll-smooth"></div>
                 </div>
-                <div class="w-80 flex-shrink-0 flex flex-col bg-[#1e1f22] rounded-xl p-3 max-h-full shadow-lg border border-[#3f4147]/40">
-                    <h3 class="font-bold text-[#b5bac1] text-xs uppercase mb-3 px-2 flex justify-between items-center"><span>⚡ กำลังทำ (IN PROGRESS)</span></h3>
+                <div class="w-80 flex-shrink-0 flex flex-col bg-[#151619] rounded-xl p-3 max-h-full shadow-lg border border-[#1e1f22]">
+                    <h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex justify-between items-center"><span>⚡ กำลังทำ (IN PROGRESS)</span></h3>
                     <div id="in_progress" class="drop-zone space-y-2 overflow-y-auto min-h-[150px] p-1 scroll-smooth"></div>
                 </div>
-                <div class="w-80 flex-shrink-0 flex flex-col bg-[#1e1f22] rounded-xl p-3 max-h-full shadow-lg border border-[#3f4147]/40">
-                    <h3 class="font-bold text-[#b5bac1] text-xs uppercase mb-3 px-2 flex justify-between items-center"><span>✅ เสร็จสิ้น (DONE)</span></h3>
+                <div class="w-80 flex-shrink-0 flex flex-col bg-[#151619] rounded-xl p-3 max-h-full shadow-lg border border-[#1e1f22]">
+                    <h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex justify-between items-center"><span>✅ เสร็จสิ้น (DONE)</span></h3>
                     <div id="done" class="drop-zone space-y-2 overflow-y-auto min-h-[150px] p-1 scroll-smooth"></div>
                 </div>
             </div>
         </div>
 
-        <div id="view-voice" class="hidden flex-1 flex flex-col h-full bg-[#1e1f22] relative">
-            <header class="p-4 flex justify-between items-center shadow-md bg-[#313338] z-20 border-b border-[#2b2d31]">
+        <div id="view-voice" class="hidden flex-1 flex flex-col h-full bg-[#0e0f11] relative">
+            <header class="p-4 flex justify-between items-center shadow-md bg-[#0f1013] z-20 border-b border-[#151619]">
                 <div class="flex items-center">
-                    <button class="open-menu md:hidden mr-3 text-[#b5bac1] text-2xl">☰</button>
-                    <h2 class="text-md font-bold text-white flex items-center"><span class="mr-2 text-xl">🔊</span> ห้องนั่งเล่นคุยงาน</h2>
+                    <button class="open-menu md:hidden mr-3 text-[#80848e] text-2xl">☰</button>
+                    <h2 class="text-md font-bold text-[#e4e5e7] flex items-center"><span class="mr-2 text-xl opacity-80">🔊</span> ห้องนั่งเล่นคุยงาน</h2>
                 </div>
                 <div class="flex items-center">
                     <span class="text-[11px] text-[#23a559] font-bold bg-[#23a559]/10 px-2 py-1 rounded border border-[#23a559]/20 mr-3 uppercase tracking-wide">Voice Connected</span>
-                    <button id="open-members-voice" class="md:hidden text-[#b5bac1] hover:text-white text-xl transition">👥</button>
+                    <button id="open-members-voice" class="md:hidden text-[#80848e] hover:text-gray-300 text-xl transition">👥</button>
                 </div>
             </header>
 
-            <div id="voice-grid" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 auto-rows-max content-start z-10 bg-[#1e1f22]">
-                <div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-32 text-[#949ba4] animate-[fadeIn_0.5s_ease-out]">
-                    <div class="w-24 h-24 bg-[#2b2d31] rounded-full flex items-center justify-center mb-5 shadow-inner"><span class="text-5xl">😴</span></div>
-                    <p class="font-bold text-lg text-[#dbdee1]">ไม่มีใครอยู่ในห้องเสียง</p>
+            <div id="voice-grid" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 auto-rows-max content-start z-10 bg-[#0e0f11]">
+                <div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]">
+                    <div class="w-24 h-24 bg-[#151619] rounded-full flex items-center justify-center mb-5 shadow-inner border border-[#1e1f22]"><span class="text-5xl opacity-50">😴</span></div>
+                    <p class="font-bold text-lg text-[#949ba4]">ไม่มีใครอยู่ในห้องเสียง</p>
                     <p class="text-sm mt-1">กดเชื่อมต่อด้านล่างเพื่อปลุกห้องนี้ให้ตื่น!</p>
                 </div>
             </div>
 
-            <div class="p-5 bg-[#111214] border-t border-[#1e1f22] flex justify-center items-center shadow-[0_-15px_30px_rgba(0,0,0,0.3)] z-20 h-28 relative">
+            <div class="p-5 bg-[#050506] border-t border-[#0a0a0c] flex justify-center items-center shadow-[0_-15px_30px_rgba(0,0,0,0.5)] z-20 h-28 relative">
                 
-                <button id="join-voice-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-8 py-3.5 rounded-full font-bold transition-all duration-200 shadow-lg hover:-translate-y-0.5 flex items-center text-[15px]">
+                <button id="join-voice-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-8 py-3.5 rounded-full font-bold transition-all duration-200 shadow-lg hover:-translate-y-0.5 flex items-center text-[15px] opacity-90 hover:opacity-100">
                     <span class="text-xl mr-2">📞</span> เข้าร่วมการแชทด้วยเสียง
                 </button>
                 
                 <div id="active-voice-ui" class="hidden flex items-center space-x-5">
                     <div class="flex flex-col items-center group tooltip">
                         <span class="tooltip-text">เปิด/ปิดไมค์</span>
-                        <button id="mute-btn" class="w-14 h-14 bg-[#2b2d31] text-gray-200 rounded-full text-2xl flex items-center justify-center hover:bg-[#35373c] transition-all duration-200 shadow-md">🎤</button>
+                        <button id="mute-btn" class="w-14 h-14 bg-[#151619] text-gray-300 rounded-full text-2xl flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]">🎤</button>
                     </div>
                     
                     <div class="flex flex-col items-center group tooltip">
                         <span class="tooltip-text">ตัดการเชื่อมต่อ</span>
-                        <button id="leave-voice-btn" class="w-14 h-14 bg-[#f23f43] text-white rounded-full text-2xl flex items-center justify-center hover:bg-[#da373c] transition-all duration-200 shadow-lg shadow-[#f23f43]/20 hover:-translate-y-0.5">
+                        <button id="leave-voice-btn" class="w-14 h-14 bg-[#da373c] text-white rounded-full text-2xl flex items-center justify-center hover:bg-[#c92f33] transition-all duration-200 shadow-lg shadow-[#da373c]/20 hover:-translate-y-0.5 opacity-90 hover:opacity-100">
                             <svg class="w-6 h-6 transform rotate-[135deg]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
                         </button>
                     </div>
@@ -232,10 +231,10 @@
         </div>
     </main>
 
-    <aside id="members-sidebar" class="fixed inset-y-0 right-0 z-50 w-64 bg-[#2b2d31] border-l border-[#1e1f22] transform translate-x-full md:relative md:translate-x-0 transition-transform duration-300 flex flex-col">
-        <div class="p-4 border-b border-[#1e1f22] flex justify-between items-center bg-[#2b2d31]">
-            <h2 class="text-[11px] font-bold text-[#949ba4] uppercase tracking-widest">ออนไลน์ — <span id="member-count">0</span></h2>
-            <button id="close-members" class="md:hidden text-[#b5bac1] hover:text-white">✕</button>
+    <aside id="members-sidebar" class="fixed inset-y-0 right-0 z-50 w-64 bg-[#151619] border-l border-[#0a0a0c] transform translate-x-full md:relative md:translate-x-0 transition-transform duration-300 flex flex-col shadow-[-2px_0_8px_rgba(0,0,0,0.2)]">
+        <div class="p-4 border-b border-[#0a0a0c] flex justify-between items-center bg-[#151619]">
+            <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-widest">ออนไลน์ — <span id="member-count">0</span></h2>
+            <button id="close-members" class="md:hidden text-[#80848e] hover:text-gray-300">✕</button>
         </div>
         <div id="members-list" class="flex-1 p-2 space-y-0.5 overflow-y-auto"></div>
     </aside>
@@ -292,11 +291,11 @@
                 if(!view) return; 
                 
                 document.querySelectorAll('.nav-btn').forEach(b => {
-                    b.classList.remove('channel-active', 'text-[#f2f3f5]'); 
-                    b.classList.add('channel-inactive', 'text-[#949ba4]');
+                    b.classList.remove('channel-active', 'text-[#e4e5e7]'); 
+                    b.classList.add('channel-inactive', 'text-[#80848e]');
                 });
-                btn.classList.remove('channel-inactive', 'text-[#949ba4]');
-                btn.classList.add('channel-active', 'text-[#f2f3f5]');
+                btn.classList.remove('channel-inactive', 'text-[#80848e]');
+                btn.classList.add('channel-active', 'text-[#e4e5e7]');
 
                 Object.values(views).forEach(v => v.classList.add('hidden'));
                 views[view].classList.remove('hidden');
@@ -335,18 +334,18 @@
                 usersData[userName] = { avatar: userAvatar, id: docSnap.id, agoraUid: user.agoraUid }; 
 
                 const isOnline = user.status === 'online';
-                const statusColor = isOnline ? 'bg-[#23a559]' : 'bg-[#80848e]';
-                const roleDisplay = user.role === 'Admin' ? `<span class="text-[#f23f43] font-extrabold ml-1.5 text-[10px] bg-[#f23f43]/10 px-1.5 py-0.5 rounded uppercase">Admin</span>` : '';
-                const nameStyle = user.role === 'Banned' ? 'line-through text-[#f23f43]' : (isOnline ? 'text-[#dbdee1]' : 'text-[#80848e]');
+                const statusColor = isOnline ? 'bg-[#23a559]' : 'bg-[#5c6069]';
+                const roleDisplay = user.role === 'Admin' ? `<span class="text-[#da373c] font-extrabold ml-1.5 text-[10px] bg-[#da373c]/10 px-1.5 py-0.5 rounded uppercase">Admin</span>` : '';
+                const nameStyle = user.role === 'Banned' ? 'line-through text-[#da373c]' : (isOnline ? 'text-[#d1d3d6]' : 'text-[#6d717a]');
 
-                const muteIconSmall = user.isMuted ? '<span class="text-[#f23f43] ml-auto text-[11px] font-bold">🔇</span>' : '';
-                const muteIconLarge = user.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#2b2d31] rounded-full p-1 border-2 border-[#1e1f22] shadow-sm"><span class="text-[#f23f43] text-xs">🔇</span></div>' : '';
+                const muteIconSmall = user.isMuted ? '<span class="text-[#da373c] ml-auto text-[11px] font-bold">🔇</span>' : '';
+                const muteIconLarge = user.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#151619] rounded-full p-1 border-2 border-[#0e0f11] shadow-sm"><span class="text-[#da373c] text-xs">🔇</span></div>' : '';
 
                 membersList.insertAdjacentHTML('beforeend', `
-                <div class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#35373c] hover:text-[#dbdee1] transition group ${!isOnline ? 'opacity-60' : ''}">
+                <div class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#1c1d21] hover:text-[#e4e5e7] transition group ${!isOnline ? 'opacity-50' : ''}">
                     <div class="relative flex-shrink-0">
-                        <img id="img-avatar-${docSnap.id}" src="${userAvatar}" class="w-8 h-8 rounded-full object-cover transition-all duration-200">
-                        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#2b2d31]"></div>
+                        <img id="img-avatar-${docSnap.id}" src="${userAvatar}" class="w-8 h-8 rounded-full object-cover transition-all duration-200 opacity-90">
+                        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619]"></div>
                     </div>
                     <div class="overflow-hidden flex-1 flex items-center">
                         <p class="text-[14px] font-medium truncate ${nameStyle}">${userName} ${roleDisplay}</p>
@@ -355,9 +354,9 @@
 
                 if (user.inVoice && voiceActiveList) {
                     voiceActiveList.insertAdjacentHTML('beforeend', `
-                        <div class="flex items-center space-x-2.5 text-[13px] text-[#b5bac1] py-1 px-2 hover:bg-[#35373c] hover:text-[#dbdee1] rounded-md transition group cursor-pointer ml-2">
+                        <div class="flex items-center space-x-2.5 text-[13px] text-[#80848e] py-1 px-2 hover:bg-[#1c1d21] hover:text-[#dbdee1] rounded-md transition group cursor-pointer ml-2">
                             <div class="relative">
-                                <img id="img-sidebar-voice-${docSnap.id}" src="${userAvatar}" class="w-6 h-6 rounded-full object-cover transition-all duration-200">
+                                <img id="img-sidebar-voice-${docSnap.id}" src="${userAvatar}" class="w-6 h-6 rounded-full object-cover transition-all duration-200 opacity-90">
                             </div>
                             <span class="truncate font-medium flex-1">${userName}</span>
                             ${muteIconSmall}
@@ -368,12 +367,12 @@
                 if (user.inVoice) {
                     usersInVoiceCount++;
                     voiceGridHTML += `
-                        <div class="bg-[#2b2d31] rounded-xl p-5 flex flex-col items-center justify-center relative shadow-lg border border-transparent hover:border-[#3f4147] transition duration-300 h-44 group animate-[fadeIn_0.3s_ease-out]">
+                        <div class="bg-[#151619] rounded-xl p-5 flex flex-col items-center justify-center relative shadow-lg border border-[#1e1f22] hover:border-[#3f4147] transition duration-300 h-44 group animate-[fadeIn_0.3s_ease-out]">
                             <div class="relative mb-4">
-                                <img id="img-grid-voice-${docSnap.id}" src="${userAvatar}" class="w-[72px] h-[72px] rounded-full object-cover bg-gray-900 border-[3px] border-transparent transition-all duration-300 shadow-md">
+                                <img id="img-grid-voice-${docSnap.id}" src="${userAvatar}" class="w-[72px] h-[72px] rounded-full object-cover bg-gray-900 border-[3px] border-transparent transition-all duration-300 shadow-md opacity-95">
                                 ${muteIconLarge}
                             </div>
-                            <p class="font-bold text-[#f2f3f5] text-[15px] truncate w-full text-center">${userName}</p>
+                            <p class="font-bold text-[#e4e5e7] text-[15px] truncate w-full text-center">${userName}</p>
                         </div>
                     `;
                 }
@@ -383,9 +382,9 @@
                 if (usersInVoiceCount > 0) { voiceGrid.innerHTML = voiceGridHTML; } 
                 else {
                     voiceGrid.innerHTML = `
-                        <div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-32 text-[#949ba4] animate-[fadeIn_0.5s_ease-out]">
-                            <div class="w-24 h-24 bg-[#2b2d31] rounded-full flex items-center justify-center mb-5 shadow-inner"><span class="text-5xl">😴</span></div>
-                            <p class="font-bold text-lg text-[#dbdee1]">ไม่มีใครอยู่ในห้องเสียง</p>
+                        <div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]">
+                            <div class="w-24 h-24 bg-[#151619] rounded-full flex items-center justify-center mb-5 shadow-inner border border-[#1e1f22]"><span class="text-5xl opacity-50">😴</span></div>
+                            <p class="font-bold text-lg text-[#949ba4]">ไม่มีใครอยู่ในห้องเสียง</p>
                             <p class="text-sm mt-1">กดเชื่อมต่อด้านล่างเพื่อปลุกห้องนี้ให้ตื่น!</p>
                         </div>`;
                 }
@@ -433,7 +432,7 @@
 
                 joinBtn.classList.add('hidden');
                 activeVoiceUI.classList.remove('hidden');
-                muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-gray-800', 'text-[#f23f43]');
+                muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]');
                 muteBtn.innerHTML = "🎤";
 
                 rtcClient.enableAudioVolumeIndicator();
@@ -476,9 +475,9 @@
             isMuted = !isMuted; localTracks.audioTrack.setEnabled(!isMuted); 
             await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted });
             if (isMuted) {
-                muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-gray-800', 'text-[#f23f43]');
+                muteBtn.classList.remove('bg-[#151619]'); muteBtn.classList.add('bg-gray-800', 'text-[#da373c]');
                 muteBtn.innerHTML = `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd"></path></svg>`;
-            } else { muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-gray-800', 'text-[#f23f43]'); muteBtn.innerHTML = "🎤"; }
+            } else { muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); muteBtn.innerHTML = "🎤"; }
         };
         window.addEventListener('beforeunload', () => { if (currentUserId) { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); } });
 
@@ -496,13 +495,13 @@
             const filteredMessages = allMessages.filter(msg => msg.channel === activeChannel);
             
             if(filteredMessages.length === 0) return chatContainer.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full text-[#949ba4] animate-[fadeIn_0.4s_ease-out]">
-                    <div class="w-16 h-16 bg-[#2b2d31] rounded-full flex items-center justify-center mb-4"><span class="text-3xl">💬</span></div>
-                    <p class="font-bold text-lg text-[#dbdee1]">ยินดีต้อนรับสู่ #${activeChannel === 'general' ? 'ประกาศทั่วไป' : 'อัปเดตงานโปรเจกต์'}</p>
+                <div class="flex flex-col items-center justify-center h-full text-[#6d717a] animate-[fadeIn_0.4s_ease-out]">
+                    <div class="w-16 h-16 bg-[#151619] rounded-full flex items-center justify-center mb-4 border border-[#1e1f22]"><span class="text-3xl opacity-70">💬</span></div>
+                    <p class="font-bold text-lg text-[#949ba4]">ยินดีต้อนรับสู่ #${activeChannel === 'general' ? 'ประกาศทั่วไป' : 'อัปเดตงานโปรเจกต์'}</p>
                     <p class="text-sm mt-1 text-center">นี่คือจุดเริ่มต้นของช่องนี้ เขียนทักทายทีมของคุณได้เลย</p>
                 </div>`;
 
-            let lastSender = null; // เช็คว่าใครส่งข้อความล่าสุด (เพื่อรวมกลุ่มข้อความแบบ Discord)
+            let lastSender = null; 
             
             filteredMessages.forEach((data) => {
                 let timeString = "...";
@@ -511,22 +510,21 @@
                 let msgAvatarUrl = `https://ui-avatars.com/api/?name=${data.senderName}&background=5865F2&color=fff&rounded=true&bold=true`;
                 if(usersData[data.senderName]) msgAvatarUrl = usersData[data.senderName].avatar;
                 
-                let contentHTML = data.text ? `<p class="text-[#dbdee1] mt-0.5 leading-relaxed text-[15px]">${data.text}</p>` : '';
-                if (data.imageUrl) contentHTML += `<img src="${data.imageUrl}" onload="document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;" class="mt-2 rounded-lg max-w-[80%] md:max-w-sm shadow-sm cursor-pointer hover:opacity-90 transition">`;
+                let contentHTML = data.text ? `<p class="text-[#d1d3d6] mt-0.5 leading-relaxed text-[15px]">${data.text}</p>` : '';
+                if (data.imageUrl) contentHTML += `<img src="${data.imageUrl}" onload="document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;" class="mt-2 rounded-lg max-w-[80%] md:max-w-sm shadow-sm cursor-pointer hover:opacity-80 transition">`;
                 
-                // ถ้ารูปแบบ Discord ข้อความติดๆ กันจากคนเดิม จะไม่แสดงโปรไฟล์ซ้ำ (ทำให้ดูโปรขึ้น)
                 if (lastSender === data.senderName) {
                     chatContainer.insertAdjacentHTML('beforeend', `
-                    <div class="flex space-x-4 hover:bg-[#2b2d31]/50 px-4 py-1 -mx-4 group transition duration-150 msg-enter">
-                        <div class="w-10 flex-shrink-0 text-right"><span class="text-[10px] text-[#80848e] opacity-0 group-hover:opacity-100 transition leading-relaxed">${timeString}</span></div>
+                    <div class="flex space-x-4 hover:bg-[#151619]/60 px-4 py-1 -mx-4 group transition duration-150 msg-enter">
+                        <div class="w-10 flex-shrink-0 text-right"><span class="text-[10px] text-[#5c6069] opacity-0 group-hover:opacity-100 transition leading-relaxed">${timeString}</span></div>
                         <div class="min-w-0 flex-1">${contentHTML}</div>
                     </div>`);
                 } else {
                     chatContainer.insertAdjacentHTML('beforeend', `
-                    <div class="flex space-x-4 hover:bg-[#2b2d31]/50 px-4 py-2 mt-4 -mx-4 group transition duration-150 msg-enter">
-                        <img src="${msgAvatarUrl}" class="w-10 h-10 rounded-full flex-shrink-0 object-cover cursor-pointer hover:opacity-80 transition">
+                    <div class="flex space-x-4 hover:bg-[#151619]/60 px-4 py-2 mt-4 -mx-4 group transition duration-150 msg-enter">
+                        <img src="${msgAvatarUrl}" class="w-10 h-10 rounded-full flex-shrink-0 object-cover cursor-pointer hover:opacity-80 transition opacity-95">
                         <div class="min-w-0 flex-1">
-                            <div class="flex items-baseline space-x-2"><span class="font-medium text-[15px] hover:underline cursor-pointer text-[#f2f3f5] tracking-wide">${data.senderName}</span><span class="text-[11px] text-[#949ba4]">${timeString}</span></div>
+                            <div class="flex items-baseline space-x-2"><span class="font-medium text-[15px] hover:underline cursor-pointer text-[#e4e5e7] tracking-wide">${data.senderName}</span><span class="text-[11px] text-[#6d717a]">${timeString}</span></div>
                             ${contentHTML}
                         </div>
                     </div>`);
@@ -568,23 +566,23 @@
             Object.values(zones).forEach(zone => zone.innerHTML = '');
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data(), id = docSnap.id, status = data.status || 'todo';
-                let tagColor = "bg-[#2b2d31] text-[#dbdee1] border border-[#3f4147]";
+                let tagColor = "bg-[#1c1d21] text-[#d1d3d6] border border-[#2b2d31]";
                 if(data.tag && data.tag.includes('Dev')) tagColor = "bg-blue-500/10 text-blue-400 border border-blue-500/20";
                 if(data.tag && data.tag.includes('Music')) tagColor = "bg-pink-500/10 text-pink-400 border border-pink-500/20";
                 if(data.tag && data.tag.includes('Video')) tagColor = "bg-purple-500/10 text-purple-400 border border-purple-500/20";
                 if(data.tag && data.tag.includes('Design')) tagColor = "bg-[#23a559]/10 text-[#23a559] border border-[#23a559]/20";
 
                 const cardHTML = `
-                    <div draggable="true" data-id="${id}" class="task-card bg-[#2b2d31] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${status === 'done' ? 'border-gray-600 opacity-60' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]">
+                    <div draggable="true" data-id="${id}" class="task-card bg-[#1c1d21] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${status === 'done' ? 'border-[#3f4147] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]">
                         <div class="flex space-x-2 mb-2.5"><span class="${tagColor} text-[10px] font-bold px-2 py-0.5 rounded-sm">${data.tag}</span></div>
-                        <p class="text-[14px] font-medium text-[#dbdee1] ${status === 'done' ? 'line-through text-[#949ba4]' : ''} leading-snug">${data.title}</p>
+                        <p class="text-[14px] font-medium text-[#d1d3d6] ${status === 'done' ? 'line-through text-[#6d717a]' : ''} leading-snug">${data.title}</p>
                     </div>`;
                 if (zones[status]) zones[status].insertAdjacentHTML('beforeend', cardHTML);
             });
 
             document.querySelectorAll('.task-card').forEach(card => {
-                card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', card.getAttribute('data-id')); setTimeout(() => card.classList.add('opacity-40'), 0); });
-                card.addEventListener('dragend', () => card.classList.remove('opacity-40'));
+                card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', card.getAttribute('data-id')); setTimeout(() => card.classList.add('opacity-30'), 0); });
+                card.addEventListener('dragend', () => card.classList.remove('opacity-30'));
             });
         });
 
