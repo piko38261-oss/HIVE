@@ -10,18 +10,15 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
         
-        /* สกอร์บาร์มืดกลืนไปกับจอ */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #35373c; }
 
-        /* แถบสลับหน้า (ปรับให้ละมุนตาขึ้น) */
         .channel-active { background-color: #232429; color: #e4e5e7; }
         .channel-inactive { color: #80848e; }
         .channel-inactive:hover { background-color: #1c1d21; color: #dbdee1; }
         
-        /* ขีดสถานะเมนูด้านซ้าย */
         .nav-item { position: relative; }
         .nav-item::before {
             content: ''; position: absolute; left: -8px; top: 50%; transform: translateY(-50%);
@@ -37,7 +34,6 @@
         
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* อนิเมชันตอนแชทเด้ง */
         .msg-enter { animation: slideUpFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes slideUpFade {
             0% { opacity: 0; transform: translateY(12px) scale(0.98); }
@@ -46,7 +42,6 @@
 
         .drop-zone-active { background-color: #1a1b1e !important; border-color: #5865F2 !important; border-style: dashed; border-width: 2px;}
 
-        /* วงแหวนสี Blurple เรืองแสงตอนพูด */
         .speaking-ring {
             outline: 3px solid #5865F2;
             outline-offset: 2px;
@@ -59,7 +54,6 @@
             100% { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0); outline-color: #5865F2; }
         }
 
-        /* Tooltip */
         .tooltip .tooltip-text {
             visibility: hidden; width: max-content; background-color: #050505; color: #e4e5e7; text-align: center;
             border-radius: 6px; padding: 6px 10px; position: absolute; z-index: 50; top: -40px; left: 50%;
@@ -71,6 +65,10 @@
             border-width: 5px; border-style: solid; border-color: #050505 transparent transparent transparent;
         }
         .tooltip:hover .tooltip-text { visibility: visible; opacity: 1; transform: translateX(-50%) scale(1); }
+
+        /* ปรับแต่งจอแชร์หน้าจอของ Agora */
+        #screen-share-stage div { border-radius: 8px; overflow: hidden; }
+        #screen-share-stage video { object-fit: contain !important; }
     </style>
 </head>
 <body class="bg-[#0e0f11] text-gray-300 h-screen flex overflow-hidden">
@@ -200,7 +198,10 @@
                 </div>
             </header>
 
-            <div id="voice-grid" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 auto-rows-max content-start z-10 bg-[#0e0f11]">
+            <div id="screen-share-stage" class="hidden w-full h-[55vh] bg-[#050505] border-b border-[#1e1f22] p-2 md:p-6 flex items-center justify-center relative z-10 shadow-inner">
+                </div>
+
+            <div id="voice-grid" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 auto-rows-max content-start z-10 bg-[#0e0f11] transition-all">
                 <div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]">
                     <div class="w-24 h-24 bg-[#151619] rounded-full flex items-center justify-center mb-5 shadow-inner border border-[#1e1f22]"><span class="text-5xl opacity-50">😴</span></div>
                     <p class="font-bold text-lg text-[#949ba4]">ไม่มีใครอยู่ในห้องเสียง</p>
@@ -218,6 +219,11 @@
                     <div class="flex flex-col items-center group tooltip">
                         <span class="tooltip-text">เปิด/ปิดไมค์</span>
                         <button id="mute-btn" class="w-14 h-14 bg-[#151619] text-gray-300 rounded-full text-2xl flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]">🎤</button>
+                    </div>
+
+                    <div class="flex flex-col items-center group tooltip">
+                        <span class="tooltip-text">แชร์หน้าจอ</span>
+                        <button id="screen-share-btn" class="w-14 h-14 bg-[#151619] text-gray-300 rounded-full text-2xl flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]">🖥️</button>
                     </div>
                     
                     <div class="flex flex-col items-center group tooltip">
@@ -267,6 +273,10 @@
         let isMuted = false;
         let myNumericUid = null;
 
+        // 🌟 ตัวแปรเก็บหน้าจอที่แชร์
+        let screenTrack = null;
+        let isSharingScreen = false;
+
         // ==========================================
         // 🌟 2. ระบบสลับหน้าต่าง (Navigation)
         // ==========================================
@@ -313,7 +323,7 @@
         });
 
         // ==========================================
-        // 🟢 3. โหลดรายชื่อสมาชิก & อัปเดต UI 
+        // 🟢 3. โหลดรายชื่อสมาชิก
         // ==========================================
         onSnapshot(collection(db, "users"), (snapshot) => {
             const membersList = document.getElementById('members-list');
@@ -411,12 +421,14 @@
         });
 
         // ==========================================
-        // 🎙️ 4. ระบบห้องคุยเสียง (Voice WebRTC) 
+        // 🎙️ 4. ระบบห้องคุยเสียง (Voice + 🖥️ Screen Share)
         // ==========================================
         const joinBtn = document.getElementById('join-voice-btn');
         const leaveBtn = document.getElementById('leave-voice-btn');
         const muteBtn = document.getElementById('mute-btn');
+        const screenShareBtn = document.getElementById('screen-share-btn');
         const activeVoiceUI = document.getElementById('active-voice-ui');
+        const screenShareStage = document.getElementById('screen-share-stage');
 
         async function joinVoice() {
             try {
@@ -456,12 +468,101 @@
                     });
                 });
 
-                rtcClient.on("user-published", async (user, mediaType) => { await rtcClient.subscribe(user, mediaType); if (mediaType === "audio") user.audioTrack.play(); });
+                // 🌟 รับข้อมูลเมื่อเพื่อนพูด หรือเพื่อนแชร์หน้าจอ
+                rtcClient.on("user-published", async (user, mediaType) => { 
+                    await rtcClient.subscribe(user, mediaType); 
+                    
+                    if (mediaType === "audio") {
+                        user.audioTrack.play(); 
+                    }
+                    if (mediaType === "video") {
+                        // 🖥️ เพื่อนแชร์หน้าจอมา ให้เปิดเวทีแล้วฉายภาพ
+                        screenShareStage.classList.remove('hidden');
+                        let playerContainer = document.createElement("div");
+                        playerContainer.id = `video-wrapper-${user.uid}`;
+                        playerContainer.className = "w-full h-full rounded-lg";
+                        screenShareStage.appendChild(playerContainer);
+                        user.videoTrack.play(playerContainer);
+                    }
+                });
+
+                // 🌟 รับข้อมูลเมื่อเพื่อนเลิกแชร์หน้าจอ
+                rtcClient.on("user-unpublished", async (user, mediaType) => {
+                    if (mediaType === "video") {
+                        const playerContainer = document.getElementById(`video-wrapper-${user.uid}`);
+                        if (playerContainer) playerContainer.remove();
+                        if (screenShareStage.children.length === 0) {
+                            screenShareStage.classList.add('hidden'); // ปิดเวทีถ้าไม่มีใครแชร์
+                        }
+                    }
+                });
 
             } catch (err) { alert("เกิดข้อผิดพลาดในการเชื่อมต่อไมค์"); joinBtn.innerHTML = '<span class="text-xl mr-2">📞</span> เข้าร่วมการแชทด้วยเสียง'; }
         }
 
+        // 🖥️ ฟังก์ชันกดปุ่มแชร์หน้าจอ
+        screenShareBtn.onclick = async () => {
+            if (!isSharingScreen) {
+                try {
+                    // เรียกหน้าต่างให้เลือกแชร์จอ
+                    screenTrack = await AgoraRTC.createScreenVideoTrack({
+                        encoderConfig: "1080p_1",
+                        optimizationMode: "detail"
+                    });
+                    
+                    // ส่งภาพหน้าจอขึ้นเซิร์ฟเวอร์
+                    await rtcClient.publish(screenTrack);
+                    isSharingScreen = true;
+                    
+                    // เปลี่ยนปุ่มเป็นสีเขียว
+                    screenShareBtn.classList.replace('bg-[#151619]', 'bg-[#23a559]');
+                    screenShareBtn.classList.replace('text-gray-300', 'text-white');
+                    
+                    // เปิดเวทีดูจอตัวเอง
+                    screenShareStage.classList.remove('hidden');
+                    let playerContainer = document.createElement("div");
+                    playerContainer.id = `video-wrapper-local`;
+                    playerContainer.className = "w-full h-full rounded-lg";
+                    screenShareStage.appendChild(playerContainer);
+                    screenTrack.play(playerContainer);
+
+                    // ถ้ายกเลิกแชร์จากปุ่มของเบราว์เซอร์
+                    screenTrack.on("track-ended", stopScreenShare);
+
+                } catch (err) {
+                    console.log("ยกเลิกการแชร์หน้าจอ หรือ Error", err);
+                }
+            } else {
+                await stopScreenShare(); // กดอีกรอบเพื่อเลิกแชร์
+            }
+        };
+
+        // 🖥️ ฟังก์ชันหยุดแชร์หน้าจอ
+        async function stopScreenShare() {
+            if (screenTrack) {
+                await rtcClient.unpublish(screenTrack);
+                screenTrack.stop();
+                screenTrack.close();
+                screenTrack = null;
+            }
+            isSharingScreen = false;
+            
+            // คืนสีปุ่มเดิม
+            screenShareBtn.classList.replace('bg-[#23a559]', 'bg-[#151619]');
+            screenShareBtn.classList.replace('text-white', 'text-gray-300');
+            
+            // ลบจอของตัวเองออก
+            const localPlayer = document.getElementById(`video-wrapper-local`);
+            if (localPlayer) localPlayer.remove();
+            
+            // ปิดเวทีถ้าโล่ง
+            if (screenShareStage.children.length === 0) {
+                screenShareStage.classList.add('hidden');
+            }
+        }
+
         async function leaveVoice() {
+            if (isSharingScreen) await stopScreenShare(); // ปิดจอก่อนวางสาย
             if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); }
             await rtcClient.leave();
             if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); }
@@ -479,7 +580,9 @@
                 muteBtn.innerHTML = `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd"></path></svg>`;
             } else { muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); muteBtn.innerHTML = "🎤"; }
         };
-        window.addEventListener('beforeunload', () => { if (currentUserId) { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); } });
+        window.addEventListener('beforeunload', () => { 
+            if (currentUserId) { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); } 
+        });
 
         // ==========================================
         // 💬 5. ระบบแชท 
