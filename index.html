@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOSH - Login & Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 h-screen flex items-center justify-center font-sans relative overflow-hidden">
+
+    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
+
+    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700 z-10 relative overflow-hidden">
+        
+        <div class="text-center mb-6">
+            <div class="w-14 h-14 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-3xl mx-auto mb-4 shadow-lg shadow-indigo-500/30">A</div>
+            <h1 id="form-title" class="text-2xl font-bold text-gray-100 transition-all">เข้าสู่ระบบ DOSH</h1>
+            <p id="form-subtitle" class="text-sm text-gray-400 mt-2 transition-all">ยินดีต้อนรับกลับเข้าสู่พื้นที่ทำงาน</p>
+        </div>
+
+        <form id="login-form" class="space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1">อีเมล</label>
+                <input id="login-email" type="email" placeholder="email@company.com" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder-gray-600">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1">รหัสผ่าน</label>
+                <input id="login-password" type="password" placeholder="••••••••" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder-gray-600">
+            </div>
+            
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-lg transition duration-200 mt-2 shadow-lg shadow-indigo-500/30">
+                เข้าสู่ระบบ
+            </button>
+            
+            <div class="mt-6 text-center text-sm text-gray-500 border-t border-gray-700 pt-6">
+                ยังไม่มีบัญชีใช่ไหม? 
+                <a href="#" id="show-register" class="text-indigo-400 hover:text-indigo-300 font-medium transition">สมัครสมาชิกที่นี่</a>
+            </div>
+        </form>
+
+        <form id="register-form" class="space-y-5 hidden">
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1">ชื่อผู้ใช้ (Username)</label>
+                <input id="reg-username" type="text" placeholder="เช่น APOKO" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder-gray-600">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1">อีเมล (Email)</label>
+                <input id="reg-email" type="email" placeholder="email@company.com" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder-gray-600">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1">สายงานหลัก (Role)</label>
+                <div class="relative">
+                    <select id="reg-role" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition appearance-none cursor-pointer">
+                        <option value="" disabled selected>-- เลือกสายงานของคุณ --</option>
+                        <option value="Dev (นักพัฒนา)">💻 Developer (นักพัฒนา)</option>
+                        <option value="Design (ออกแบบ)">🎨 Design (ออกแบบ)</option>
+                        <option value="Video (ตัดต่อวีดีโอ)">🎬 Video (ตัดต่อวีดีโอ)</option>
+                        <option value="Music (เสียงและดนตรี)">🎵 Music (เสียงและดนตรี)</option>
+                        <option value="Member">🎮 General / Member</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
+                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1">รหัสผ่าน (อย่างน้อย 6 ตัว)</label>
+                <input id="reg-password" type="password" placeholder="••••••••" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder-gray-600">
+            </div>
+            
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-lg transition duration-200 mt-2 shadow-lg shadow-indigo-500/30">
+                สร้างบัญชีผู้ใช้
+            </button>
+            
+            <div class="mt-6 text-center text-sm text-gray-500 border-t border-gray-700 pt-6">
+                มีบัญชีอยู่แล้วใช่ไหม? 
+                <a href="#" id="show-login" class="text-indigo-400 hover:text-indigo-300 font-medium transition">กลับไปหน้าเข้าสู่ระบบ</a>
+            </div>
+        </form>
+
+    </div>
+
+    <script>
+        const loginFormDOM = document.getElementById('login-form');
+        const registerFormDOM = document.getElementById('register-form');
+        const showRegisterBtn = document.getElementById('show-register');
+        const showLoginBtn = document.getElementById('show-login');
+        const formTitle = document.getElementById('form-title');
+        const formSubtitle = document.getElementById('form-subtitle');
+
+        showRegisterBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginFormDOM.classList.add('hidden');
+            registerFormDOM.classList.remove('hidden');
+            formTitle.textContent = 'สมัครสมาชิก DOSH';
+            formSubtitle.textContent = 'กรอกข้อมูลเพื่อเข้าร่วมพื้นที่ทำงานและไลฟ์สไตล์';
+        });
+
+        showLoginBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            registerFormDOM.classList.add('hidden');
+            loginFormDOM.classList.remove('hidden');
+            formTitle.textContent = 'เข้าสู่ระบบ DOSH';
+            formSubtitle.textContent = 'ยินดีต้อนรับกลับเข้าสู่พื้นที่ทำงาน';
+        });
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I",
+            authDomain: "apoko-hq.firebaseapp.com",
+            projectId: "apoko-hq",
+            storageBucket: "apoko-hq.firebasestorage.app",
+            messagingSenderId: "122632343459",
+            appId: "1:122632343459:web:c225aaff8464f1b0c35416"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // ระบบสมัครสมาชิก (Register)
+        const registerForm = document.getElementById('register-form');
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault(); 
+            
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const username = document.getElementById('reg-username').value;
+            const role = document.getElementById('reg-role').value;
+
+            createUserWithEmailAndPassword(auth, email, password)
+                .then(async (userCredential) => {
+                    const user = userCredential.user;
+                    await updateProfile(user, { displayName: username });
+                    await setDoc(doc(db, "users", user.uid), {
+                        username: username,
+                        email: email,
+                        role: role,
+                        status: 'online'
+                    });
+
+                    alert("สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ " + username);
+                    window.location.href = "app.html"; // 🌟 พาไปหน้า SPA
+                })
+                .catch((error) => {
+                    alert("เกิดข้อผิดพลาด: " + error.message);
+                });
+        });
+
+        // ระบบเข้าสู่ระบบ (Login)
+        const loginForm = document.getElementById('login-form');
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    window.location.href = "app.html"; // 🌟 พาไปหน้า SPA
+                })
+                .catch((error) => {
+                    alert("อีเมล หรือ รหัสผ่าน ไม่ถูกต้อง!");
+                });
+        });
+    </script>
+</body>
+</html>

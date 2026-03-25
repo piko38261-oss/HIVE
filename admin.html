@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - DOSH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 md:p-8 font-sans">
+    
+    <div class="max-w-5xl mx-auto bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-700">
+        
+        <div class="bg-gray-900 p-6 border-b border-gray-700 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-red-400 flex items-center"><span class="mr-2">🛡️</span> ระบบจัดการสมาชิก (Admin Panel)</h1>
+                <p class="text-gray-400 text-sm mt-1">จัดการรายชื่อ เปลี่ยนสายงาน และดูแลความเรียบร้อยของ DOSH</p>
+            </div>
+            <a href="app.html" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition text-sm font-medium">
+                กลับหน้าหลัก
+            </a>
+        </div>
+
+        <div class="p-6 overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-900 text-gray-400 text-sm uppercase tracking-wider">
+                        <th class="p-4 rounded-tl-lg">โปรไฟล์</th>
+                        <th class="p-4">ชื่อผู้ใช้ (Username)</th>
+                        <th class="p-4">อีเมล (Email)</th>
+                        <th class="p-4">สายงานปัจจุบัน (Role)</th>
+                        <th class="p-4 rounded-tr-lg text-center">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-user-list" class="divide-y divide-gray-700">
+                    <tr><td colspan="5" class="p-4 text-center text-gray-500">กำลังโหลดข้อมูล...</td></tr>
+                </tbody>
+            </table >
+        </div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        // 🚨 นำเข้า deleteDoc มาใช้งาน เพื่อลบผู้ใช้ 🚨
+        import { getFirestore, collection, onSnapshot, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I",
+            authDomain: "apoko-hq.firebaseapp.com",
+            projectId: "apoko-hq",
+            storageBucket: "apoko-hq.firebasestorage.app",
+            messagingSenderId: "122632343459",
+            appId: "1:122632343459:web:c225aaff8464f1b0c35416"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const userListDOM = document.getElementById('admin-user-list');
+        let myCurrentId = null; // เก็บไอดีแอดมินตัวเอง ป้องกันเตะตัวเอง
+
+        // 1. ตรวจสอบสิทธิ์ (ต้องเป็น Admin เท่านั้น)
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                myCurrentId = user.uid; // จำไอดีตัวเองไว้
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    const myRole = userDoc.data().role;
+                    if (myRole !== 'Admin') {
+                        alert("⛔ คุณไม่มีสิทธิ์เข้าถึงหน้านี้! (เฉพาะ Admin เท่านั้น)");
+                        window.location.href = "app.html"; 
+                    } else {
+                        loadAllUsers(); // โหลดรายชื่อลูกทีม
+                    }
+                }
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        // 2. ฟังก์ชันโหลดรายชื่อสมาชิกทั้งหมด
+        function loadAllUsers() {
+            onSnapshot(collection(db, "users"), (snapshot) => {
+                userListDOM.innerHTML = ''; 
+                
+                snapshot.forEach((docSnap) => {
+                    const userData = docSnap.data();
+                    const userId = docSnap.id;
+                    const userName = userData.username || 'Unknown';
+                    const email = userData.email || 'ไม่มีอีเมล';
+                    const currentRole = userData.role || 'Member';
+                    const avatarUrl = userData.photoURL || `https://ui-avatars.com/api/?name=${userName}&background=4f46e5&color=fff&rounded=true&bold=true`;
+                    
+                    const isBanned = currentRole === 'Banned';
+                    
+                    // ป้องกันไม่ให้แอดมินเตะตัวเอง
+                    const kickButtonDisabled = userId === myCurrentId ? 'hidden' : ''; 
+
+                    const row = `
+                        <tr class="hover:bg-gray-800/50 transition ${isBanned ? 'opacity-50 bg-red-900/10' : ''}">
+                            <td class="p-4">
+                                <img src="${avatarUrl}" class="w-10 h-10 rounded-full object-cover border border-gray-600">
+                            </td>
+                            <td class="p-4 font-medium ${isBanned ? 'line-through text-red-400' : 'text-gray-200'}">${userName}</td>
+                            <td class="p-4 text-sm text-gray-400">${email}</td>
+                            <td class="p-4">
+                                <select id="role-${userId}" class="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm text-gray-300 focus:border-indigo-500 outline-none">
+                                    <option value="Admin" ${currentRole === 'Admin' ? 'selected' : ''}>👑 Admin</option>
+                                    <option value="Dev (นักพัฒนา)" ${currentRole === 'Dev (นักพัฒนา)' ? 'selected' : ''}>💻 Dev</option>
+                                    <option value="Design (ออกแบบ)" ${currentRole === 'Design (ออกแบบ)' ? 'selected' : ''}>🎨 Design</option>
+                                    <option value="Video (ตัดต่อวีดีโอ)" ${currentRole === 'Video (ตัดต่อวีดีโอ)' ? 'selected' : ''}>🎬 Video</option>
+                                    <option value="Music (เสียงและดนตรี)" ${currentRole === 'Music (เสียงและดนตรี)' ? 'selected' : ''}>🎵 Music</option>
+                                    <option value="Member" ${currentRole === 'Member' ? 'selected' : ''}>🎮 Member</option>
+                                    <option value="Banned" ${currentRole === 'Banned' ? 'selected' : ''}>⛔ Banned (แบน)</option>
+                                </select>
+                            </td>
+                            <td class="p-4 text-center flex justify-center space-x-2">
+                                <button onclick="updateUserRole('${userId}')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded text-sm font-medium transition">
+                                    บันทึก
+                                </button>
+                                <button onclick="kickUser('${userId}', '${userName}')" class="${kickButtonDisabled} bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded text-sm font-medium transition flex items-center" title="เตะออกจากทีม">
+                                    🥾 เตะออก
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    userListDOM.insertAdjacentHTML('beforeend', row);
+                });
+            });
+        }
+
+        // 3. ฟังก์ชันอัปเดตสิทธิ์ (บันทึกตำแหน่ง)
+        window.updateUserRole = async function(targetUserId) {
+            const newRole = document.getElementById(`role-${targetUserId}`).value;
+            try {
+                await updateDoc(doc(db, "users", targetUserId), { role: newRole });
+                alert("อัปเดตตำแหน่งสำเร็จ! ✅");
+            } catch (error) {
+                console.error(error);
+                alert("เกิดข้อผิดพลาดในการอัปเดต");
+            }
+        };
+
+        // 🚨 4. ฟังก์ชันเตะสมาชิก (ลบข้อมูลทิ้ง) 🚨
+        window.kickUser = async function(targetUserId, targetUserName) {
+            // เด้งถามเพื่อความชัวร์ ป้องกันกดผิด
+            const confirmKick = confirm(`คุณแน่ใจหรือไม่ว่าต้องการเตะ '${targetUserName}' ออกจาก DOSH?\n(การกระทำนี้จะลบชื่อเขาออกจากแถบสมาชิกทันที!)`);
+            
+            if (confirmKick) {
+                try {
+                    // ใช้คำสั่งลบ Document ออกจาก Database ของเรา
+                    await deleteDoc(doc(db, "users", targetUserId));
+                    alert(`🥾 เตะ ${targetUserName} ออกจากทีมเรียบร้อยแล้ว!`);
+                } catch (error) {
+                    console.error(error);
+                    alert("เกิดข้อผิดพลาดในการเตะผู้ใช้ ลองใหม่อีกครั้ง");
+                }
+            }
+        };
+
+    </script>
+</body>
+</html>
