@@ -1,9 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // ==========================================
-// 🚨 1. ตั้งค่า Firebase & Agora & ImgBB
+// 🚨 1. ตั้งค่า Firebase & API ต่างๆ
 // ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I",
@@ -13,19 +13,38 @@ const firebaseConfig = {
     messagingSenderId: "122632343459",
     appId: "1:122632343459:web:c225aaff8464f1b0c35416"
 };
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a"; 
-const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
+const app = initializeApp(firebaseConfig); const auth = getAuth(app); const db = getFirestore(app);
+const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a"; const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
 
 const rtcClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-let localTracks = { audioTrack: null };
-let screenTrack = null;
-let screenAudioTrack = null;
-let isMuted = false, isSharingScreen = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general"; 
+let localTracks = { audioTrack: null }, screenTrack = null, screenAudioTrack = null;
+let isMuted = false, isSharingScreen = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general", currentUserRole = "Member"; 
 let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false;
+
+// 🎵 เสียงแจ้งเตือน (SFX)
+const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+sfxMsg.volume = 0.5;
+
+// ขออนุญาตแจ้งเตือน (Notification) เมื่อคลิกหน้าจอครั้งแรก
+document.body.addEventListener('click', () => {
+    if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
+}, { once: true });
+
+// 🔍 สร้างระบบ Lightbox (ซูมรูปภาพ) ฝังเข้าไปในหน้าเว็บแบบไดนามิก
+const lightbox = document.createElement('div');
+lightbox.className = 'fixed inset-0 bg-black/95 z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 cursor-zoom-out p-4';
+lightbox.innerHTML = `<img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl scale-95 transition-transform duration-300"><button class="absolute top-6 right-6 text-white hover:text-gray-300 transition"><i class="ph ph-x text-[32px]"></i></button>`;
+document.body.appendChild(lightbox);
+
+window.openLightbox = (url) => {
+    document.getElementById('lightbox-img').src = url;
+    lightbox.classList.remove('hidden'); void lightbox.offsetWidth; // Reflow
+    lightbox.classList.remove('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-95', 'scale-100');
+};
+lightbox.onclick = () => {
+    lightbox.classList.add('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-100', 'scale-95');
+    setTimeout(() => lightbox.classList.add('hidden'), 300);
+};
 
 // ==========================================
 // 🌟 2. ระบบ Navigation & UI
@@ -42,23 +61,18 @@ overlay.onclick = () => { sidebar.classList.remove('open'); membersSidebar.class
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.onclick = (e) => {
         e.preventDefault(); const view = btn.getAttribute('data-view'); if(!view) return; 
-        
         if (isTyping && currentUserId) { isTyping = false; clearTimeout(typingTimeout); updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }
-        
         document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#e4e5e7]'); b.classList.add('channel-inactive', 'text-[#80848e]'); });
         btn.classList.remove('channel-inactive', 'text-[#80848e]'); btn.classList.add('channel-active', 'text-[#e4e5e7]');
-        
         Object.values(views).forEach(v => v.classList.add('hidden')); views[view].classList.remove('hidden');
-        
         if (view === 'chat' || view === 'voice') { membersSidebar.classList.remove('hidden', 'md:hidden'); if (view === 'chat') { activeChannel = btn.getAttribute('data-channel'); document.getElementById('chat-header-title').textContent = btn.getAttribute('data-name'); renderMessages(); } } else { membersSidebar.classList.add('hidden', 'md:hidden'); }
-        
         if (view === 'whiteboard') setTimeout(initCanvasSize, 100);
         sidebar.classList.remove('open'); overlay.classList.remove('active');
     };
 });
 
 // ==========================================
-// 🟢 3. โหลดผู้ใช้งาน, สถานะ Typing & LIVE
+// 🟢 3. โหลดรายชื่อผู้ใช้งาน
 // ==========================================
 onSnapshot(collection(db, "users"), (snapshot) => {
     const membersList = document.getElementById('members-list'), voiceActiveList = document.getElementById('voice-active-users'), voiceGrid = document.getElementById('voice-grid'), typingIndicator = document.getElementById('typing-indicator');
@@ -69,7 +83,6 @@ onSnapshot(collection(db, "users"), (snapshot) => {
         const u = docSnap.data(), id = docSnap.id, userName = u.username || 'Unknown';
         const userAvatar = u.photoURL || `https://ui-avatars.com/api/?name=${userName}&background=5865F2&color=fff&rounded=true&bold=true`;
         usersData[userName] = { avatar: userAvatar, id: id, agoraUid: u.agoraUid }; 
-        
         if (u.isTyping && u.typingChannel === activeChannel && id !== currentUserId) peopleTyping.push(userName);
 
         const isOnline = u.status === 'online', statusColor = isOnline ? 'bg-[#23a559]' : 'bg-[#5c6069]';
@@ -77,36 +90,24 @@ onSnapshot(collection(db, "users"), (snapshot) => {
         const nameStyle = u.role === 'Banned' ? 'line-through text-[#da373c]' : (isOnline ? 'text-[#d1d3d6]' : 'text-[#6d717a]');
         const muteIconSmall = u.isMuted ? '<i class="ph-fill ph-microphone-slash text-[#da373c] ml-auto text-[14px]"></i>' : '';
         const muteIconLarge = u.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#151619] rounded-full p-1.5 border-2 border-[#0e0f11] shadow-sm flex items-center justify-center"><i class="ph-fill ph-microphone-slash text-[#da373c] text-[14px]"></i></div>' : '';
-        const screenBadgeSmall = u.isSharingScreen ? '<span class="ml-2 text-[9px] bg-[#5865F2] text-white px-1.5 py-0.5 rounded flex items-center font-bold tracking-wider" title="กำลังแชร์จอ"><i class="ph-fill ph-screencast mr-1"></i>LIVE</span>' : '';
+        const screenBadgeSmall = u.isSharingScreen ? '<span class="ml-2 text-[9px] bg-[#5865F2] text-white px-1.5 py-0.5 rounded flex items-center font-bold tracking-wider"><i class="ph-fill ph-screencast mr-1"></i>LIVE</span>' : '';
         const screenBadgeGrid = u.isSharingScreen ? '<div class="absolute top-0 right-0 bg-[#5865F2] text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl flex items-center animate-pulse"><i class="ph-fill ph-screencast mr-1"></i>LIVE</div>' : '';
 
-        membersList.insertAdjacentHTML('beforeend', `<div class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#1c1d21] hover:text-[#e4e5e7] transition group ${!isOnline ? 'opacity-50' : ''}"><div class="relative flex-shrink-0"><img id="img-avatar-${id}" src="${userAvatar}" class="w-8 h-8 rounded-full object-cover transition-all duration-200 opacity-90"><div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619]"></div></div><div class="overflow-hidden flex-1 flex items-center"><p class="text-[14px] font-medium truncate ${nameStyle}">${userName} ${roleDisplay}</p></div></div>`);
-
-        if (u.inVoice && voiceActiveList) voiceActiveList.insertAdjacentHTML('beforeend', `<div class="flex items-center space-x-2.5 text-[13px] text-[#80848e] py-1 px-2 hover:bg-[#1c1d21] hover:text-[#dbdee1] rounded-md transition group cursor-pointer ml-2"><div class="relative flex-shrink-0"><img id="img-sidebar-voice-${id}" src="${userAvatar}" class="w-6 h-6 rounded-full object-cover transition-all duration-200 opacity-90"></div><span class="truncate font-medium flex-1 flex items-center">${userName} ${screenBadgeSmall}</span>${muteIconSmall}</div>`);
-
-        if (u.inVoice) {
-            usersInVoiceCount++;
-            voiceGridHTML += `<div class="bg-[#151619] rounded-xl p-4 md:p-6 flex flex-col items-center justify-center relative shadow-lg border border-[#1e1f22] hover:border-[#3f4147] transition duration-300 h-auto min-h-[130px] md:min-h-[160px] group animate-[fadeIn_0.3s_ease-out]">${screenBadgeGrid}<div class="relative mb-2 md:mb-4 flex-shrink-0"><img id="img-grid-voice-${id}" src="${userAvatar}" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover bg-gray-900 border-[3px] border-transparent transition-all duration-300 shadow-md opacity-95">${muteIconLarge}</div><p class="font-bold text-[#e4e5e7] text-[13px] md:text-[15px] truncate w-full text-center mt-auto flex items-center justify-center">${userName}</p></div>`;
-        }
+        membersList.insertAdjacentHTML('beforeend', `<div class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#1c1d21] hover:text-[#e4e5e7] transition group ${!isOnline ? 'opacity-50' : ''}"><div class="relative flex-shrink-0"><img id="img-avatar-${id}" src="${userAvatar}" class="w-8 h-8 rounded-full object-cover opacity-90"><div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619]"></div></div><div class="overflow-hidden flex-1 flex items-center"><p class="text-[14px] font-medium truncate ${nameStyle}">${userName} ${roleDisplay}</p></div></div>`);
+        if (u.inVoice && voiceActiveList) voiceActiveList.insertAdjacentHTML('beforeend', `<div class="flex items-center space-x-2.5 text-[13px] text-[#80848e] py-1 px-2 hover:bg-[#1c1d21] hover:text-[#dbdee1] rounded-md transition cursor-pointer ml-2"><div class="relative flex-shrink-0"><img id="img-sidebar-voice-${id}" src="${userAvatar}" class="w-6 h-6 rounded-full object-cover opacity-90"></div><span class="truncate font-medium flex-1 flex items-center">${userName} ${screenBadgeSmall}</span>${muteIconSmall}</div>`);
+        if (u.inVoice) { usersInVoiceCount++; voiceGridHTML += `<div class="bg-[#151619] rounded-xl p-4 md:p-6 flex flex-col items-center justify-center relative shadow-lg border border-[#1e1f22] h-auto min-h-[130px] animate-[fadeIn_0.3s_ease-out]">${screenBadgeGrid}<div class="relative mb-2 flex-shrink-0"><img id="img-grid-voice-${id}" src="${userAvatar}" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover bg-gray-900 border-[3px] border-transparent shadow-md">${muteIconLarge}</div><p class="font-bold text-[#e4e5e7] text-[13px] md:text-[15px] truncate w-full text-center mt-auto">${userName}</p></div>`; }
     });
 
     if (typingIndicator) { if (peopleTyping.length > 0) { typingIndicator.innerHTML = `<i class="ph-fill ph-chat-teardrop-dots mr-1.5 animate-bounce"></i> ${peopleTyping.join(', ')} กำลังพิมพ์ข้อความ...`; typingIndicator.classList.remove('opacity-0'); } else { typingIndicator.classList.add('opacity-0'); } }
-
-    if (voiceGrid) { if (usersInVoiceCount > 0) { voiceGrid.innerHTML = voiceGridHTML; } else { voiceGrid.innerHTML = `<div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]"><div class="w-20 h-20 md:w-24 md:h-24 bg-[#151619] rounded-full flex items-center justify-center mb-4 md:mb-5 shadow-inner border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] md:text-[48px] opacity-40"></i></div><p class="font-bold text-base md:text-lg text-[#949ba4] text-center">ไม่มีใครอยู่ในห้องเสียง</p><p class="text-xs md:text-sm mt-1 text-center px-4">กดเชื่อมต่อด้านล่างเพื่อปลุกห้องนี้ให้ตื่น!</p></div>`; } }
+    if (voiceGrid) { if (usersInVoiceCount > 0) { voiceGrid.innerHTML = voiceGridHTML; } else { voiceGrid.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a]"><div class="w-20 h-20 md:w-24 md:h-24 bg-[#151619] rounded-full flex items-center justify-center mb-4 border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] opacity-40"></i></div><p class="font-bold text-base text-[#949ba4]">ไม่มีใครอยู่ในห้องเสียง</p></div>`; } }
     renderMessages();
 });
 
 // ==========================================
-// 🎨 4. Settings (อัปโหลดรูปภาพโปรไฟล์)
+// 🎨 4. ตั้งค่ารูปโปรไฟล์ 
 // ==========================================
 const settingsModal = document.getElementById('settings-modal'), avatarInput = document.getElementById('settings-avatar-input'), statusTxt = document.getElementById('settings-status');
-
-document.getElementById('open-settings-btn').onclick = document.getElementById('mini-profile-btn').onclick = (e) => { 
-    e.preventDefault(); 
-    document.getElementById('settings-avatar-preview').src = document.getElementById('current-user-avatar').src; 
-    document.getElementById('settings-username-display').textContent = currentUsername; 
-    settingsModal.classList.remove('hidden'); sidebar.classList.remove('open'); overlay.classList.remove('active'); 
-};
+document.getElementById('open-settings-btn').onclick = document.getElementById('mini-profile-btn').onclick = (e) => { e.preventDefault(); document.getElementById('settings-avatar-preview').src = document.getElementById('current-user-avatar').src; document.getElementById('settings-username-display').textContent = currentUsername; settingsModal.classList.remove('hidden'); sidebar.classList.remove('open'); overlay.classList.remove('active'); };
 document.getElementById('close-settings-btn').onclick = () => { settingsModal.classList.add('hidden'); statusTxt.textContent = ""; };
 document.getElementById('settings-avatar-wrapper').onclick = () => avatarInput.click();
 
@@ -114,25 +115,7 @@ avatarInput.onchange = async (e) => {
     const f = e.target.files[0]; if(!f) return;
     statusTxt.className = "text-yellow-500 text-[12px] font-medium h-4 transition-all"; statusTxt.textContent = "กำลังอัปโหลดรูปภาพ... ⏳";
     document.getElementById('settings-avatar-wrapper').classList.add('opacity-50', 'pointer-events-none');
-    
-    try { 
-        const fd = new FormData(); fd.append("image", f); 
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); 
-        const r = await res.json(); 
-        
-        if (r.success) { 
-            await updateProfile(auth.currentUser, { photoURL: r.data.url }); 
-            await updateDoc(doc(db, "users", currentUserId), { photoURL: r.data.url }); 
-            document.getElementById('settings-avatar-preview').src = r.data.url; 
-            document.getElementById('current-user-avatar').src = r.data.url; 
-            statusTxt.className = "text-[#23a559] text-[12px] font-medium h-4 transition-all"; statusTxt.textContent = "เปลี่ยนรูปโปรไฟล์สำเร็จ! ✅"; 
-            setTimeout(() => statusTxt.textContent = "", 3000); 
-        } 
-    } catch(err) { 
-        statusTxt.className = "text-[#da373c] text-[12px] font-medium h-4 transition-all"; statusTxt.textContent = "เกิดข้อผิดพลาดในการอัปโหลด ❌"; 
-    } finally { 
-        document.getElementById('settings-avatar-wrapper').classList.remove('opacity-50', 'pointer-events-none'); avatarInput.value = ""; 
-    }
+    try { const fd = new FormData(); fd.append("image", f); const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const r = await res.json(); if (r.success) { await updateProfile(auth.currentUser, { photoURL: r.data.url }); await updateDoc(doc(db, "users", currentUserId), { photoURL: r.data.url }); document.getElementById('settings-avatar-preview').src = r.data.url; document.getElementById('current-user-avatar').src = r.data.url; statusTxt.className = "text-[#23a559] text-[12px] font-medium h-4 transition-all"; statusTxt.textContent = "เปลี่ยนรูปโปรไฟล์สำเร็จ! ✅"; setTimeout(() => statusTxt.textContent = "", 3000); } } catch(err) { statusTxt.className = "text-[#da373c] text-[12px] font-medium h-4 transition-all"; statusTxt.textContent = "เกิดข้อผิดพลาดในการอัปโหลด ❌"; } finally { document.getElementById('settings-avatar-wrapper').classList.remove('opacity-50', 'pointer-events-none'); avatarInput.value = ""; }
 };
 
 // ==========================================
@@ -144,57 +127,53 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('current-user-name').textContent = currentUsername;
         document.getElementById('current-user-avatar').src = user.photoURL || `https://ui-avatars.com/api/?name=${currentUsername}&background=5865F2&color=fff&rounded=true&bold=true`;
         
-        try { const userDoc = await getDoc(doc(db, "users", currentUserId)); if (userDoc.exists() && userDoc.data().role === 'Admin') document.getElementById('admin-menu-btn').classList.remove('hidden'); } catch (err) {}
+        try { const userDoc = await getDoc(doc(db, "users", currentUserId)); if (userDoc.exists()) { currentUserRole = userDoc.data().role; if (currentUserRole === 'Admin') document.getElementById('admin-menu-btn').classList.remove('hidden'); } } catch (err) {}
         
         const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
-        if (wasInVoice) { 
-            await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e)); 
-            setTimeout(() => { 
-                joinVoice(); 
-                document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#e4e5e7]'); b.classList.add('channel-inactive', 'text-[#80848e]'); if (b.getAttribute('data-view') === 'voice') { b.classList.remove('channel-inactive', 'text-[#80848e]'); b.classList.add('channel-active', 'text-[#e4e5e7]'); } }); 
-                Object.values(views).forEach(v => v.classList.add('hidden')); views['voice'].classList.remove('hidden'); membersSidebar.classList.remove('hidden', 'md:hidden'); 
-            }, 1500); 
-        } else { 
-            await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }).catch(e=>console.log(e)); 
-        }
+        if (wasInVoice) { await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e)); setTimeout(() => { joinVoice(); document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#e4e5e7]'); b.classList.add('channel-inactive', 'text-[#80848e]'); if (b.getAttribute('data-view') === 'voice') { b.classList.remove('channel-inactive', 'text-[#80848e]'); b.classList.add('channel-active', 'text-[#e4e5e7]'); } }); Object.values(views).forEach(v => v.classList.add('hidden')); views['voice'].classList.remove('hidden'); membersSidebar.classList.remove('hidden', 'md:hidden'); }, 1500); } else { await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }).catch(e=>console.log(e)); }
     } else { window.location.href = "index.html"; }
 });
 
-document.getElementById('logout-btn').addEventListener('click', async () => { 
-    if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } catch (e) {} } 
-    localStorage.removeItem('dosh_active_voice'); if (localTracks.audioTrack) { await leaveVoice(); } signOut(auth); 
-});
-
-window.addEventListener('beforeunload', () => { 
-    if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { 
-        updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); 
-    } 
-});
+document.getElementById('logout-btn').addEventListener('click', async () => { if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } catch (e) {} } localStorage.removeItem('dosh_active_voice'); if (localTracks.audioTrack) { await leaveVoice(); } signOut(auth); });
+window.addEventListener('beforeunload', () => { if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } });
 
 // ==========================================
-// 💬 6. ระบบแชท & Message Reactions
+// 💬 6. ระบบแชท + แจ้งเตือน + รีแอคชั่น
 // ==========================================
 const chatInput = document.getElementById('chat-input');
-chatInput.addEventListener('input', () => { 
-    if (!currentUserId) return; 
-    if (!isTyping) { isTyping = true; updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel }); } 
-    clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }, 2000); 
-});
+chatInput.addEventListener('input', () => { if (!currentUserId) return; if (!isTyping) { isTyping = true; updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel }); } clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }, 2000); });
 
+// ลบแชทจากหน้าแอป (เฉพาะ Admin)
+window.deleteChatMsg = async (msgId) => { if(confirm('🗑️ ยืนยันการลบข้อความนี้ใช่ไหม? (แอดมินลบได้เท่านั้น)')) await deleteDoc(doc(db, "messages", msgId)); };
+
+let isInitialLoad = true;
 onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => { 
-    allMessages = []; snapshot.forEach((docSnap) => { allMessages.push({ id: docSnap.id, ...docSnap.data() }); }); renderMessages(); 
+    allMessages = []; 
+    snapshot.forEach((docSnap) => { allMessages.push({ id: docSnap.id, ...docSnap.data() }); }); 
+    renderMessages(); 
+
+    // 🔔 ระบบ Notification & Sound (ดักจับข้อความใหม่ที่เพิ่งเข้ามา)
+    if (!isInitialLoad) {
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added") {
+                const m = change.doc.data();
+                if (m.senderName !== currentUsername && m.channel === activeChannel) {
+                    sfxMsg.play().catch(()=>{}); // เล่นเสียงติ๊ง!
+                    if ("Notification" in window && Notification.permission === "granted" && document.hidden) {
+                        new Notification(`💬 DOSH: ข้อความใหม่จาก ${m.senderName}`, {
+                            body: m.text || "ส่งรูปภาพ 🖼️", icon: usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}`
+                        });
+                    }
+                }
+            }
+        });
+    }
+    isInitialLoad = false;
 });
 
 window.toggleReaction = async (msgId, emoji) => {
-    if (!currentUserId) return;
-    const msgRef = doc(db, "messages", msgId);
-    const msgDoc = await getDoc(msgRef);
-    if (!msgDoc.exists()) return;
-    
-    const data = msgDoc.data();
-    let reactions = data.reactions || {};
-    let usersReacted = reactions[emoji] || [];
-    
+    if (!currentUserId) return; const msgRef = doc(db, "messages", msgId); const msgDoc = await getDoc(msgRef); if (!msgDoc.exists()) return;
+    const data = msgDoc.data(); let reactions = data.reactions || {}; let usersReacted = reactions[emoji] || [];
     if (usersReacted.includes(currentUserId)) { usersReacted = usersReacted.filter(id => id !== currentUserId); } else { usersReacted.push(currentUserId); }
     if (usersReacted.length === 0) { delete reactions[emoji]; } else { reactions[emoji] = usersReacted; }
     await updateDoc(msgRef, { reactions: reactions });
@@ -203,21 +182,22 @@ window.toggleReaction = async (msgId, emoji) => {
 function renderMessages() {
     const chatContainer = document.getElementById('chat-container'); chatContainer.innerHTML = ''; 
     const filteredMessages = allMessages.filter(msg => msg.channel === activeChannel);
-    if(filteredMessages.length === 0) return chatContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-[#6d717a] animate-[fadeIn_0.4s_ease-out]"><div class="w-14 h-14 md:w-16 md:h-16 bg-[#151619] rounded-full flex items-center justify-center mb-3 md:mb-4 border border-[#1e1f22]"><i class="ph ph-chat-teardrop-dots text-[28px] md:text-[36px] opacity-70"></i></div><p class="font-bold text-base md:text-lg text-[#949ba4]">ยินดีต้อนรับสู่ #${activeChannel === 'general' ? 'ประกาศทั่วไป' : 'อัปเดตงานโปรเจกต์'}</p><p class="text-xs md:text-sm mt-1 text-center">นี่คือจุดเริ่มต้นของช่องนี้ เขียนทักทายทีมของคุณได้เลย</p></div>`;
-    let lastSender = null; 
+    if(filteredMessages.length === 0) return chatContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-[#6d717a]"><div class="w-14 h-14 bg-[#151619] rounded-full flex items-center justify-center mb-3"><i class="ph ph-chat-teardrop-dots text-[28px]"></i></div><p class="font-bold text-base">เริ่มพิมพ์ข้อความทักทายได้เลย!</p></div>`;
     
+    let lastSender = null; 
     filteredMessages.forEach((m) => {
         let timeString = m.timestamp ? m.timestamp.toDate().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : "...";
         let msgAvatarUrl = usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}&background=5865F2&color=fff&rounded=true&bold=true`;
-        let contentHTML = m.text ? `<p class="text-[#d1d3d6] mt-0.5 leading-relaxed text-[14px] md:text-[15px]">${m.text}</p>` : '';
-        if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" onload="document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;" class="mt-2 rounded-lg max-w-[80%] md:max-w-sm shadow-sm cursor-pointer hover:opacity-80 transition">`;
+        
+        let contentHTML = m.text ? `<p class="text-[#d1d3d6] mt-0.5 leading-relaxed text-[14px]">${m.text}</p>` : '';
+        // 🔍 ภาพในแชทคลิกเพื่อเปิด Lightbox ได้แล้ว!
+        if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" onclick="openLightbox('${m.imageUrl}')" onload="document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;" class="mt-2 rounded-lg max-w-[80%] md:max-w-sm shadow-sm cursor-zoom-in hover:opacity-80 transition">`;
         
         let reactsHTML = '';
         if (m.reactions && Object.keys(m.reactions).length > 0) {
             reactsHTML = `<div class="flex flex-wrap gap-1.5 mt-2">`;
             Object.entries(m.reactions).forEach(([emoji, usersArr]) => {
-                const count = usersArr.length;
-                const hasReacted = usersArr.includes(currentUserId);
+                const count = usersArr.length, hasReacted = usersArr.includes(currentUserId);
                 const activeStyle = hasReacted ? 'bg-[#5865F2]/20 border-[#5865F2]/50 text-[#dbdee1]' : 'bg-[#1e1f22] border-[#2b2d31] text-[#80848e] hover:bg-[#2b2d31]';
                 if (count > 0) reactsHTML += `<div class="border rounded-md px-1.5 py-0.5 text-[12px] flex items-center cursor-pointer transition ${activeStyle}" onclick="toggleReaction('${m.id}', '${emoji}')">${emoji} <span class="ml-1 font-bold ${hasReacted ? 'text-[#5865F2]' : ''}">${count}</span></div>`;
             });
@@ -225,11 +205,13 @@ function renderMessages() {
         }
 
         const reactBarUI = `<div class="reaction-bar absolute -top-4 right-4 bg-[#151619] border border-[#1e1f22] rounded-lg p-1 shadow-xl flex items-center space-x-1 z-20"><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '👍')">👍</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '❤️')">❤️</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '😂')">😂</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '🔥')">🔥</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '😮')">😮</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '✅')">✅</button></div>`;
+        // 🗑️ ปุ่มลบข้อความเฉพาะ Admin (ซ่อน System Bot)
+        const deleteAdminUI = (currentUserRole === 'Admin' && m.senderName !== "🤖 System Bot") ? `<button onclick="deleteChatMsg('${m.id}')" class="absolute top-2 right-2 text-[#da373c] opacity-0 group-hover:opacity-100 transition p-1 hover:bg-[#da373c]/20 rounded"><i class="ph-fill ph-trash text-[16px]"></i></button>` : '';
 
         if (lastSender === m.senderName) {
-            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-1 -mx-2 md:-mx-4 group transition duration-150 msg-enter relative"><div class="w-8 md:w-10 flex-shrink-0 text-right"><span class="text-[9px] md:text-[10px] text-[#5c6069] opacity-0 group-hover:opacity-100 transition leading-relaxed">${timeString}</span></div><div class="min-w-0 flex-1 pb-1">${contentHTML}${reactsHTML}</div>${reactBarUI}</div>`);
+            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-1 -mx-2 md:-mx-4 group transition duration-150 relative"><div class="w-8 md:w-10 flex-shrink-0 text-right"><span class="text-[9px] md:text-[10px] text-[#5c6069] opacity-0 group-hover:opacity-100 transition leading-relaxed">${timeString}</span></div><div class="min-w-0 flex-1 pb-1">${contentHTML}${reactsHTML}</div>${reactBarUI}${deleteAdminUI}</div>`);
         } else {
-            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-2 mt-4 -mx-2 md:-mx-4 group transition duration-150 msg-enter relative"><img src="${msgAvatarUrl}" class="w-8 h-8 md:w-10 md:h-10 rounded-full flex-shrink-0 object-cover cursor-pointer hover:opacity-80 transition opacity-95"><div class="min-w-0 flex-1 pb-1"><div class="flex items-baseline space-x-2"><span class="font-medium text-[14px] md:text-[15px] hover:underline cursor-pointer text-[#e4e5e7] tracking-wide">${m.senderName}</span><span class="text-[10px] md:text-[11px] text-[#6d717a]">${timeString}</span></div>${contentHTML}${reactsHTML}</div>${reactBarUI}</div>`);
+            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-2 mt-4 -mx-2 md:-mx-4 group transition duration-150 relative"><img src="${msgAvatarUrl}" class="w-8 h-8 md:w-10 md:h-10 rounded-full flex-shrink-0 object-cover opacity-95"><div class="min-w-0 flex-1 pb-1"><div class="flex items-baseline space-x-2"><span class="font-medium text-[14px] md:text-[15px] text-[#e4e5e7] tracking-wide">${m.senderName}</span><span class="text-[10px] md:text-[11px] text-[#6d717a]">${timeString}</span></div>${contentHTML}${reactsHTML}</div>${reactBarUI}${deleteAdminUI}</div>`);
         }
         lastSender = m.senderName;
     });
