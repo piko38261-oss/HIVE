@@ -600,7 +600,7 @@
         });
 
         // ==========================================
-        // 🎙️ 5. ระบบห้องคุยเสียง (Voice & Screen Share)
+        // 🎙️ 5. ระบบห้องคุยเสียง (Voice & Screen Share แก้บั๊กจอดำ)
         // ==========================================
         const joinBtn = document.getElementById('join-voice-btn');
         const leaveBtn = document.getElementById('leave-voice-btn');
@@ -613,46 +613,8 @@
             try {
                 joinBtn.innerHTML = "กำลังเชื่อมต่อ...";
                 myNumericUid = Math.floor(Math.random() * 1000000); 
-                await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid);
                 
-                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
-                    AEC: true,
-                    ANS: true,
-                    AGC: true
-                });
-                
-                await rtcClient.publish(localTracks.audioTrack);
-                
-                isMuted = false;
-                await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false });
-                localStorage.setItem('dosh_active_voice', 'true');
-
-                joinBtn.classList.add('hidden');
-                activeVoiceUI.classList.remove('hidden');
-                muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]');
-                document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]";
-
-                rtcClient.enableAudioVolumeIndicator();
-                rtcClient.on("volume-indicator", volumes => {
-                    document.querySelectorAll('.speaking-ring').forEach(img => img.classList.remove('speaking-ring'));
-                    volumes.forEach(volume => {
-                        if (volume.level > 10) { 
-                            let speakingUserId = null;
-                            if (volume.uid === myNumericUid || volume.uid === 0) { speakingUserId = currentUserId; } 
-                            else { for (const key in usersData) { if (usersData[key].agoraUid === volume.uid) { speakingUserId = usersData[key].id; break; } } }
-
-                            if (speakingUserId) {
-                                const avatar1 = document.getElementById(`img-avatar-${speakingUserId}`);
-                                const avatar2 = document.getElementById(`img-sidebar-voice-${speakingUserId}`);
-                                const avatar3 = document.getElementById(`img-grid-voice-${speakingUserId}`);
-                                if(avatar1) avatar1.classList.add('speaking-ring');
-                                if(avatar2) avatar2.classList.add('speaking-ring');
-                                if(avatar3) avatar3.classList.add('speaking-ring');
-                            }
-                        }
-                    });
-                });
-
+                // 🌟 1. ดักฟัง Event การแชร์จอ "ก่อน" เข้าห้อง!
                 rtcClient.on("user-published", async (user, mediaType) => { 
                     await rtcClient.subscribe(user, mediaType); 
                     if (mediaType === "audio") { user.audioTrack.play(); }
@@ -680,6 +642,47 @@
                         if (screenShareStage.children.length === 0) { screenShareStage.classList.add('hidden'); }
                     }
                 });
+
+                rtcClient.enableAudioVolumeIndicator();
+                rtcClient.on("volume-indicator", volumes => {
+                    document.querySelectorAll('.speaking-ring').forEach(img => img.classList.remove('speaking-ring'));
+                    volumes.forEach(volume => {
+                        if (volume.level > 10) { 
+                            let speakingUserId = null;
+                            if (volume.uid === myNumericUid || volume.uid === 0) { speakingUserId = currentUserId; } 
+                            else { for (const key in usersData) { if (usersData[key].agoraUid === volume.uid) { speakingUserId = usersData[key].id; break; } } }
+
+                            if (speakingUserId) {
+                                const avatar1 = document.getElementById(`img-avatar-${speakingUserId}`);
+                                const avatar2 = document.getElementById(`img-sidebar-voice-${speakingUserId}`);
+                                const avatar3 = document.getElementById(`img-grid-voice-${speakingUserId}`);
+                                if(avatar1) avatar1.classList.add('speaking-ring');
+                                if(avatar2) avatar2.classList.add('speaking-ring');
+                                if(avatar3) avatar3.classList.add('speaking-ring');
+                            }
+                        }
+                    });
+                });
+
+                // 🌟 2. เข้าห้อง "หลัง" จากเปิดหูเปิดตารอแล้ว
+                await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid);
+                
+                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+                    AEC: true,
+                    ANS: true,
+                    AGC: true
+                });
+                
+                await rtcClient.publish(localTracks.audioTrack);
+                
+                isMuted = false;
+                await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false });
+                localStorage.setItem('dosh_active_voice', 'true');
+
+                joinBtn.classList.add('hidden');
+                activeVoiceUI.classList.remove('hidden');
+                muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]');
+                document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]";
 
             } catch (err) { 
                 console.error(err);
