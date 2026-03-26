@@ -78,7 +78,30 @@
         input[type="color"]::-webkit-color-swatch { border: 2px solid #2b2d31; border-radius: 6px; }
     </style>
 </head>
-<body class="bg-[#0e0f11] text-gray-300 h-[100dvh] flex overflow-hidden">
+<body class="bg-[#0e0f11] text-gray-300 h-[100dvh] flex overflow-hidden relative">
+
+    <div id="settings-modal" class="fixed inset-0 z-[60] bg-black/80 hidden flex items-center justify-center backdrop-blur-sm transition-opacity">
+        <div class="bg-[#1e1f22] w-[90%] max-w-sm rounded-2xl shadow-2xl border border-[#2b2d31] p-6 relative animate-[slideUpFade_0.3s_ease-out]">
+            <button id="close-settings-btn" class="absolute top-4 right-4 text-[#80848e] hover:text-[#e4e5e7] transition"><i class="ph ph-x text-[24px]"></i></button>
+            <h2 class="text-lg font-bold text-white mb-6 text-center tracking-wide">ตั้งค่าโปรไฟล์</h2>
+            
+            <div class="flex flex-col items-center space-y-5">
+                <div class="relative group cursor-pointer" id="settings-avatar-wrapper">
+                    <img id="settings-avatar-preview" src="" class="w-28 h-28 rounded-full object-cover border-4 border-[#2b2d31] shadow-lg transition-all duration-300 group-hover:brightness-50">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                        <i class="ph-fill ph-camera text-white text-3xl drop-shadow-md"></i>
+                        <span class="text-white text-xs font-bold mt-1 drop-shadow-md">เปลี่ยนรูป</span>
+                    </div>
+                </div>
+                <input type="file" id="settings-avatar-input" accept="image/png, image/jpeg, image/webp" class="hidden">
+                
+                <div class="text-center w-full">
+                    <p id="settings-username-display" class="text-lg font-extrabold text-[#e4e5e7] mb-1">Loading...</p>
+                    <p id="settings-status" class="text-[12px] font-medium text-[#5c6069] h-4 transition-all"></p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div id="overlay" class="overlay fixed inset-0 z-40 md:hidden"></div>
 
@@ -119,14 +142,14 @@
                 <ul class="space-y-0.5">
                     <li><a href="#" data-view="board" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center group"><i class="ph ph-kanban text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> Task Board</a></li>
                     <li><a href="#" data-view="whiteboard" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center group"><i class="ph ph-palette text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> กระดานไอเดีย</a></li>
-                    <li><a href="settings.html" class="block px-3 py-1.5 rounded-md text-[#80848e] hover:bg-[#1c1d21] hover:text-[#dbdee1] font-medium text-[15px] transition flex items-center group"><i class="ph ph-gear text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> Settings</a></li>
+                    <li><a href="#" id="open-settings-btn" class="block px-3 py-1.5 rounded-md text-[#80848e] hover:bg-[#1c1d21] hover:text-[#dbdee1] font-medium text-[15px] transition flex items-center group"><i class="ph ph-gear text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> Settings</a></li>
                     <li><a href="admin.html" id="admin-menu-btn" class="hidden block px-3 py-1.5 rounded-md text-[#da373c] hover:bg-[#da373c]/10 font-medium text-[15px] transition mt-2 flex items-center group"><i class="ph ph-shield-warning text-[20px] mr-2 transition"></i> Admin Panel</a></li>
                 </ul>
             </div>
         </nav>
 
         <div class="p-2 bg-[#0a0a0c] flex items-center justify-between border-t border-[#050506]">
-            <div class="flex items-center space-x-2.5 hover:bg-[#1a1b1e] p-1.5 rounded-md cursor-pointer transition flex-1 overflow-hidden">
+            <div class="flex items-center space-x-2.5 hover:bg-[#1a1b1e] p-1.5 rounded-md cursor-pointer transition flex-1 overflow-hidden" id="mini-profile-btn">
                 <div class="relative flex-shrink-0">
                     <img id="current-user-avatar" src="" class="w-8 h-8 rounded-full bg-gray-800 object-cover opacity-90">
                     <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#23a559] rounded-full border-[3px] border-[#0a0a0c]"></div>
@@ -158,7 +181,11 @@
             
             <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-2 relative scroll-smooth w-full"></div>
             
-            <div class="px-2 md:px-4 pb-6 md:pb-6 pt-2 bg-[#0f1013] w-full">
+            <div class="px-2 md:px-4 pb-6 md:pb-6 pt-1 bg-[#0f1013] w-full flex flex-col justify-end">
+                
+                <div id="typing-indicator" class="text-[11px] text-[#5865F2] font-medium h-5 pl-2 mb-1 flex items-center opacity-0 transition-opacity duration-200">
+                    </div>
+
                 <div class="flex items-center bg-[#1a1b1e] rounded-xl px-3 md:px-4 py-2 md:py-2.5 shadow-sm border border-transparent focus-within:border-[#5865F2]/50 transition duration-200">
                     <input type="file" id="file-input" accept="image/png, image/jpeg, image/gif" class="hidden">
                     <button id="attach-btn" class="text-[#80848e] hover:text-[#d1d3d6] mr-2 md:mr-3 bg-[#232429] hover:bg-[#2b2d33] w-8 h-8 rounded-full flex items-center justify-center font-bold transition flex-shrink-0">
@@ -292,7 +319,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // ==========================================
@@ -321,6 +348,13 @@
         let screenAudioTrack = null;
         let isSharingScreen = false;
 
+        let currentUserId = null, currentUsername = "Guest", activeChannel = "general"; 
+        let allMessages = [], usersData = {}; 
+
+        // 🌟 ตัวแปรสำหรับระบบพิมพ์ข้อความ
+        let typingTimeout = null;
+        let isTyping = false;
+
         // ==========================================
         // 🌟 2. ระบบสลับหน้าต่าง (Navigation)
         // ==========================================
@@ -335,15 +369,18 @@
         document.getElementById('close-members').onclick = () => { membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); };
         overlay.onclick = () => { sidebar.classList.remove('open'); membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); };
 
-        let currentUserId = null, currentUsername = "Guest", activeChannel = "general"; 
-        let allMessages = [], usersData = {}; 
-
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const view = btn.getAttribute('data-view');
                 if(!view) return; 
                 
+                // รีเซ็ตการพิมพ์เมื่อย้ายห้อง
+                if (isTyping && currentUserId) {
+                    isTyping = false; clearTimeout(typingTimeout);
+                    updateDoc(doc(db, "users", currentUserId), { isTyping: false });
+                }
+
                 document.querySelectorAll('.nav-btn').forEach(b => {
                     b.classList.remove('channel-active', 'text-[#e4e5e7]'); 
                     b.classList.add('channel-inactive', 'text-[#80848e]');
@@ -370,15 +407,17 @@
         });
 
         // ==========================================
-        // 🟢 3. โหลดรายชื่อสมาชิก และ ป้าย LIVE
+        // 🟢 3. โหลดรายชื่อสมาชิก & แสดงคนกำลังพิมพ์
         // ==========================================
         onSnapshot(collection(db, "users"), (snapshot) => {
             const membersList = document.getElementById('members-list');
             const voiceActiveList = document.getElementById('voice-active-users');
             const voiceGrid = document.getElementById('voice-grid'); 
+            const typingIndicator = document.getElementById('typing-indicator');
             
             membersList.innerHTML = ''; if (voiceActiveList) voiceActiveList.innerHTML = ''; 
             let voiceGridHTML = ''; let usersInVoiceCount = 0;
+            let peopleTyping = []; // 🌟 เก็บรายชื่อคนกำลังพิมพ์
 
             document.getElementById('member-count').textContent = snapshot.size; 
             usersData = {}; 
@@ -390,6 +429,11 @@
                 
                 usersData[userName] = { avatar: userAvatar, id: docSnap.id, agoraUid: user.agoraUid }; 
 
+                // 🌟 ตรวจสอบว่าใครกำลังพิมพ์ข้อความในห้องนี้อยู่บ้าง (ยกเว้นตัวเอง)
+                if (user.isTyping && user.typingChannel === activeChannel && docSnap.id !== currentUserId) {
+                    peopleTyping.push(userName);
+                }
+
                 const isOnline = user.status === 'online';
                 const statusColor = isOnline ? 'bg-[#23a559]' : 'bg-[#5c6069]';
                 const roleDisplay = user.role === 'Admin' ? `<span class="text-[#da373c] font-extrabold ml-1.5 text-[9px] md:text-[10px] bg-[#da373c]/10 px-1.5 py-0.5 rounded uppercase">Admin</span>` : '';
@@ -398,7 +442,6 @@
                 const muteIconSmall = user.isMuted ? '<i class="ph-fill ph-microphone-slash text-[#da373c] ml-auto text-[14px]"></i>' : '';
                 const muteIconLarge = user.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#151619] rounded-full p-1.5 border-2 border-[#0e0f11] shadow-sm flex items-center justify-center"><i class="ph-fill ph-microphone-slash text-[#da373c] text-[14px]"></i></div>' : '';
 
-                // 🌟 ป้ายแสดงสถานะการแชร์จอ
                 const screenBadgeSmall = user.isSharingScreen ? '<span class="ml-2 text-[9px] bg-[#5865F2] text-white px-1.5 py-0.5 rounded flex items-center font-bold tracking-wider" title="กำลังแชร์จอ"><i class="ph-fill ph-screencast mr-1"></i>LIVE</span>' : '';
                 const screenBadgeGrid = user.isSharingScreen ? '<div class="absolute top-0 right-0 bg-[#5865F2] text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl flex items-center animate-pulse"><i class="ph-fill ph-screencast mr-1"></i>LIVE</div>' : '';
 
@@ -440,6 +483,16 @@
                 }
             });
 
+            // 🌟 อัปเดตข้อความ "กำลังพิมพ์..."
+            if (typingIndicator) {
+                if (peopleTyping.length > 0) {
+                    typingIndicator.innerHTML = `<i class="ph-fill ph-chat-teardrop-dots mr-1.5 animate-bounce"></i> ${peopleTyping.join(', ')} กำลังพิมพ์ข้อความ...`;
+                    typingIndicator.classList.remove('opacity-0');
+                } else {
+                    typingIndicator.classList.add('opacity-0');
+                }
+            }
+
             if (voiceGrid) {
                 if (usersInVoiceCount > 0) { voiceGrid.innerHTML = voiceGridHTML; } 
                 else {
@@ -453,6 +506,77 @@
             }
             renderMessages();
         });
+
+        // ==========================================
+        // 🎨 4. ระบบตั้งค่าโปรไฟล์ส่วนตัว (อัปโหลดรูป)
+        // ==========================================
+        const settingsModal = document.getElementById('settings-modal');
+        const openSettingsBtns = [document.getElementById('open-settings-btn'), document.getElementById('mini-profile-btn')];
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        const settingsAvatarPreview = document.getElementById('settings-avatar-preview');
+        const settingsAvatarInput = document.getElementById('settings-avatar-input');
+        const settingsAvatarWrapper = document.getElementById('settings-avatar-wrapper');
+        const settingsStatus = document.getElementById('settings-status');
+        const settingsUsernameDisplay = document.getElementById('settings-username-display');
+
+        // เปิดหน้าต่างตั้งค่า
+        openSettingsBtns.forEach(btn => {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                settingsAvatarPreview.src = document.getElementById('current-user-avatar').src;
+                settingsUsernameDisplay.textContent = currentUsername;
+                settingsModal.classList.remove('hidden');
+                sidebar.classList.remove('open'); overlay.classList.remove('active');
+            };
+        });
+
+        // ปิดหน้าต่างตั้งค่า
+        closeSettingsBtn.onclick = () => {
+            settingsModal.classList.add('hidden');
+            settingsStatus.textContent = "";
+        };
+
+        // กดที่รูปเพื่ออัปโหลด
+        settingsAvatarWrapper.onclick = () => settingsAvatarInput.click();
+
+        // เมื่อเลือกรูปใหม่
+        settingsAvatarInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            
+            settingsStatus.classList.replace('text-[#5c6069]', 'text-yellow-500');
+            settingsStatus.textContent = "กำลังอัปโหลดรูปภาพ... ⏳";
+            settingsAvatarWrapper.classList.add('opacity-50', 'pointer-events-none');
+
+            try {
+                const formData = new FormData(); 
+                formData.append("image", file);
+                const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
+                const result = await response.json();
+                
+                if (result.success) {
+                    const newPhotoUrl = result.data.url;
+                    
+                    // 1. อัปเดตใน Firebase Auth
+                    await updateProfile(auth.currentUser, { photoURL: newPhotoUrl });
+                    // 2. อัปเดตใน Firestore (เพื่อให้คนอื่นเห็นรูปใหม่เราด้วย)
+                    await updateDoc(doc(db, "users", currentUserId), { photoURL: newPhotoUrl });
+                    
+                    settingsAvatarPreview.src = newPhotoUrl;
+                    document.getElementById('current-user-avatar').src = newPhotoUrl;
+                    
+                    settingsStatus.classList.replace('text-yellow-500', 'text-[#23a559]');
+                    settingsStatus.textContent = "เปลี่ยนรูปโปรไฟล์สำเร็จ! ✅";
+                    setTimeout(() => settingsStatus.textContent = "", 3000);
+                }
+            } catch(err) {
+                settingsStatus.classList.replace('text-yellow-500', 'text-[#da373c]');
+                settingsStatus.textContent = "เกิดข้อผิดพลาดในการอัปโหลด ❌";
+            } finally {
+                settingsAvatarWrapper.classList.remove('opacity-50', 'pointer-events-none');
+                settingsAvatarInput.value = "";
+            }
+        };
 
         // ==========================================
         // 🌟 ระบบ AUTO-RECONNECT
@@ -486,15 +610,14 @@
                         membersSidebar.classList.remove('hidden', 'md:hidden');
                     }, 1500); 
                 } else {
-                    // ล้างสถานะเผื่อมีบั๊กค้าง
-                    await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }).catch(e=>console.log(e));
+                    await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }).catch(e=>console.log(e));
                 }
 
             } else { window.location.href = "index.html"; }
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
-            if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }); } catch (e) {} }
+            if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } catch (e) {} }
             localStorage.removeItem('dosh_active_voice');
             if (localTracks.audioTrack) { await leaveVoice(); } signOut(auth);
         });
@@ -680,7 +803,6 @@
                 await rtcClient.publish(localTracks.audioTrack);
                 
                 isMuted = false;
-                // 🌟 อัปเดตสถานะใน Firebase ว่าเข้าห้องเสียงแล้ว
                 await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false, isSharingScreen: false });
                 localStorage.setItem('dosh_active_voice', 'true');
 
@@ -716,7 +838,6 @@
                     }
                     
                     isSharingScreen = true;
-                    // 🌟 อัปเดต Firebase ให้โลกรู้ว่าแชร์จออยู่
                     await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: true });
                     
                     screenShareBtn.classList.replace('bg-[#151619]', 'bg-[#23a559]');
@@ -745,7 +866,6 @@
             if (screenAudioTrack) { await rtcClient.unpublish(screenAudioTrack); screenAudioTrack.stop(); screenAudioTrack.close(); screenAudioTrack = null; }
             
             isSharingScreen = false;
-            // 🌟 ปิดป้าย LIVE
             if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: false });
             
             screenShareBtn.classList.replace('bg-[#23a559]', 'bg-[#151619]');
@@ -762,7 +882,6 @@
             if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); }
             await rtcClient.leave();
             
-            // 🌟 เคลียร์สถานะทุกอย่าง
             if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }); }
             
             localStorage.removeItem('dosh_active_voice');
@@ -787,13 +906,32 @@
         };
         window.addEventListener('beforeunload', () => { 
             if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { 
-                updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }); 
+                updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); 
             } 
         });
 
         // ==========================================
-        // 💬 6. ระบบแชท 
+        // 💬 6. ระบบแชท & กำลังพิมพ์ (Typing Indicator)
         // ==========================================
+        const chatInput = document.getElementById('chat-input');
+        
+        // 🌟 ดักจับตอนกดแป้นพิมพ์
+        chatInput.addEventListener('input', () => {
+            if (!currentUserId) return;
+            
+            if (!isTyping) {
+                isTyping = true;
+                updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel });
+            }
+
+            // ถ้าหยุดพิมพ์ครบ 2 วินาที ให้ลบสถานะกำลังพิมพ์ออก
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                isTyping = false;
+                updateDoc(doc(db, "users", currentUserId), { isTyping: false });
+            }, 2000);
+        });
+
         onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => {
             allMessages = []; snapshot.forEach((docSnap) => { allMessages.push(docSnap.data()); });
             renderMessages();
@@ -845,26 +983,30 @@
         }
 
         async function sendMessage() {
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim(); if (!text) return;
-            input.value = ''; 
+            const text = chatInput.value.trim(); if (!text) return;
+            chatInput.value = ''; 
+            
+            // 🌟 พอกดส่งปุ๊บ ให้ลบสถานะกำลังพิมพ์ทันที
+            clearTimeout(typingTimeout);
+            isTyping = false;
+            updateDoc(doc(db, "users", currentUserId), { isTyping: false });
+
             await addDoc(collection(db, "messages"), { text: text, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp() });
         }
         document.getElementById('send-btn').addEventListener('click', sendMessage);
-        document.getElementById('chat-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
 
         document.getElementById('attach-btn').addEventListener('click', () => document.getElementById('file-input').click());
         document.getElementById('file-input').addEventListener('change', async (e) => {
             const file = e.target.files[0]; if (!file) return;
-            const input = document.getElementById('chat-input');
-            input.placeholder = "กำลังอัปโหลดไฟล์..."; input.disabled = true;
+            chatInput.placeholder = "กำลังอัปโหลดไฟล์..."; chatInput.disabled = true;
             try {
                 const formData = new FormData(); formData.append("image", file);
                 const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
                 const result = await response.json();
                 if (result.success) await addDoc(collection(db, "messages"), { text: "", imageUrl: result.data.url, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp() });
             } catch (err) { alert("อัปโหลดพลาด"); } 
-            finally { input.placeholder = "ส่งข้อความถึง #ห้องแชท"; input.disabled = false; input.value = ""; input.focus(); }
+            finally { chatInput.placeholder = "ส่งข้อความถึง #ห้องแชท"; chatInput.disabled = false; chatInput.value = ""; chatInput.focus(); }
         });
 
         // ==========================================
