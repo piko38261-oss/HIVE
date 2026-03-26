@@ -123,7 +123,6 @@ onAuthStateChanged(auth, async (user) => {
         
         try { const userDoc = await getDoc(doc(db, "users", currentUserId)); if (userDoc.exists()) { currentUserRole = userDoc.data().role; if (currentUserRole === 'Admin') document.getElementById('admin-menu-btn').classList.remove('hidden'); } } catch (err) {}
         
-        // 🌟 ขออนุญาตแจ้งเตือนเมื่อ Login
         if ("Notification" in window && Notification.permission === "default") { Notification.requestPermission(); }
 
         const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
@@ -135,7 +134,7 @@ document.getElementById('logout-btn').addEventListener('click', async () => { if
 window.addEventListener('beforeunload', () => { if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } });
 
 // ==========================================
-// 💬 6. ระบบแชท + แจ้งเตือน + รีแอคชั่น
+// 💬 6. ระบบแชท + System Bot + แจ้งเตือน
 // ==========================================
 const chatInput = document.getElementById('chat-input');
 chatInput.addEventListener('input', () => { if (!currentUserId) return; if (!isTyping) { isTyping = true; updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel }); } clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }, 2000); });
@@ -182,9 +181,34 @@ function renderMessages() {
     let lastSender = null; 
     filteredMessages.forEach((m) => {
         let timeString = m.timestamp ? m.timestamp.toDate().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : "...";
-        let msgAvatarUrl = usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}&background=5865F2&color=fff&rounded=true&bold=true`;
         
-        let contentHTML = m.text ? `<p class="text-[#d1d3d6] mt-0.5 leading-relaxed text-[14px]">${m.text}</p>` : '';
+        // 🌟 แปลงระบบข้อความ **ตัวหนา** แบบ Markdown
+        let formattedText = m.text ? m.text.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-[#e4e5e7]">$1</span>') : '';
+
+        // 🤖 🌟 เช็คว่าถ้าเป็นข้อความจาก System Bot ให้โชว์หน้าตาแบบหุ่นยนต์สุดล้ำ!
+        if (m.senderName === "🤖 System Bot") {
+            chatContainer.insertAdjacentHTML('beforeend', `
+            <div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-3 mt-4 -mx-2 md:-mx-4 group transition duration-150 relative items-center border-l-[3px] border-transparent hover:border-[#5865F2]">
+                <div class="w-8 md:w-10 h-8 md:h-10 rounded-full bg-[#5865F2]/10 flex items-center justify-center flex-shrink-0 border border-[#5865F2]/20">
+                    <i class="ph-fill ph-robot text-[#5865F2] text-[20px] md:text-[24px]"></i>
+                </div>
+                <div class="min-w-0 flex-1 pb-1">
+                    <div class="flex items-baseline space-x-2">
+                        <span class="font-extrabold text-[12px] text-white bg-[#5865F2] px-1.5 py-0.5 rounded uppercase tracking-wider">System</span>
+                        <span class="text-[10px] md:text-[11px] text-[#6d717a]">${timeString}</span>
+                    </div>
+                    <p class="text-[#949ba4] mt-1 text-[13px] md:text-[14px] leading-relaxed">${formattedText}</p>
+                </div>
+            </div>`);
+            lastSender = "system_bot"; // รีเซ็ตการรวมข้อความ
+            return; // ข้ามการทำ UI แบบคนปกติไปเลย
+        }
+
+        // =======================================
+        // การทำงานของแชทคนธรรมดา (ด้านล่างนี้)
+        // =======================================
+        let msgAvatarUrl = usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}&background=5865F2&color=fff&rounded=true&bold=true`;
+        let contentHTML = formattedText ? `<p class="text-[#d1d3d6] mt-0.5 leading-relaxed text-[14px] md:text-[15px]">${formattedText}</p>` : '';
         if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" onclick="openLightbox('${m.imageUrl}')" onload="document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;" class="mt-2 rounded-lg max-w-[80%] md:max-w-sm shadow-sm cursor-zoom-in hover:opacity-80 transition">`;
         
         let reactsHTML = '';
@@ -198,8 +222,7 @@ function renderMessages() {
             reactsHTML += `</div>`;
         }
 
-        // 🌟 ซ่อม UI: รวมปุ่ม Reaction และ ถังขยะ Admin ไว้ในกล่องเดียวกัน และเพิ่ม pr-20 ป้องกันข้อความทับปุ่ม
-        const adminDeleteBtn = (currentUserRole === 'Admin' && m.senderName !== "🤖 System Bot") 
+        const adminDeleteBtn = (currentUserRole === 'Admin') 
             ? `<div class="w-px h-4 bg-[#35373c] mx-1"></div><button onclick="deleteChatMsg('${m.id}')" class="reaction-btn hover:bg-[#da373c]/20 text-[#da373c] rounded p-1 text-[16px]" title="ลบข้อความ"><i class="ph-fill ph-trash"></i></button>` 
             : '';
 
@@ -221,7 +244,6 @@ function renderMessages() {
         lastSender = m.senderName;
     });
     
-    // ดันข้อความล่างสุดให้มีช่องว่างนิดนึง จะได้ไม่ติดช่องพิมพ์
     chatContainer.insertAdjacentHTML('beforeend', '<div class="h-4 w-full flex-shrink-0"></div>');
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
