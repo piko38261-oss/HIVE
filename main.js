@@ -349,11 +349,15 @@ document.getElementById('attach-btn').onclick = () => document.getElementById('f
 document.getElementById('file-input').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; chatInput.placeholder = "กำลังอัปโหลดไฟล์..."; chatInput.disabled = true; try { const fd = new FormData(); fd.append("image", f); const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const r = await res.json(); if (r.success) { await addDoc(collection(db, "messages"), { text: "", imageUrl: r.data.url, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp(), reactions: {}, replyTo: replyingTo }); replyingTo = null; document.getElementById('reply-banner').classList.add('hidden'); } } catch (err) { showToast("อัปโหลดพลาด", "error"); } finally { chatInput.placeholder = "ส่งข้อความถึง #ห้องแชท"; chatInput.disabled = false; chatInput.value = ""; chatInput.focus(); } };
 
 // ==========================================
-// 🎨 11. ระบบกระดานวาดรูป (ทั่วไป & เกม)
+// 🎨 11. ระบบกระดานวาดรูป (ทั่วไป & เกม) [เวอร์ชันแก้กระตุก]
 // ==========================================
 const canvas = document.getElementById('whiteboard-canvas'), ctx = canvas.getContext('2d'), canvasContainer = document.getElementById('canvas-container'), wbStatus = document.getElementById('wb-status');
 const gameCanvas = document.getElementById('game-whiteboard-canvas'), gameCtx = gameCanvas.getContext('2d'), gameCanvasContainer = document.getElementById('game-canvas-container');
 let isDrawing = false; let isGameDrawing = false; let isEraserMode = false;
+
+// 🌟 ระบบหน่วงเวลา (Debounce) ป้องกันการเซฟรูปถี่เกินไปจนกระตุก
+let wbSyncTimer = null; 
+let gameWbSyncTimer = null;
 
 function initCanvasSize() { if(canvas.width !== canvasContainer.clientWidth || canvas.height !== canvasContainer.clientHeight) { const temp = canvas.toDataURL(); canvas.width = canvasContainer.clientWidth; canvas.height = canvasContainer.clientHeight; if(temp !== "data:,") { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0); img.src = temp; } } }
 function initGameCanvasSize() { if(gameCanvas.width !== gameCanvasContainer.clientWidth || gameCanvas.height !== gameCanvasContainer.clientHeight) { const temp = gameCanvas.toDataURL(); gameCanvas.width = gameCanvasContainer.clientWidth; gameCanvas.height = gameCanvasContainer.clientHeight; if(temp !== "data:,") { const img = new Image(); img.onload = () => gameCtx.drawImage(img, 0, 0); img.src = temp; } } }
@@ -361,23 +365,48 @@ function initGameCanvasSize() { if(gameCanvas.width !== gameCanvasContainer.clie
 window.addEventListener('resize', () => { initCanvasSize(); initGameCanvasSize(); }); 
 function getMousePos(e, c) { const r = c.getBoundingClientRect(); const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY; return { x: x - r.left, y: y - r.top }; } 
 
+// --- ส่วนกระดานไอเดียหลัก ---
 function startDrawing(e) { if(e.type === 'touchstart') e.preventDefault(); isDrawing = true; draw(e); } 
 function draw(e) { if (!isDrawing) return; if(e.type === 'touchmove') e.preventDefault(); const p = getMousePos(e, canvas); ctx.lineWidth = document.getElementById('wb-size').value; ctx.lineCap = 'round'; ctx.strokeStyle = document.getElementById('wb-color').value; ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x, p.y); } 
-function stopDrawing() { if (!isDrawing) return; isDrawing = false; ctx.beginPath(); syncWhiteboard(); } 
+function stopDrawing() { 
+    if (!isDrawing) return; 
+    isDrawing = false; ctx.beginPath(); 
+    // 🌟 หน่วงเวลา 0.4 วินาทีหลังวาดเสร็จ ค่อยส่งขึ้น Server
+    clearTimeout(wbSyncTimer);
+    wbSyncTimer = setTimeout(() => syncWhiteboard(), 400); 
+} 
 canvas.onmousedown = startDrawing; canvas.onmousemove = draw; canvas.onmouseup = canvas.onmouseout = stopDrawing; canvas.addEventListener('touchstart', startDrawing, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchend', stopDrawing); 
 document.getElementById('wb-clear').onclick = () => { if(confirm("ล้างกระดานทั้งหมด?")) { ctx.clearRect(0, 0, canvas.width, canvas.height); syncWhiteboard(true); showToast("ล้างกระดานแล้ว", "success"); } }; 
-async function syncWhiteboard(isC = false) { if(!currentUserId) return; await setDoc(doc(db, "appData", "whiteboard"), { image: isC ? "" : canvas.toDataURL(), updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); } 
+
+async function syncWhiteboard(isC = false) { 
+    if(!currentUserId) return; 
+    // 🌟 บีบอัดเป็น WebP 50% ลดขนาดไฟล์ลง 30 เท่า! เครื่องหายค้างแน่นอน
+    const imgData = isC ? "" : canvas.toDataURL("image/webp", 0.5);
+    await setDoc(doc(db, "appData", "whiteboard"), { image: imgData, updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); 
+} 
+
 onSnapshot(doc(db, "appData", "whiteboard"), (d) => { if (d.exists() && !isDrawing) { const val = d.data(); if (val.updatedBy && val.updatedBy !== currentUsername && !currentDrawGame.isActive) { wbStatus.innerHTML = `<i class="ph ph-pencil-simple mr-1.5"></i> ${val.updatedBy} เพิ่งอัปเดตกระดาน`; wbStatus.classList.remove('opacity-0'); setTimeout(() => { if(!currentDrawGame.isActive) wbStatus.classList.add('opacity-0'); }, 3000); } if(val.image) { const img = new Image(); img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); }; img.src = val.image; } else { ctx.clearRect(0, 0, canvas.width, canvas.height); } } });
 
+// --- ส่วนกระดานเกมทายภาพ ---
 document.getElementById('game-eraser-btn').onclick = () => { isEraserMode = !isEraserMode; document.getElementById('game-eraser-btn').classList.toggle('text-white'); document.getElementById('game-eraser-btn').classList.toggle('bg-[#35373c]'); };
 function startGameDrawing(e) { if(!currentDrawGame.isActive || currentDrawGame.drawerId !== currentUserId) return; if(e.type === 'touchstart') e.preventDefault(); isGameDrawing = true; drawGame(e); } 
 function drawGame(e) { if (!isGameDrawing) return; if(e.type === 'touchmove') e.preventDefault(); const p = getMousePos(e, gameCanvas); gameCtx.lineWidth = document.getElementById('game-size').value; gameCtx.lineCap = 'round'; gameCtx.globalCompositeOperation = isEraserMode ? 'destination-out' : 'source-over'; gameCtx.strokeStyle = document.getElementById('game-color').value; gameCtx.lineTo(p.x, p.y); gameCtx.stroke(); gameCtx.beginPath(); gameCtx.moveTo(p.x, p.y); } 
-function stopGameDrawing() { if (!isGameDrawing) return; isGameDrawing = false; gameCtx.beginPath(); syncGameWhiteboard(); } 
+function stopGameDrawing() { 
+    if (!isGameDrawing) return; 
+    isGameDrawing = false; gameCtx.beginPath(); 
+    // 🌟 เกมต้องการความเรียลไทม์สูงกว่า เลยหน่วงแค่ 0.25 วิ
+    clearTimeout(gameWbSyncTimer);
+    gameWbSyncTimer = setTimeout(() => syncGameWhiteboard(), 250); 
+} 
 gameCanvas.onmousedown = startGameDrawing; gameCanvas.onmousemove = drawGame; gameCanvas.onmouseup = gameCanvas.onmouseout = stopGameDrawing; gameCanvas.addEventListener('touchstart', startGameDrawing, {passive: false}); gameCanvas.addEventListener('touchmove', drawGame, {passive: false}); gameCanvas.addEventListener('touchend', stopGameDrawing); 
 document.getElementById('game-clear-btn').onclick = () => { gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); syncGameWhiteboard(true); }; 
-async function syncGameWhiteboard(isC = false) { await setDoc(doc(db, "appData", "gameWhiteboard"), { image: isC ? "" : gameCanvas.toDataURL(), updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); } 
-onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => { if (d.exists() && !isGameDrawing) { const val = d.data(); if(val.image) { const img = new Image(); img.onload = () => { gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); gameCtx.drawImage(img, 0, 0); }; img.src = val.image; } else { gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); } } });
 
+async function syncGameWhiteboard(isC = false) { 
+    const imgData = isC ? "" : gameCanvas.toDataURL("image/webp", 0.5);
+    await setDoc(doc(db, "appData", "gameWhiteboard"), { image: imgData, updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); 
+} 
+
+onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => { if (d.exists() && !isGameDrawing) { const val = d.data(); if(val.image) { const img = new Image(); img.onload = () => { gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); gameCtx.drawImage(img, 0, 0); }; img.src = val.image; } else { gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); } } });
 // ==========================================
 // 🎙️ 12. ระบบเสียง & แชร์จอ (Agora)
 // ==========================================
