@@ -370,7 +370,7 @@
         });
 
         // ==========================================
-        // 🟢 3. โหลดรายชื่อสมาชิก
+        // 🟢 3. โหลดรายชื่อสมาชิก และ ป้าย LIVE
         // ==========================================
         onSnapshot(collection(db, "users"), (snapshot) => {
             const membersList = document.getElementById('members-list');
@@ -398,6 +398,10 @@
                 const muteIconSmall = user.isMuted ? '<i class="ph-fill ph-microphone-slash text-[#da373c] ml-auto text-[14px]"></i>' : '';
                 const muteIconLarge = user.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#151619] rounded-full p-1.5 border-2 border-[#0e0f11] shadow-sm flex items-center justify-center"><i class="ph-fill ph-microphone-slash text-[#da373c] text-[14px]"></i></div>' : '';
 
+                // 🌟 ป้ายแสดงสถานะการแชร์จอ
+                const screenBadgeSmall = user.isSharingScreen ? '<span class="ml-2 text-[9px] bg-[#5865F2] text-white px-1.5 py-0.5 rounded flex items-center font-bold tracking-wider" title="กำลังแชร์จอ"><i class="ph-fill ph-screencast mr-1"></i>LIVE</span>' : '';
+                const screenBadgeGrid = user.isSharingScreen ? '<div class="absolute top-0 right-0 bg-[#5865F2] text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl flex items-center animate-pulse"><i class="ph-fill ph-screencast mr-1"></i>LIVE</div>' : '';
+
                 membersList.insertAdjacentHTML('beforeend', `
                 <div class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#1c1d21] hover:text-[#e4e5e7] transition group ${!isOnline ? 'opacity-50' : ''}">
                     <div class="relative flex-shrink-0">
@@ -415,7 +419,7 @@
                             <div class="relative flex-shrink-0">
                                 <img id="img-sidebar-voice-${docSnap.id}" src="${userAvatar}" class="w-6 h-6 rounded-full object-cover transition-all duration-200 opacity-90">
                             </div>
-                            <span class="truncate font-medium flex-1">${userName}</span>
+                            <span class="truncate font-medium flex-1 flex items-center">${userName} ${screenBadgeSmall}</span>
                             ${muteIconSmall}
                         </div>
                     `);
@@ -425,11 +429,12 @@
                     usersInVoiceCount++;
                     voiceGridHTML += `
                         <div class="bg-[#151619] rounded-xl p-4 md:p-6 flex flex-col items-center justify-center relative shadow-lg border border-[#1e1f22] hover:border-[#3f4147] transition duration-300 h-auto min-h-[130px] md:min-h-[160px] group animate-[fadeIn_0.3s_ease-out]">
+                            ${screenBadgeGrid}
                             <div class="relative mb-2 md:mb-4 flex-shrink-0">
                                 <img id="img-grid-voice-${docSnap.id}" src="${userAvatar}" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover bg-gray-900 border-[3px] border-transparent transition-all duration-300 shadow-md opacity-95">
                                 ${muteIconLarge}
                             </div>
-                            <p class="font-bold text-[#e4e5e7] text-[13px] md:text-[15px] truncate w-full text-center mt-auto">${userName}</p>
+                            <p class="font-bold text-[#e4e5e7] text-[13px] md:text-[15px] truncate w-full text-center mt-auto flex items-center justify-center">${userName}</p>
                         </div>
                     `;
                 }
@@ -481,14 +486,15 @@
                         membersSidebar.classList.remove('hidden', 'md:hidden');
                     }, 1500); 
                 } else {
-                    await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false }).catch(e=>console.log(e));
+                    // ล้างสถานะเผื่อมีบั๊กค้าง
+                    await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }).catch(e=>console.log(e));
                 }
 
             } else { window.location.href = "index.html"; }
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
-            if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false }); } catch (e) {} }
+            if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }); } catch (e) {} }
             localStorage.removeItem('dosh_active_voice');
             if (localTracks.audioTrack) { await leaveVoice(); } signOut(auth);
         });
@@ -600,7 +606,7 @@
         });
 
         // ==========================================
-        // 🎙️ 5. ระบบห้องคุยเสียง (Voice & Screen Share แก้บั๊กจอดำ)
+        // 🎙️ 5. ระบบห้องคุยเสียง (Voice & Screen Share)
         // ==========================================
         const joinBtn = document.getElementById('join-voice-btn');
         const leaveBtn = document.getElementById('leave-voice-btn');
@@ -614,7 +620,6 @@
                 joinBtn.innerHTML = "กำลังเชื่อมต่อ...";
                 myNumericUid = Math.floor(Math.random() * 1000000); 
                 
-                // 🌟 1. ดักฟัง Event การแชร์จอ "ก่อน" เข้าห้อง!
                 rtcClient.on("user-published", async (user, mediaType) => { 
                     await rtcClient.subscribe(user, mediaType); 
                     if (mediaType === "audio") { user.audioTrack.play(); }
@@ -664,7 +669,6 @@
                     });
                 });
 
-                // 🌟 2. เข้าห้อง "หลัง" จากเปิดหูเปิดตารอแล้ว
                 await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid);
                 
                 localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
@@ -676,7 +680,8 @@
                 await rtcClient.publish(localTracks.audioTrack);
                 
                 isMuted = false;
-                await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false });
+                // 🌟 อัปเดตสถานะใน Firebase ว่าเข้าห้องเสียงแล้ว
+                await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false, isSharingScreen: false });
                 localStorage.setItem('dosh_active_voice', 'true');
 
                 joinBtn.classList.add('hidden');
@@ -711,6 +716,8 @@
                     }
                     
                     isSharingScreen = true;
+                    // 🌟 อัปเดต Firebase ให้โลกรู้ว่าแชร์จออยู่
+                    await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: true });
                     
                     screenShareBtn.classList.replace('bg-[#151619]', 'bg-[#23a559]');
                     screenShareBtn.classList.replace('text-gray-300', 'text-white');
@@ -736,7 +743,10 @@
         async function stopScreenShare() {
             if (screenTrack) { await rtcClient.unpublish(screenTrack); screenTrack.stop(); screenTrack.close(); screenTrack = null; }
             if (screenAudioTrack) { await rtcClient.unpublish(screenAudioTrack); screenAudioTrack.stop(); screenAudioTrack.close(); screenAudioTrack = null; }
+            
             isSharingScreen = false;
+            // 🌟 ปิดป้าย LIVE
+            if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: false });
             
             screenShareBtn.classList.replace('bg-[#23a559]', 'bg-[#151619]');
             screenShareBtn.classList.replace('text-white', 'text-gray-300');
@@ -751,7 +761,9 @@
             if (isSharingScreen) await stopScreenShare(); 
             if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); }
             await rtcClient.leave();
-            if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); }
+            
+            // 🌟 เคลียร์สถานะทุกอย่าง
+            if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }); }
             
             localStorage.removeItem('dosh_active_voice');
 
@@ -775,7 +787,7 @@
         };
         window.addEventListener('beforeunload', () => { 
             if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { 
-                updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); 
+                updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }); 
             } 
         });
 
