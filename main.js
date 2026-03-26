@@ -32,14 +32,14 @@ window.openLightbox = (url) => { document.getElementById('lightbox-img').src = u
 lightbox.onclick = () => { lightbox.classList.add('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-100', 'scale-95'); setTimeout(() => lightbox.classList.add('hidden'), 300); };
 
 // ==========================================
-// 🌟 1.5 ระบบ Watch Party (แก้ไขเรื่องเสียงรั่ว)
+// 🌟 1.5 ระบบ Watch Party
 // ==========================================
 let ytPlayer = null;
 let ignoreNextYtEvent = false;
 let lastSyncTime = 0;
 let pendingVideoData = null;
-let amIInVoice = false; // 🌟 ยามเฝ้าประตู: เช็คว่าเราอยู่ในห้องเสียงหรือไม่
-let latestWPData = null; // 🌟 เก็บสถานะคลิปล่าสุดไว้ตลอดเวลา
+let amIInVoice = false; 
+let latestWPData = null; 
 
 if (window.YT && window.YT.Player) {
     if (pendingVideoData && amIInVoice) { initOrUpdatePlayer(pendingVideoData.vid, pendingVideoData.time, pendingVideoData.state, pendingVideoData.host); pendingVideoData = null; }
@@ -82,7 +82,6 @@ async function onPlayerStateChange(event) {
 }
 
 function initOrUpdatePlayer(vid, time, state, host) {
-    // 🚨 ป้องกันชั้นสุดยอด: ถ้าไม่ได้อยู่ในห้องเสียง ห้ามโหลดคลิปเด็ดขาด!
     if (!amIInVoice) return;
 
     if(typeof window.YT === 'undefined' || typeof window.YT.Player === 'undefined') {
@@ -126,20 +125,15 @@ function initOrUpdatePlayer(vid, time, state, host) {
 onSnapshot(doc(db, "appData", "watchParty"), (d) => {
     if(d.exists()) {
         const wp = d.data();
-        latestWPData = wp; // 🌟 เก็บข้อมูลล่าสุดเผื่อคนเพิ่งเข้าห้องมาใหม่
-        
+        latestWPData = wp; 
         if(wp.videoId) {
-            // 🚨 ส่งข้อมูลไปให้ระบบเล่น แต่เครื่องเล่นจะยอมเล่นก็ต่อเมื่อ amIInVoice = true
-            if (amIInVoice) {
-                initOrUpdatePlayer(wp.videoId, wp.time, wp.state, wp.updatedBy);
-            }
+            if (amIInVoice) { initOrUpdatePlayer(wp.videoId, wp.time, wp.state, wp.updatedBy); }
         } else {
             document.getElementById('watch-party-stage').classList.add('hidden');
             document.getElementById('watch-party-stage').classList.remove('flex');
             if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; }
             document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; 
-            pendingVideoData = null;
-            latestWPData = null;
+            pendingVideoData = null; latestWPData = null;
         }
     }
 });
@@ -405,6 +399,7 @@ window.addEventListener('resize', initCanvasSize); function getMousePos(e) { con
 // 🎙️ 9. ระบบห้องคุยเสียง (Voice & Screen Share)
 // ==========================================
 const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.getElementById('leave-voice-btn'), muteBtn = document.getElementById('mute-btn'), ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
+
 async function joinVoice() { 
     try { 
         joinBtn.innerHTML = "กำลังเชื่อมต่อ..."; 
@@ -422,12 +417,18 @@ async function joinVoice() {
         muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); 
         document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]"; 
 
-        // 🌟 เซ็ตสถานะว่า "อยู่ในห้องเสียงแล้วนะ!" เพื่อรับอนุญาตให้ดูคลิป
         amIInVoice = true;
-        // ถ้ามีคลิปเล่นค้างอยู่ ให้เอามาฉายขึ้นจอทันที
         if(latestWPData && latestWPData.videoId) {
             initOrUpdatePlayer(latestWPData.videoId, latestWPData.time, latestWPData.state, latestWPData.updatedBy);
         }
+
+        // 🌟 ให้บอทประกาศว่าเราเข้าห้องแล้วในห้องแชท General
+        await addDoc(collection(db, "messages"), { 
+            text: `🔊 **${currentUsername}** ได้กระโดดเข้ามาในห้องนั่งเล่นคุยงาน! ไปคุยกันเถอะ`, 
+            senderName: "🤖 System Bot", 
+            channel: "general", 
+            timestamp: serverTimestamp() 
+        });
 
     } catch (err) { 
         console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
@@ -435,7 +436,6 @@ async function joinVoice() {
 }
 
 ssBtn.onclick = async () => { const sIco = document.getElementById('screen-icon'); if (!isSharingScreen) { try { const res = await AgoraRTC.createScreenVideoTrack({ encoderConfig: { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 }, optimizationMode: "motion" }, "auto"); if (Array.isArray(res)) { screenTrack = res[0]; screenAudioTrack = res[1]; await rtcClient.publish([screenTrack, screenAudioTrack]); } else { screenTrack = res; await rtcClient.publish(screenTrack); } isSharingScreen = true; await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: true }); ssBtn.classList.replace('bg-[#151619]', 'bg-[#23a559]'); ssBtn.classList.replace('text-gray-300', 'text-white'); sIco.className = "ph-fill ph-screencast text-[20px] md:text-[24px]"; ssStage.classList.remove('hidden'); let pc = document.createElement("div"); pc.id = `v-wrap-local`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); screenTrack.play(pc, { fit: "contain" }); screenTrack.on("track-ended", stopScreenShare); } catch (err) { console.log(err); } } else { await stopScreenShare(); } };
-
 async function stopScreenShare() { if (screenTrack) { await rtcClient.unpublish(screenTrack); screenTrack.stop(); screenTrack.close(); screenTrack = null; } if (screenAudioTrack) { await rtcClient.unpublish(screenAudioTrack); screenAudioTrack.stop(); screenAudioTrack.close(); screenAudioTrack = null; } isSharingScreen = false; if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: false }); ssBtn.classList.replace('bg-[#23a559]', 'bg-[#151619]'); ssBtn.classList.replace('text-white', 'text-gray-300'); document.getElementById('screen-icon').className = "ph ph-screencast text-[20px] md:text-[24px]"; const pc = document.getElementById(`v-wrap-local`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); }
 
 async function leaveVoice() { 
@@ -448,12 +448,19 @@ async function leaveVoice() {
     joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
     document.getElementById('active-voice-ui').classList.add('hidden'); 
 
-    // 🌟 ออกจากห้องเสียงแล้ว ห้ามได้ยินเสียงคลิป! (ระเบิดจอทิ้ง)
     amIInVoice = false;
     if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; }
     document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>';
     document.getElementById('watch-party-stage').classList.add('hidden');
     document.getElementById('watch-party-stage').classList.remove('flex');
+
+    // 🌟 ให้บอทประกาศว่าเราออกจากห้องเสียงแล้ว
+    await addDoc(collection(db, "messages"), { 
+        text: `👋 **${currentUsername}** ได้ออกจากห้องนั่งเล่นไปแล้ว`, 
+        senderName: "🤖 System Bot", 
+        channel: "general", 
+        timestamp: serverTimestamp() 
+    });
 }
 
 joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
