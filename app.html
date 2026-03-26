@@ -887,7 +887,7 @@
         Object.keys(zones).forEach(status => {
             const zone = zones[status];
             zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drop-zone-active'); });
-            zone.addEventListener('dragleave', () => zone.classList.remove('drop-zone-active');
+            zone.addEventListener('dragleave', () => zone.classList.remove('drop-zone-active'));
             zone.addEventListener('drop', async (e) => {
                 e.preventDefault(); zone.classList.remove('drop-zone-active');
                 const taskId = e.dataTransfer.getData('text/plain');
