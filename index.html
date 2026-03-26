@@ -126,32 +126,43 @@
 
         // ระบบสมัครสมาชิก (Register)
         const registerForm = document.getElementById('register-form');
-        registerForm.addEventListener('submit', (e) => {
-            e.preventDefault(); 
+    registerForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    // 🌟 ใส่ .trim() ต่อท้าย .value ทุกอัน เพื่อตัดช่องว่างที่มือถือชอบแอบเติม
+    const username = document.getElementById('reg-username').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value.trim();
+    const role = document.getElementById('reg-role').value;
+
+    // 🌟 เพิ่มระบบเช็คความยาวรหัสผ่าน ดักไว้ก่อนส่งไป Firebase
+    if (password.length < 6) {
+        alert("⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรครับ!");
+        return; // หยุดการทำงานถ้าโค้ดสั้นไป
+    }
+
+    createUserWithEmailAndPassword(auth, email, password)
+        .then(async (userCredential) => {
+            const user = userCredential.user;
+            await updateProfile(user, { displayName: username });
+            await setDoc(doc(db, "users", user.uid), {
+                username: username,
+                email: email,
+                role: role,
+                status: 'online'
+            });
+            alert("สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ " + username);
+            window.location.href = "app.html";
+        })
+        .catch((error) => {
+            // แปลงข้อความ Error ภาษาอังกฤษ ให้เป็นภาษาไทยเข้าใจง่าย
+            let errorMsg = "เกิดข้อผิดพลาด: " + error.message;
+            if (error.code === 'auth/email-already-in-use') errorMsg = "อีเมลนี้ถูกใช้งานไปแล้วครับ!";
+            if (error.code === 'auth/invalid-email') errorMsg = "รูปแบบอีเมลไม่ถูกต้องครับ!";
             
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
-            const username = document.getElementById('reg-username').value;
-            const role = document.getElementById('reg-role').value;
-
-            createUserWithEmailAndPassword(auth, email, password)
-                .then(async (userCredential) => {
-                    const user = userCredential.user;
-                    await updateProfile(user, { displayName: username });
-                    await setDoc(doc(db, "users", user.uid), {
-                        username: username,
-                        email: email,
-                        role: role,
-                        status: 'online'
-                    });
-
-                    alert("สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ " + username);
-                    window.location.href = "app.html"; // 🌟 พาไปหน้า SPA
-                })
-                .catch((error) => {
-                    alert("เกิดข้อผิดพลาด: " + error.message);
-                });
+            alert(errorMsg);
         });
+    }); 
 
         // ระบบเข้าสู่ระบบ (Login)
         const loginForm = document.getElementById('login-form');

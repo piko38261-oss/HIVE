@@ -449,6 +449,9 @@
             renderMessages();
         });
 
+        // ==========================================
+        // 🌟 ระบบ AUTO-RECONNECT เมือ Refresh หน้าเว็บ 🌟
+        // ==========================================
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUserId = user.uid; currentUsername = user.displayName || user.email.split('@')[0];
@@ -458,12 +461,38 @@
                     const userDoc = await getDoc(doc(db, "users", currentUserId));
                     if (userDoc.exists() && userDoc.data().role === 'Admin') { document.getElementById('admin-menu-btn').classList.remove('hidden'); }
                 } catch (err) {}
-                await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false }).catch(e=>console.log(e));
+
+                // เช็คว่าก่อนหน้านี้อยู่ในห้องเสียงหรือไม่
+                const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
+
+                if (wasInVoice) {
+                    await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e));
+                    // หน่วงเวลาให้ทุกอย่างโหลดเสร็จ แล้วเชื่อมต่อกลับอัตโนมัติ
+                    setTimeout(() => {
+                        joinVoice();
+                        // สลับหน้าจอมาที่ห้องเสียงให้ด้วย
+                        document.querySelectorAll('.nav-btn').forEach(b => {
+                            b.classList.remove('channel-active', 'text-[#e4e5e7]'); 
+                            b.classList.add('channel-inactive', 'text-[#80848e]');
+                            if (b.getAttribute('data-view') === 'voice') {
+                                b.classList.remove('channel-inactive', 'text-[#80848e]');
+                                b.classList.add('channel-active', 'text-[#e4e5e7]');
+                            }
+                        });
+                        Object.values(views).forEach(v => v.classList.add('hidden'));
+                        views['voice'].classList.remove('hidden');
+                        membersSidebar.classList.remove('hidden', 'md:hidden');
+                    }, 1500); 
+                } else {
+                    await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false }).catch(e=>console.log(e));
+                }
+
             } else { window.location.href = "index.html"; }
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
             if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false }); } catch (e) {} }
+            localStorage.removeItem('dosh_active_voice'); // เคลียร์สถานะตอนออก
             if (localTracks.audioTrack) { await leaveVoice(); } signOut(auth);
         });
 
@@ -595,6 +624,9 @@
                 isMuted = false;
                 await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false });
 
+                // 🌟 บันทึกสถานะว่าเข้าห้องเสียงแล้ว
+                localStorage.setItem('dosh_active_voice', 'true');
+
                 joinBtn.classList.add('hidden');
                 activeVoiceUI.classList.remove('hidden');
                 muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]');
@@ -642,7 +674,12 @@
                     }
                 });
 
-            } catch (err) { alert("เกิดข้อผิดพลาดในการเชื่อมต่อไมค์"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; }
+            } catch (err) { 
+                console.error(err);
+                localStorage.removeItem('dosh_active_voice'); // ถ้าต่อไม่ติดให้เคลียร์สถานะทิ้ง
+                alert("เชื่อมต่อไมค์ไม่สำเร็จ กรุณากดอนุญาตการใช้ไมโครโฟน"); 
+                joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
+            }
         }
 
         screenShareBtn.onclick = async () => {
@@ -701,6 +738,10 @@
             if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); }
             await rtcClient.leave();
             if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); }
+            
+            // 🌟 ยกเลิก Auto-Reconnect เมื่อกดปุ่มวางสายเอง
+            localStorage.removeItem('dosh_active_voice');
+
             document.querySelectorAll('.speaking-ring').forEach(img => img.classList.remove('speaking-ring'));
             joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>';
             activeVoiceUI.classList.add('hidden');
@@ -720,7 +761,10 @@
             }
         };
         window.addEventListener('beforeunload', () => { 
-            if (currentUserId) { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); } 
+            // ไม่เซ็ต false ตรงนี้แล้ว เพราะเราจะ Reconnect ยกเว้นแต่ปิดจอมือถือ/แท็บทิ้งไปนานๆ
+            if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { 
+                updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); 
+            } 
         });
 
         // ==========================================
