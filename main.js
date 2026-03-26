@@ -17,6 +17,18 @@ let replyingTo = null;
 
 const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); sfxMsg.volume = 0.5;
 
+// 🌟 สร้างฟังก์ชันแจ้งเตือน Toast (สวยล้ำ ไม่ใช้ alert ธรรมดา)
+window.showToast = (msg, type = "success") => {
+    const toast = document.createElement("div");
+    const icon = type === "success" ? `<i class="ph-fill ph-check-circle text-[#23a559] text-[20px]"></i>` : 
+                 (type === "error" ? `<i class="ph-fill ph-warning-circle text-[#da373c] text-[20px]"></i>` : 
+                 `<i class="ph-fill ph-info text-[#5865F2] text-[20px]"></i>`);
+    toast.className = `flex items-center gap-3 bg-[#1e1f22] border border-[#2b2d31] text-[#dbdee1] px-4 py-3 rounded-lg shadow-xl animate-[slideUpFade_0.3s_ease-out]`;
+    toast.innerHTML = `${icon} <span class="text-[13px] font-medium">${msg}</span>`;
+    document.getElementById("toast-container").appendChild(toast);
+    setTimeout(() => { toast.classList.add("opacity-0", "translate-y-4", "transition-all", "duration-300"); setTimeout(() => toast.remove(), 300); }, 3000);
+};
+
 const lightbox = document.createElement('div'); lightbox.className = 'fixed inset-0 bg-black/95 z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 cursor-zoom-out p-4'; lightbox.innerHTML = `<img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl scale-95 transition-transform duration-300"><button class="absolute top-6 right-6 text-white hover:text-gray-300 transition"><i class="ph ph-x text-[32px]"></i></button>`; document.body.appendChild(lightbox);
 window.openLightbox = (url) => { document.getElementById('lightbox-img').src = url; lightbox.classList.remove('hidden'); void lightbox.offsetWidth; lightbox.classList.remove('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-95', 'scale-100'); };
 lightbox.onclick = () => { lightbox.classList.add('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-100', 'scale-95'); setTimeout(() => lightbox.classList.add('hidden'), 300); };
@@ -111,6 +123,9 @@ onSnapshot(collection(db, "users"), (snapshot) => {
             myStatusUI.textContent = u.customStatus || 'ออนไลน์';
             myStatusUI.className = u.customStatus ? 'text-[11px] text-[#23a559] truncate leading-none mt-0.5' : 'text-[11px] text-[#6d717a] truncate leading-none mt-0.5';
             document.getElementById('settings-custom-status').value = u.customStatus || ''; 
+            // โหลดชื่อปัจจุบัน
+            document.getElementById('settings-username-input').value = currentUsername;
+            
             if(u.bannerURL) { document.getElementById('settings-banner-preview').src = u.bannerURL; document.getElementById('settings-banner-preview').classList.remove('hidden'); }
         }
 
@@ -125,20 +140,19 @@ onSnapshot(collection(db, "users"), (snapshot) => {
 });
 
 // ==========================================
-// 🎨 5. Settings (บันทึกรูปโปรไฟล์ & ภาพปก & สถานะ) + แจ้งเตือน Alert
+// 🎨 5. Settings (บันทึกโปรไฟล์ & ชื่อ & สถานะ)
 // ==========================================
-const settingsModal = document.getElementById('settings-modal'), statusTxt = document.getElementById('settings-status');
+const settingsModal = document.getElementById('settings-modal');
 const avatarInput = document.getElementById('settings-avatar-input'), bannerInput = document.getElementById('settings-banner-input');
 
-document.getElementById('open-settings-btn').onclick = document.getElementById('mini-profile-btn').onclick = (e) => { e.preventDefault(); document.getElementById('settings-avatar-preview').src = document.getElementById('current-user-avatar').src; document.getElementById('settings-username-display').textContent = currentUsername; settingsModal.classList.remove('hidden'); sidebar.classList.remove('open'); overlay.classList.remove('active'); };
-document.getElementById('close-settings-btn').onclick = () => { settingsModal.classList.add('hidden'); statusTxt.textContent = ""; };
+document.getElementById('open-settings-btn').onclick = document.getElementById('mini-profile-btn').onclick = (e) => { e.preventDefault(); document.getElementById('settings-avatar-preview').src = document.getElementById('current-user-avatar').src; settingsModal.classList.remove('hidden'); sidebar.classList.remove('open'); overlay.classList.remove('active'); };
+document.getElementById('close-settings-btn').onclick = () => { settingsModal.classList.add('hidden'); };
 
 document.getElementById('settings-avatar-wrapper').onclick = () => avatarInput.click();
 document.getElementById('settings-banner-wrapper').onclick = () => bannerInput.click();
 
 async function uploadImage(file, type) {
-    statusTxt.className = "text-yellow-500 text-[12px] font-medium h-4 transition-all text-center mt-2"; 
-    statusTxt.textContent = `กำลังอัปโหลด${type === 'avatar' ? 'โปรไฟล์' : 'ภาพปก'}... ⏳`;
+    showToast(`กำลังอัปโหลด${type === 'avatar' ? 'โปรไฟล์' : 'ภาพปก'}... ⏳`, "info");
     document.getElementById(`settings-${type}-wrapper`).classList.add('opacity-50', 'pointer-events-none');
     try { 
         const fd = new FormData(); fd.append("image", file); 
@@ -152,33 +166,30 @@ async function uploadImage(file, type) {
                 await updateDoc(doc(db, "users", currentUserId), { bannerURL: r.data.url });
                 document.getElementById('settings-banner-preview').src = r.data.url; document.getElementById('settings-banner-preview').classList.remove('hidden');
             }
-            statusTxt.className = "text-[#23a559] text-[12px] font-medium h-4 transition-all text-center mt-2"; 
-            statusTxt.textContent = "อัปโหลดสำเร็จ! ✅"; 
-            setTimeout(() => statusTxt.textContent = "", 3000); 
+            showToast("อัปโหลดรูปภาพสำเร็จ!", "success");
         } 
-    } catch(err) { statusTxt.className = "text-[#da373c] text-[12px] font-medium h-4 transition-all text-center mt-2"; statusTxt.textContent = "เกิดข้อผิดพลาดในการอัปโหลด ❌"; } 
+    } catch(err) { showToast("เกิดข้อผิดพลาดในการอัปโหลด", "error"); } 
     finally { document.getElementById(`settings-${type}-wrapper`).classList.remove('opacity-50', 'pointer-events-none'); }
 }
 
 avatarInput.onchange = (e) => { if(e.target.files[0]) uploadImage(e.target.files[0], 'avatar'); avatarInput.value = ""; };
 bannerInput.onchange = (e) => { if(e.target.files[0]) uploadImage(e.target.files[0], 'banner'); bannerInput.value = ""; };
 
+// 🌟 บันทึกชื่อและสถานะ
 document.getElementById('save-settings-btn').onclick = async () => {
+    const newName = document.getElementById('settings-username-input').value.trim() || currentUsername;
     const newStatus = document.getElementById('settings-custom-status').value.trim();
-    statusTxt.className = "text-yellow-500 text-[12px] font-medium h-4 transition-all text-center mt-2"; 
-    statusTxt.textContent = "กำลังบันทึกข้อมูล... ⏳";
+    
     try { 
-        await updateDoc(doc(db, "users", currentUserId), { customStatus: newStatus }); 
-        statusTxt.className = "text-[#23a559] text-[12px] font-medium h-4 transition-all text-center mt-2"; 
-        statusTxt.textContent = "บันทึกการตั้งค่าสำเร็จ! ✅"; 
+        await updateProfile(auth.currentUser, { displayName: newName });
+        await updateDoc(doc(db, "users", currentUserId), { username: newName, customStatus: newStatus }); 
+        currentUsername = newName;
+        document.getElementById('current-user-name').textContent = currentUsername;
         
-        // 🌟 เด้งแจ้งเตือนกลางจอเพื่อความชัวร์ 100% ว่าบันทึกแล้ว!
-        alert("✅ บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้วครับ!");
-        
+        showToast("บันทึกการตั้งค่าโปรไฟล์สำเร็จ!", "success"); // แจ้งเตือนแบบใหม่!
         settingsModal.classList.add('hidden'); 
     } catch(e) { 
-        statusTxt.className = "text-[#da373c] text-[12px] font-medium h-4 transition-all text-center mt-2"; 
-        statusTxt.textContent = "เกิดข้อผิดพลาด ❌"; 
+        showToast("เกิดข้อผิดพลาดในการบันทึก", "error");
     }
 };
 
@@ -206,7 +217,6 @@ const chatInput = document.getElementById('chat-input');
 chatInput.addEventListener('input', () => { if (!currentUserId) return; if (!isTyping) { isTyping = true; updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel }); } clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }, 2000); });
 window.deleteChatMsg = async (msgId) => { if(confirm('🗑️ ยืนยันการลบข้อความนี้ใช่ไหม? (แอดมินลบได้เท่านั้น)')) await deleteDoc(doc(db, "messages", msgId)); };
 
-// ฟังก์ชันเซ็ตสถานะการตอบกลับ
 window.setReply = (msgId, senderName, rawText) => {
     replyingTo = { msgId, senderName, text: rawText.substring(0, 40) + (rawText.length > 40 ? '...' : '') };
     document.getElementById('reply-to-name').textContent = `@${senderName}`;
@@ -278,7 +288,7 @@ function renderMessages() {
 async function sendMessage() { const txt = chatInput.value.trim(); if (!txt) return; chatInput.value = ''; clearTimeout(typingTimeout); isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); await addDoc(collection(db, "messages"), { text: txt, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp(), reactions: {}, replyTo: replyingTo }); replyingTo = null; document.getElementById('reply-banner').classList.add('hidden'); }
 document.getElementById('send-btn').onclick = sendMessage; chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
 document.getElementById('attach-btn').onclick = () => document.getElementById('file-input').click();
-document.getElementById('file-input').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; chatInput.placeholder = "กำลังอัปโหลดไฟล์..."; chatInput.disabled = true; try { const fd = new FormData(); fd.append("image", f); const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const r = await res.json(); if (r.success) { await addDoc(collection(db, "messages"), { text: "", imageUrl: r.data.url, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp(), reactions: {}, replyTo: replyingTo }); replyingTo = null; document.getElementById('reply-banner').classList.add('hidden'); } } catch (err) { alert("อัปโหลดพลาด"); } finally { chatInput.placeholder = "ส่งข้อความถึง #ห้องแชท"; chatInput.disabled = false; chatInput.value = ""; chatInput.focus(); } };
+document.getElementById('file-input').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; chatInput.placeholder = "กำลังอัปโหลดไฟล์..."; chatInput.disabled = true; try { const fd = new FormData(); fd.append("image", f); const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const r = await res.json(); if (r.success) { await addDoc(collection(db, "messages"), { text: "", imageUrl: r.data.url, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp(), reactions: {}, replyTo: replyingTo }); replyingTo = null; document.getElementById('reply-banner').classList.add('hidden'); } } catch (err) { showToast("อัปโหลดพลาด", "error"); } finally { chatInput.placeholder = "ส่งข้อความถึง #ห้องแชท"; chatInput.disabled = false; chatInput.value = ""; chatInput.focus(); } };
 
 // ==========================================
 // 🎨 8. ระบบกระดานไอเดีย (Shared Whiteboard)
@@ -286,13 +296,13 @@ document.getElementById('file-input').onchange = async (e) => { const f = e.targ
 const canvas = document.getElementById('whiteboard-canvas'), ctx = canvas.getContext('2d'), canvasContainer = document.getElementById('canvas-container'), wbStatus = document.getElementById('wb-status');
 let isDrawing = false;
 function initCanvasSize() { if(canvas.width !== canvasContainer.clientWidth || canvas.height !== canvasContainer.clientHeight) { const temp = canvas.toDataURL(); canvas.width = canvasContainer.clientWidth; canvas.height = canvasContainer.clientHeight; if(temp !== "data:,") { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0); img.src = temp; } } }
-window.addEventListener('resize', initCanvasSize); function getMousePos(e) { const r = canvas.getBoundingClientRect(); const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY; return { x: x - r.left, y: y - r.top }; } function startDrawing(e) { if(e.type === 'touchstart') e.preventDefault(); isDrawing = true; draw(e); } function draw(e) { if (!isDrawing) return; if(e.type === 'touchmove') e.preventDefault(); const p = getMousePos(e); ctx.lineWidth = document.getElementById('wb-size').value; ctx.lineCap = 'round'; ctx.strokeStyle = document.getElementById('wb-color').value; ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x, p.y); } function stopDrawing() { if (!isDrawing) return; isDrawing = false; ctx.beginPath(); syncWhiteboard(); } canvas.onmousedown = startDrawing; canvas.onmousemove = draw; canvas.onmouseup = canvas.onmouseout = stopDrawing; canvas.addEventListener('touchstart', startDrawing, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchend', stopDrawing); document.getElementById('wb-clear').onclick = () => { if(confirm("ล้างกระดานทั้งหมด?")) { ctx.clearRect(0, 0, canvas.width, canvas.height); syncWhiteboard(true); } }; async function syncWhiteboard(isC = false) { if(!currentUserId) return; await setDoc(doc(db, "appData", "whiteboard"), { image: isC ? "" : canvas.toDataURL(), updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); } onSnapshot(doc(db, "appData", "whiteboard"), (d) => { if (d.exists() && !isDrawing) { const val = d.data(); if (val.updatedBy && val.updatedBy !== currentUsername) { wbStatus.innerHTML = `<i class="ph ph-pencil-simple mr-1.5"></i> ${val.updatedBy} เพิ่งอัปเดตกระดาน`; wbStatus.classList.remove('opacity-0'); setTimeout(() => wbStatus.classList.add('opacity-0'), 3000); } if(val.image) { const img = new Image(); img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); }; img.src = val.image; } else { ctx.clearRect(0, 0, canvas.width, canvas.height); } } });
+window.addEventListener('resize', initCanvasSize); function getMousePos(e) { const r = canvas.getBoundingClientRect(); const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY; return { x: x - r.left, y: y - r.top }; } function startDrawing(e) { if(e.type === 'touchstart') e.preventDefault(); isDrawing = true; draw(e); } function draw(e) { if (!isDrawing) return; if(e.type === 'touchmove') e.preventDefault(); const p = getMousePos(e); ctx.lineWidth = document.getElementById('wb-size').value; ctx.lineCap = 'round'; ctx.strokeStyle = document.getElementById('wb-color').value; ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x, p.y); } function stopDrawing() { if (!isDrawing) return; isDrawing = false; ctx.beginPath(); syncWhiteboard(); } canvas.onmousedown = startDrawing; canvas.onmousemove = draw; canvas.onmouseup = canvas.onmouseout = stopDrawing; canvas.addEventListener('touchstart', startDrawing, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchend', stopDrawing); document.getElementById('wb-clear').onclick = () => { if(confirm("ล้างกระดานทั้งหมด?")) { ctx.clearRect(0, 0, canvas.width, canvas.height); syncWhiteboard(true); showToast("ล้างกระดานแล้ว", "success"); } }; async function syncWhiteboard(isC = false) { if(!currentUserId) return; await setDoc(doc(db, "appData", "whiteboard"), { image: isC ? "" : canvas.toDataURL(), updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); } onSnapshot(doc(db, "appData", "whiteboard"), (d) => { if (d.exists() && !isDrawing) { const val = d.data(); if (val.updatedBy && val.updatedBy !== currentUsername) { wbStatus.innerHTML = `<i class="ph ph-pencil-simple mr-1.5"></i> ${val.updatedBy} เพิ่งอัปเดตกระดาน`; wbStatus.classList.remove('opacity-0'); setTimeout(() => wbStatus.classList.add('opacity-0'), 3000); } if(val.image) { const img = new Image(); img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); }; img.src = val.image; } else { ctx.clearRect(0, 0, canvas.width, canvas.height); } } });
 
 // ==========================================
 // 🎙️ 9. ระบบห้องคุยเสียง (Voice & Screen Share)
 // ==========================================
 const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.getElementById('leave-voice-btn'), muteBtn = document.getElementById('mute-btn'), ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
-async function joinVoice() { try { joinBtn.innerHTML = "กำลังเชื่อมต่อ..."; myNumericUid = Math.floor(Math.random() * 1000000); rtcClient.on("user-published", async (u, t) => { await rtcClient.subscribe(u, t); if (t === "audio") u.audioTrack.play(); if (t === "video") { ssStage.classList.remove('hidden'); const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); } }); rtcClient.on("user-unpublished", async (u, t) => { if (t === "video") { const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); } }); rtcClient.enableAudioVolumeIndicator(); rtcClient.on("volume-indicator", vs => { document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); vs.forEach(v => { if (v.level > 10) { let sId = null; if (v.uid === myNumericUid || v.uid === 0) { sId = currentUserId; } else { for (const k in usersData) { if (usersData[k].agoraUid === v.uid) { sId = usersData[k].id; break; } } } if (sId) { const a1 = document.getElementById(`img-avatar-${sId}`), a2 = document.getElementById(`img-sidebar-voice-${sId}`), a3 = document.getElementById(`img-grid-voice-${sId}`); if(a1) a1.classList.add('speaking-ring'); if(a2) a2.classList.add('speaking-ring'); if(a3) a3.classList.add('speaking-ring'); } } }); }); await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid); localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true }); await rtcClient.publish(localTracks.audioTrack); isMuted = false; await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false, isSharingScreen: false }); localStorage.setItem('dosh_active_voice', 'true'); joinBtn.classList.add('hidden'); document.getElementById('active-voice-ui').classList.remove('hidden'); muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]"; } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); alert("เชื่อมต่อไมค์ไม่สำเร็จ"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } }
+async function joinVoice() { try { joinBtn.innerHTML = "กำลังเชื่อมต่อ..."; myNumericUid = Math.floor(Math.random() * 1000000); rtcClient.on("user-published", async (u, t) => { await rtcClient.subscribe(u, t); if (t === "audio") u.audioTrack.play(); if (t === "video") { ssStage.classList.remove('hidden'); const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); } }); rtcClient.on("user-unpublished", async (u, t) => { if (t === "video") { const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); } }); rtcClient.enableAudioVolumeIndicator(); rtcClient.on("volume-indicator", vs => { document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); vs.forEach(v => { if (v.level > 10) { let sId = null; if (v.uid === myNumericUid || v.uid === 0) { sId = currentUserId; } else { for (const k in usersData) { if (usersData[k].agoraUid === v.uid) { sId = usersData[k].id; break; } } } if (sId) { const a1 = document.getElementById(`img-avatar-${sId}`), a2 = document.getElementById(`img-sidebar-voice-${sId}`), a3 = document.getElementById(`img-grid-voice-${sId}`); if(a1) a1.classList.add('speaking-ring'); if(a2) a2.classList.add('speaking-ring'); if(a3) a3.classList.add('speaking-ring'); } } }); }); await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid); localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true }); await rtcClient.publish(localTracks.audioTrack); isMuted = false; await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false, isSharingScreen: false }); localStorage.setItem('dosh_active_voice', 'true'); joinBtn.classList.add('hidden'); document.getElementById('active-voice-ui').classList.remove('hidden'); muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]"; } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } }
 ssBtn.onclick = async () => { const sIco = document.getElementById('screen-icon'); if (!isSharingScreen) { try { const res = await AgoraRTC.createScreenVideoTrack({ encoderConfig: { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 }, optimizationMode: "motion" }, "auto"); if (Array.isArray(res)) { screenTrack = res[0]; screenAudioTrack = res[1]; await rtcClient.publish([screenTrack, screenAudioTrack]); } else { screenTrack = res; await rtcClient.publish(screenTrack); } isSharingScreen = true; await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: true }); ssBtn.classList.replace('bg-[#151619]', 'bg-[#23a559]'); ssBtn.classList.replace('text-gray-300', 'text-white'); sIco.className = "ph-fill ph-screencast text-[20px] md:text-[24px]"; ssStage.classList.remove('hidden'); let pc = document.createElement("div"); pc.id = `v-wrap-local`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); screenTrack.play(pc, { fit: "contain" }); screenTrack.on("track-ended", stopScreenShare); } catch (err) { console.log(err); } } else { await stopScreenShare(); } };
 async function stopScreenShare() { if (screenTrack) { await rtcClient.unpublish(screenTrack); screenTrack.stop(); screenTrack.close(); screenTrack = null; } if (screenAudioTrack) { await rtcClient.unpublish(screenAudioTrack); screenAudioTrack.stop(); screenAudioTrack.close(); screenAudioTrack = null; } isSharingScreen = false; if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: false }); ssBtn.classList.replace('bg-[#23a559]', 'bg-[#151619]'); ssBtn.classList.replace('text-white', 'text-gray-300'); document.getElementById('screen-icon').className = "ph ph-screencast text-[20px] md:text-[24px]"; const pc = document.getElementById(`v-wrap-local`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); }
 async function leaveVoice() { if (isSharingScreen) await stopScreenShare(); if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); } await rtcClient.leave(); if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }); } localStorage.removeItem('dosh_active_voice'); document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; document.getElementById('active-voice-ui').classList.add('hidden'); }
@@ -300,9 +310,30 @@ joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
 muteBtn.onclick = async () => { isMuted = !isMuted; localTracks.audioTrack.setEnabled(!isMuted); await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); const muteIcon = document.getElementById('mute-icon'); if (isMuted) { muteBtn.classList.remove('bg-[#151619]'); muteBtn.classList.add('bg-gray-800', 'text-[#da373c]'); muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; } else { muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; } };
 
 // ==========================================
-// 📋 10. ระบบกระดานงาน (Task Board)
+// 📋 10. ระบบกระดานงาน (Task Board) - ใช้ Custom Modal ใหม่
 // ==========================================
 const zones = { 'todo': document.getElementById('todo'), 'in_progress': document.getElementById('in_progress'), 'done': document.getElementById('done') };
 onSnapshot(collection(db, "tasks"), (snapshot) => { Object.values(zones).forEach(z => z.innerHTML = ''); snapshot.forEach((docSnap) => { const d = docSnap.data(), id = docSnap.id, s = d.status || 'todo'; let tC = "bg-[#1c1d21] text-[#d1d3d6] border border-[#2b2d31]"; if(d.tag && d.tag.includes('Dev')) tC = "bg-blue-500/10 text-blue-400 border border-blue-500/20"; if(d.tag && d.tag.includes('Music')) tC = "bg-pink-500/10 text-pink-400 border border-pink-500/20"; if(d.tag && d.tag.includes('Video')) tC = "bg-purple-500/10 text-purple-400 border border-purple-500/20"; if(d.tag && d.tag.includes('Design')) tC = "bg-[#23a559]/10 text-[#23a559] border border-[#23a559]/20"; const cardHTML = `<div draggable="true" data-id="${id}" class="task-card bg-[#1c1d21] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${s === 'done' ? 'border-[#3f4147] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]"><div class="flex space-x-2 mb-2.5"><span class="${tC} text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center"><i class="ph-fill ph-tag text-[10px] mr-1"></i>${d.tag}</span></div><p class="text-[13px] md:text-[14px] font-medium text-[#d1d3d6] ${s === 'done' ? 'line-through text-[#6d717a]' : ''} leading-snug">${d.title}</p></div>`; if (zones[s]) zones[s].insertAdjacentHTML('beforeend', cardHTML); }); document.querySelectorAll('.task-card').forEach(c => { c.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', c.getAttribute('data-id')); setTimeout(() => c.classList.add('opacity-30'), 0); }); c.addEventListener('dragend', () => c.classList.remove('opacity-30')); }); });
 Object.keys(zones).forEach(s => { const z = zones[s]; z.addEventListener('dragover', (e) => { e.preventDefault(); z.classList.add('drop-zone-active'); }); z.addEventListener('dragleave', () => z.classList.remove('drop-zone-active')); z.addEventListener('drop', async (e) => { e.preventDefault(); z.classList.remove('drop-zone-active'); const tId = e.dataTransfer.getData('text/plain'); if (tId) await updateDoc(doc(db, "tasks", tId), { status: s }); }); });
-document.getElementById('add-task-btn').addEventListener('click', async () => { const t = prompt("ชื่องาน:"); if (!t) return; const tag = prompt("สายงาน (เช่น Dev, Music, Video, Design):", "Dev"); await addDoc(collection(db, "tasks"), { title: t, tag: tag || 'General', status: 'todo', timestamp: serverTimestamp() }); });
+
+// 🌟 ระบบเพิ่มงานผ่าน Modal ใหม่!
+const taskModal = document.getElementById('task-modal');
+document.getElementById('add-task-btn').addEventListener('click', () => {
+    document.getElementById('task-title-input').value = '';
+    taskModal.classList.remove('hidden');
+});
+document.getElementById('close-task-modal').addEventListener('click', () => taskModal.classList.add('hidden'));
+
+document.getElementById('confirm-task-btn').addEventListener('click', async () => {
+    const title = document.getElementById('task-title-input').value.trim();
+    const tag = document.getElementById('task-tag-input').value;
+    
+    if (!title) {
+        showToast("กรุณากรอกชื่องานก่อนครับ!", "error");
+        return;
+    }
+    
+    await addDoc(collection(db, "tasks"), { title: title, tag: tag, status: 'todo', timestamp: serverTimestamp() });
+    taskModal.classList.add('hidden');
+    showToast("เพิ่มงานใหม่ลงในกระดานแล้ว!", "success");
+});
