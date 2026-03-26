@@ -125,6 +125,17 @@
             try { errorMsg.textContent = "กำลังรอ Google..."; const result = await signInWithPopup(auth, provider); await saveUserToDB(result.user); } 
             catch (e) { errorMsg.textContent = "การล็อกอินด้วย Google ล้มเหลว!"; }
         };
+
+        // ==========================================
+        // 🚀 ลงทะเบียน PWA (ให้หน้า Login รู้จักแอป)
+        // ==========================================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => console.log('✅ DOSH ServiceWorker ทำงาน (หน้า Login)'))
+                    .catch(err => console.log('❌ DOSH ServiceWorker พลาด:', err));
+            });
+        }
     </script>
 </body>
 </html>
