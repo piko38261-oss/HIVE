@@ -13,7 +13,8 @@ const rtcClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 let localTracks = { audioTrack: null }, screenTrack = null, screenAudioTrack = null;
 let isMuted = false, isSharingScreen = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general", currentUserRole = "Member"; 
 let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false, unreadCounts = { general: 0, project: 0 };
-let replyingTo = null, messageToDelete = null; 
+let replyingTo = null;
+let messageToDelete = null; // เก็บ ID ที่จะลบ
 
 const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); sfxMsg.volume = 0.5;
 
@@ -32,21 +33,11 @@ window.openLightbox = (url) => { document.getElementById('lightbox-img').src = u
 lightbox.onclick = () => { lightbox.classList.add('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-100', 'scale-95'); setTimeout(() => lightbox.classList.add('hidden'), 300); };
 
 // ==========================================
-// 🌟 1.5 เตรียมระบบ Watch Party (YouTube API)
+// 🌟 1.5 เตรียมระบบ Watch Party (YouTube API แก้บั๊กจอดำ)
 // ==========================================
-let ytPlayer;
+let ytPlayer = null;
 let ignoreNextYtEvent = false;
 let lastSyncTime = 0;
-
-window.onYouTubeIframeAPIReady = function() {
-    ytPlayer = new YT.Player('yt-player', {
-        height: '100%',
-        width: '100%',
-        videoId: '',
-        playerVars: { 'autoplay': 1, 'controls': 1, 'rel': 0, 'modestbranding': 1, 'disablekb': 1 },
-        events: { 'onStateChange': onPlayerStateChange }
-    });
-};
 
 function extractVideoID(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -71,7 +62,6 @@ document.getElementById('close-wp-btn').onclick = async () => {
 
 async function onPlayerStateChange(event) {
     if(ignoreNextYtEvent) { ignoreNextYtEvent = false; return; }
-    // 1 = Playing, 2 = Paused. ส่งให้คนอื่นรู้เมื่อมีการกดเล่นหรือหยุด
     if(event.data === 1 || event.data === 2) {
         const now = Date.now(); if (now - lastSyncTime < 1000) return; lastSyncTime = now;
         const time = ytPlayer.getCurrentTime(); const vid = ytPlayer.getVideoData().video_id;
@@ -83,26 +73,39 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
     if(d.exists()) {
         const wp = d.data();
         if(wp.videoId) {
+            // ต้องทำให้จอโชว์ก่อนสร้าง IFrame จะได้ไม่จอดำ!
             document.getElementById('watch-party-stage').classList.remove('hidden');
             document.getElementById('watch-party-stage').classList.add('flex');
             document.getElementById('wp-host').textContent = wp.updatedBy;
-            if(!ytPlayer || !ytPlayer.loadVideoById) return; 
             
-            const currentVid = ytPlayer.getVideoData ? ytPlayer.getVideoData().video_id : '';
-            if(currentVid !== wp.videoId) {
-                ignoreNextYtEvent = true; ytPlayer.loadVideoById(wp.videoId, wp.time);
+            if(!ytPlayer) {
+                ytPlayer = new YT.Player('yt-player-container', {
+                    height: '100%', width: '100%', videoId: wp.videoId,
+                    playerVars: { 'autoplay': 1, 'controls': 1, 'rel': 0, 'modestbranding': 1, 'origin': window.location.origin },
+                    events: {
+                        'onReady': (e) => { e.target.seekTo(wp.time, true); if(wp.state === 1) e.target.playVideo(); },
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
             } else {
-                if(wp.updatedBy !== currentUsername) {
-                    ignoreNextYtEvent = true; const currentTime = ytPlayer.getCurrentTime();
-                    if(Math.abs(currentTime - wp.time) > 2) ytPlayer.seekTo(wp.time, true);
-                    if(wp.state === 1 && ytPlayer.getPlayerState() !== 1) ytPlayer.playVideo();
-                    if(wp.state === 2 && ytPlayer.getPlayerState() !== 2) ytPlayer.pauseVideo();
+                if (!ytPlayer.getVideoData) return; 
+                const currentVid = ytPlayer.getVideoData().video_id;
+                if(currentVid !== wp.videoId) {
+                    ignoreNextYtEvent = true; ytPlayer.loadVideoById(wp.videoId, wp.time);
+                } else {
+                    if(wp.updatedBy !== currentUsername) {
+                        ignoreNextYtEvent = true; const currentTime = ytPlayer.getCurrentTime();
+                        if(Math.abs(currentTime - wp.time) > 2) ytPlayer.seekTo(wp.time, true);
+                        if(wp.state === 1 && ytPlayer.getPlayerState() !== 1) ytPlayer.playVideo();
+                        if(wp.state === 2 && ytPlayer.getPlayerState() !== 2) ytPlayer.pauseVideo();
+                    }
                 }
             }
         } else {
             document.getElementById('watch-party-stage').classList.add('hidden');
             document.getElementById('watch-party-stage').classList.remove('flex');
-            if(ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
+            if(ytPlayer && ytPlayer.destroy) { ytPlayer.destroy(); ytPlayer = null; }
+            document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; // รีเซ็ตเตรียมไว้รอบหน้า
         }
     }
 });
@@ -231,15 +234,22 @@ document.getElementById('logout-btn').addEventListener('click', async () => { if
 window.addEventListener('beforeunload', () => { if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } });
 
 // ==========================================
-// 💬 6. ระบบแชท + Modal ลบ + ตอบกลับ
+// 💬 6. ระบบแชท + Modal ลบ (ซ่อมแล้ว) + ตอบกลับ
 // ==========================================
 const chatInput = document.getElementById('chat-input');
 chatInput.addEventListener('input', () => { if (!currentUserId) return; if (!isTyping) { isTyping = true; updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel }); } clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }, 2000); });
 
+// 🌟 ระบบลบข้อความ (Custom Modal กลับมาแล้วครับ!)
 const deleteModal = document.getElementById('delete-confirm-modal');
 window.deleteChatMsg = (msgId) => { messageToDelete = msgId; deleteModal.classList.remove('hidden'); };
 document.getElementById('cancel-delete-btn').onclick = () => { messageToDelete = null; deleteModal.classList.add('hidden'); };
-document.getElementById('confirm-delete-btn').onclick = async () => { if (messageToDelete) { try { await deleteDoc(doc(db, "messages", messageToDelete)); showToast("ลบข้อความสำเร็จ", "success"); } catch (err) { showToast("เกิดข้อผิดพลาดในการลบข้อความ", "error"); } messageToDelete = null; deleteModal.classList.add('hidden'); } };
+document.getElementById('confirm-delete-btn').onclick = async () => {
+    if (messageToDelete) {
+        try { await deleteDoc(doc(db, "messages", messageToDelete)); showToast("ลบข้อความสำเร็จ", "success"); } 
+        catch (err) { showToast("เกิดข้อผิดพลาดในการลบข้อความ", "error"); }
+        messageToDelete = null; deleteModal.classList.add('hidden');
+    }
+};
 
 window.setReply = (msgId, senderName, rawText) => { replyingTo = { msgId, senderName, text: rawText.substring(0, 40) + (rawText.length > 40 ? '...' : '') }; document.getElementById('reply-to-name').textContent = `@${senderName}`; document.getElementById('reply-to-text').textContent = replyingTo.text; document.getElementById('reply-banner').classList.remove('hidden'); chatInput.focus(); };
 document.getElementById('cancel-reply-btn').onclick = () => { replyingTo = null; document.getElementById('reply-banner').classList.add('hidden'); };

@@ -6,9 +6,7 @@
     <title>DOSH - Workspace & Lounge</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
-    
     <script src="https://www.youtube.com/iframe_api"></script>
-
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="style.css">
@@ -34,20 +32,8 @@
             <button id="close-task-modal" class="absolute top-4 right-4 text-[#80848e] hover:text-[#e4e5e7] transition"><i class="ph ph-x text-[20px]"></i></button>
             <h2 class="text-lg font-bold text-white mb-5 flex items-center"><i class="ph-fill ph-kanban mr-2 text-[#23a559]"></i> สร้างงานใหม่</h2>
             <div class="space-y-4">
-                <div>
-                    <label class="block text-[11px] font-bold text-[#80848e] uppercase mb-1.5">ชื่องาน (Task Title)</label>
-                    <input type="text" id="task-title-input" placeholder="เช่น ออกแบบโลโก้, ตัดคลิป" class="w-full bg-[#111214] border border-[#2b2d31] focus:border-[#5865F2] rounded-md px-3 py-2 text-[13px] text-[#dbdee1] focus:outline-none transition">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-[#80848e] uppercase mb-1.5">หมวดหมู่ (Tag)</label>
-                    <select id="task-tag-input" class="w-full bg-[#111214] border border-[#2b2d31] focus:border-[#5865F2] rounded-md px-3 py-2 text-[13px] text-[#dbdee1] focus:outline-none transition cursor-pointer outline-none">
-                        <option value="Dev">💻 Dev (พัฒนา)</option>
-                        <option value="Design">🎨 Design (ออกแบบ)</option>
-                        <option value="Video">🎬 Video (วิดีโอ)</option>
-                        <option value="Music">🎵 Music (เสียง/เพลง)</option>
-                        <option value="General" selected>📌 General (ทั่วไป)</option>
-                    </select>
-                </div>
+                <div><label class="block text-[11px] font-bold text-[#80848e] uppercase mb-1.5">ชื่องาน (Task Title)</label><input type="text" id="task-title-input" placeholder="เช่น ออกแบบโลโก้, ตัดคลิป" class="w-full bg-[#111214] border border-[#2b2d31] focus:border-[#5865F2] rounded-md px-3 py-2 text-[13px] text-[#dbdee1] focus:outline-none transition"></div>
+                <div><label class="block text-[11px] font-bold text-[#80848e] uppercase mb-1.5">หมวดหมู่ (Tag)</label><select id="task-tag-input" class="w-full bg-[#111214] border border-[#2b2d31] focus:border-[#5865F2] rounded-md px-3 py-2 text-[13px] text-[#dbdee1] focus:outline-none transition cursor-pointer outline-none"><option value="Dev">💻 Dev (พัฒนา)</option><option value="Design">🎨 Design (ออกแบบ)</option><option value="Video">🎬 Video (วิดีโอ)</option><option value="Music">🎵 Music (เสียง/เพลง)</option><option value="General" selected>📌 General (ทั่วไป)</option></select></div>
                 <button id="confirm-task-btn" class="w-full bg-[#23a559] hover:bg-[#1e8a49] text-white font-bold py-2.5 rounded-md transition shadow-md mt-2 text-[14px]">เพิ่มงานเข้าระบบ</button>
             </div>
         </div>
@@ -121,37 +107,36 @@
         <div id="view-voice" class="hidden flex-1 flex flex-col h-full bg-[#0e0f11] relative w-full">
             <header class="p-3.5 border-b border-[#151619] flex justify-between items-center shadow-md bg-[#0f1013] z-20 w-full"><div class="flex items-center"><button class="open-menu md:hidden mr-3 text-[#80848e] transition p-1"><i class="ph ph-list text-[24px]"></i></button><h2 class="text-base md:text-md font-bold text-[#e4e5e7] flex items-center"><i class="ph ph-speaker-high text-[20px] md:text-[22px] mr-2 text-[#5c6069]"></i> ห้องนั่งเล่นคุยงาน</h2></div><div class="flex items-center"><span class="text-[10px] md:text-[11px] text-[#23a559] font-bold bg-[#23a559]/10 px-2 py-1 rounded border border-[#23a559]/20 mr-2 md:mr-3 uppercase tracking-wide flex items-center"><i class="ph-fill ph-circle text-[8px] mr-1.5 animate-pulse"></i><span class="hidden md:inline">Voice Connected</span><span class="md:hidden">Connected</span></span><button id="open-members-voice" class="md:hidden text-[#80848e] hover:text-gray-300 transition p-1"><i class="ph ph-users text-[22px]"></i></button></div></header>
             
-            <div id="watch-party-stage" class="hidden w-full bg-[#050505] border-b border-[#1e1f22] p-2 md:p-6 flex-col items-center justify-center relative z-10 shadow-inner">
-                <div class="w-full max-w-4xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative border border-[#1e1f22]">
-                    <div id="yt-player"></div>
+            <div id="watch-party-stage" class="hidden w-full bg-[#050505] border-b border-[#1e1f22] p-2 md:p-4 flex-col items-center justify-center relative z-10 shadow-inner flex-shrink-0 max-h-[35vh] md:max-h-[45vh]">
+                <div class="w-full max-w-3xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative border border-[#1e1f22]" id="yt-wrapper">
+                    <div id="yt-player-container"></div>
                 </div>
-                <div class="mt-3 flex items-center justify-between w-full max-w-4xl text-[#80848e] text-[12px] bg-[#151619] px-4 py-2 rounded-lg border border-[#1e1f22]">
-                    <span class="flex items-center"><i class="ph-fill ph-broadcast text-[#23a559] mr-2 animate-pulse text-[16px]"></i> กำลังแชร์คลิปโดย: <span id="wp-host" class="font-bold text-[#e4e5e7] ml-1.5">-</span></span>
-                    <button id="close-wp-btn" class="text-[#da373c] hover:text-white transition hover:bg-[#da373c] px-3 py-1 rounded font-bold flex items-center"><i class="ph-fill ph-stop-circle mr-1 text-[16px]"></i> ปิดวิดีโอ</button>
+                <div class="mt-2 flex items-center justify-between w-full max-w-3xl text-[#80848e] text-[11px] md:text-[12px] bg-[#151619] px-3 py-1.5 rounded-lg border border-[#1e1f22]">
+                    <span class="flex items-center"><i class="ph-fill ph-broadcast text-[#23a559] mr-2 animate-pulse text-[14px]"></i> กำลังแชร์คลิปโดย: <span id="wp-host" class="font-bold text-[#e4e5e7] ml-1.5">-</span></span>
+                    <button id="close-wp-btn" class="text-[#da373c] hover:text-white transition hover:bg-[#da373c] px-2 py-1 rounded font-bold flex items-center"><i class="ph-fill ph-stop-circle mr-1"></i> ปิดวิดีโอ</button>
                 </div>
             </div>
 
             <div id="screen-share-stage" class="hidden w-full h-[40vh] md:h-[55vh] bg-[#050505] border-b border-[#1e1f22] p-1 md:p-6 flex items-center justify-center relative z-10 shadow-inner"></div>
+            
             <div id="voice-grid" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 auto-rows-max content-start z-10 bg-[#0e0f11] transition-all w-full"></div>
             
-            <div class="pt-3 pb-6 px-3 md:p-5 bg-[#050506] border-t border-[#0a0a0c] flex justify-center items-center shadow-[0_-15px_30px_rgba(0,0,0,0.5)] z-20 h-24 md:h-28 relative w-full">
+            <div class="pt-3 pb-6 px-3 md:p-5 bg-[#050506] border-t border-[#0a0a0c] flex justify-center items-center shadow-[0_-15px_30px_rgba(0,0,0,0.5)] z-20 h-24 md:h-28 relative w-full flex-shrink-0">
                 <button id="join-voice-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-6 py-2.5 md:px-8 md:py-3.5 rounded-full font-bold transition-all duration-200 shadow-lg hover:-translate-y-0.5 flex items-center text-[14px] md:text-[15px] opacity-90 hover:opacity-100"><i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span></button>
                 
-                <div id="wp-controls" class="hidden absolute top-[-60px] left-1/2 transform -translate-x-1/2 bg-[#151619] p-2 rounded-xl border border-[#2b2d31] shadow-2xl flex items-center space-x-2 w-[90%] max-w-md transition-all animate-[slideUpFade_0.2s_ease-out]">
+                <div id="wp-controls" class="hidden absolute top-[-60px] left-1/2 transform -translate-x-1/2 bg-[#151619] p-2 rounded-xl border border-[#2b2d31] shadow-2xl flex items-center space-x-2 w-[90%] max-w-md transition-all animate-[slideUpFade_0.2s_ease-out] z-50">
                     <i class="ph-fill ph-youtube-logo text-[#da373c] text-[28px] ml-1"></i>
                     <input type="text" id="wp-link-input" placeholder="วางลิงก์ YouTube ที่นี่..." class="flex-1 bg-[#0e0f11] border border-[#2b2d31] focus:border-[#da373c] rounded-lg px-3 py-2 text-[13px] text-[#dbdee1] focus:outline-none transition shadow-inner">
-                    <button id="start-wp-btn" class="bg-[#da373c] hover:bg-[#c92f33] text-white px-4 py-2 rounded-lg font-bold text-[13px] transition shadow-md">เปิดคลิป</button>
+                    <button id="start-wp-btn" class="bg-[#da373c] hover:bg-[#c92f33] text-white px-4 py-2 rounded-lg font-bold text-[13px] transition shadow-md flex-shrink-0">เปิดคลิป</button>
                 </div>
 
                 <div id="active-voice-ui" class="hidden flex items-center space-x-4 md:space-x-6">
-                    
                     <div class="flex flex-col items-center group tooltip">
                         <span class="tooltip-text hidden md:block">ดู YouTube พร้อมกัน</span>
                         <button id="toggle-wp-input-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#151619] text-[#da373c] rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]">
                             <i class="ph-fill ph-youtube-logo text-[20px] md:text-[24px]"></i>
                         </button>
                     </div>
-
                     <div class="flex flex-col items-center group tooltip"><span class="tooltip-text hidden md:block">เปิด/ปิดไมค์</span><button id="mute-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#151619] text-gray-300 rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]"><i id="mute-icon" class="ph ph-microphone text-[20px] md:text-[24px]"></i></button></div>
                     <div class="flex flex-col items-center group tooltip"><span class="tooltip-text hidden md:block">แชร์หน้าจอ (30FPS)</span><button id="screen-share-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#151619] text-gray-300 rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]"><i id="screen-icon" class="ph ph-screencast text-[20px] md:text-[24px]"></i></button></div>
                     <div class="flex flex-col items-center group tooltip"><span class="tooltip-text hidden md:block">ตัดการเชื่อมต่อ</span><button id="leave-voice-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#da373c] text-white rounded-full flex items-center justify-center hover:bg-[#c92f33] transition-all duration-200 shadow-lg shadow-[#da373c]/20 hover:-translate-y-0.5 opacity-90 hover:opacity-100"><i class="ph-fill ph-phone-disconnect text-[22px] md:text-[26px]"></i></button></div>
