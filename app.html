@@ -6,6 +6,9 @@
     <title>DOSH - Workspace & Lounge</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
+    
+    <script src="https://www.youtube.com/iframe_api"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="style.css">
@@ -16,9 +19,7 @@
 
     <div id="delete-confirm-modal" class="fixed inset-0 z-[90] bg-black/80 hidden flex items-center justify-center backdrop-blur-sm transition-opacity p-4">
         <div class="bg-[#1e1f22] w-full max-w-[320px] rounded-2xl shadow-2xl border border-[#2b2d31] p-6 relative animate-[slideUpFade_0.2s_ease-out]">
-            <div class="w-12 h-12 rounded-full bg-[#da373c]/10 flex items-center justify-center mb-4 mx-auto">
-                <i class="ph-fill ph-warning-circle text-[#da373c] text-[24px]"></i>
-            </div>
+            <div class="w-12 h-12 rounded-full bg-[#da373c]/10 flex items-center justify-center mb-4 mx-auto"><i class="ph-fill ph-warning-circle text-[#da373c] text-[24px]"></i></div>
             <h2 class="text-lg font-bold text-white mb-2 text-center">ยืนยันการลบข้อความ</h2>
             <p class="text-[#949ba4] text-[13px] text-center mb-6">คุณแน่ใจหรือไม่ที่จะลบข้อความนี้ทิ้งถาวร? (แอดมินลบได้เท่านั้น)</p>
             <div class="flex space-x-3">
@@ -55,34 +56,16 @@
     <div id="settings-modal" class="fixed inset-0 z-[60] bg-black/80 hidden flex items-center justify-center backdrop-blur-sm transition-opacity p-4">
         <div class="bg-[#1e1f22] w-full max-w-[340px] rounded-2xl shadow-2xl border border-[#2b2d31] overflow-hidden relative animate-[slideUpFade_0.2s_ease-out]">
             <button id="close-settings-btn" class="absolute top-3 right-3 bg-black/50 hover:bg-black text-white p-1.5 rounded-full z-20 transition"><i class="ph ph-x text-[18px]"></i></button>
-            
-            <div class="relative w-full h-28 bg-[#5865F2] cursor-pointer group hover:brightness-90 transition" id="settings-banner-wrapper">
-                <img id="settings-banner-preview" src="" class="w-full h-full object-cover transition-all duration-300 hidden">
-                <div class="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded text-white flex items-center text-[10px] font-bold z-10 pointer-events-none border border-white/20"><i class="ph-fill ph-image mr-1 text-[14px]"></i> เปลี่ยนภาพปก</div>
-            </div>
+            <div class="relative w-full h-28 bg-[#5865F2] cursor-pointer group hover:brightness-90 transition" id="settings-banner-wrapper"><img id="settings-banner-preview" src="" class="w-full h-full object-cover transition-all duration-300 hidden"><div class="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded text-white flex items-center text-[10px] font-bold z-10 pointer-events-none border border-white/20"><i class="ph-fill ph-image mr-1 text-[14px]"></i> เปลี่ยนภาพปก</div></div>
             <input type="file" id="settings-banner-input" accept="image/png, image/jpeg, image/webp" class="hidden">
-
             <div class="px-5 pb-5 relative">
-                <div class="relative cursor-pointer w-20 h-20 -mt-10 mb-3 z-10 group hover:brightness-90 transition" id="settings-avatar-wrapper">
-                    <img id="settings-avatar-preview" src="" class="w-full h-full rounded-full object-cover border-[4px] border-[#1e1f22] bg-[#1a1b1e] shadow-lg">
-                    <div class="absolute bottom-0 right-0 bg-[#5865F2] p-1.5 rounded-full text-white border-2 border-[#1e1f22] pointer-events-none shadow-sm"><i class="ph-fill ph-camera text-[14px]"></i></div>
-                </div>
+                <div class="relative cursor-pointer w-20 h-20 -mt-10 mb-3 z-10 group hover:brightness-90 transition" id="settings-avatar-wrapper"><img id="settings-avatar-preview" src="" class="w-full h-full rounded-full object-cover border-[4px] border-[#1e1f22] bg-[#1a1b1e] shadow-lg"><div class="absolute bottom-0 right-0 bg-[#5865F2] p-1.5 rounded-full text-white border-2 border-[#1e1f22] pointer-events-none shadow-sm"><i class="ph-fill ph-camera text-[14px]"></i></div></div>
                 <input type="file" id="settings-avatar-input" accept="image/png, image/jpeg, image/webp" class="hidden">
-
                 <div class="w-full space-y-3">
-                    <div>
-                        <label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">ชื่อแสดงผล (Display Name)</label>
-                        <input type="text" id="settings-username-input" maxlength="20" class="w-full bg-[#111214] border border-[#2b2d31] focus:border-[#5865F2] rounded-md px-3 py-2 text-[14px] font-bold text-white focus:outline-none transition shadow-inner">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">สถานะส่วนตัว (Custom Status)</label>
-                        <input type="text" id="settings-custom-status" maxlength="30" placeholder="เช่น กำลังปั่นงาน 💻" class="w-full bg-[#111214] border border-[#2b2d31] focus:border-[#5865F2] rounded-md px-3 py-2 text-[13px] text-[#dbdee1] focus:outline-none transition shadow-inner">
-                    </div>
+                    <div><label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">ชื่อแสดงผล (Display Name)</label><input type="text" id="settings-username-input" maxlength="20" class="w-full bg-[#111214] border border-[#2b2d31] focus:border-[#5865F2] rounded-md px-3 py-2 text-[14px] font-bold text-white focus:outline-none transition shadow-inner"></div>
+                    <div><label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">สถานะส่วนตัว (Custom Status)</label><input type="text" id="settings-custom-status" maxlength="30" placeholder="เช่น กำลังปั่นงาน 💻" class="w-full bg-[#111214] border border-[#2b2d31] focus:border-[#5865F2] rounded-md px-3 py-2 text-[13px] text-[#dbdee1] focus:outline-none transition shadow-inner"></div>
                 </div>
-
-                <button id="save-settings-btn" class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-2.5 rounded-md transition shadow-md mt-5 text-[14px] flex justify-center items-center">
-                    <i class="ph-fill ph-floppy-disk mr-2 text-[18px]"></i> บันทึกการตั้งค่า
-                </button>
+                <button id="save-settings-btn" class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-2.5 rounded-md transition shadow-md mt-5 text-[14px] flex justify-center items-center"><i class="ph-fill ph-floppy-disk mr-2 text-[18px]"></i> บันทึกการตั้งค่า</button>
             </div>
         </div>
     </div>
@@ -93,14 +76,7 @@
             <div class="w-full h-28 bg-[#5865F2] relative"><img id="profile-card-banner" src="" class="w-full h-full object-cover hidden"></div>
             <div class="px-5 pb-6 relative">
                 <img id="profile-card-avatar" src="" class="w-20 h-20 rounded-full border-[6px] border-[#151619] object-cover absolute -top-10 left-4 bg-[#1e1f22] shadow-md">
-                <div class="pt-12">
-                    <h3 id="profile-card-name" class="text-[20px] font-extrabold text-white leading-none">Name</h3>
-                    <div id="profile-card-badges" class="flex space-x-2 mt-2"></div>
-                    <div class="mt-4 bg-[#111214] p-3 rounded-lg border border-[#1e1f22]">
-                        <h4 class="text-[10px] font-extrabold text-[#e4e5e7] uppercase mb-1 tracking-wider">สถานะส่วนตัว</h4>
-                        <p id="profile-card-status" class="text-[13px] text-[#dbdee1] leading-snug"></p>
-                    </div>
-                </div>
+                <div class="pt-12"><h3 id="profile-card-name" class="text-[20px] font-extrabold text-white leading-none">Name</h3><div id="profile-card-badges" class="flex space-x-2 mt-2"></div><div class="mt-4 bg-[#111214] p-3 rounded-lg border border-[#1e1f22]"><h4 class="text-[10px] font-extrabold text-[#e4e5e7] uppercase mb-1 tracking-wider">สถานะส่วนตัว</h4><p id="profile-card-status" class="text-[13px] text-[#dbdee1] leading-snug"></p></div></div>
             </div>
         </div>
     </div>
@@ -108,51 +84,13 @@
     <div id="overlay" class="overlay fixed inset-0 z-40 md:hidden"></div>
 
     <aside id="sidebar" class="sidebar-mobile fixed inset-y-0 left-0 z-50 w-64 md:w-64 bg-[#151619] flex flex-col md:relative md:translate-x-0 border-r border-[#0a0a0c] shadow-[2px_0_8px_rgba(0,0,0,0.3)]">
-        <div class="p-4 border-b border-[#0a0a0c] flex items-center justify-between shadow-sm bg-[#151619] hover:bg-[#1c1d21] cursor-pointer transition">
-            <div class="flex items-center space-x-3">
-                <div class="w-9 h-9 rounded-[10px] bg-[#5865F2] flex items-center justify-center font-extrabold text-lg text-white shadow-inner">D</div>
-                <div><h1 class="text-[15px] font-extrabold text-[#e4e5e7] tracking-wide">DOSH Server</h1></div>
-            </div>
-            <button id="close-menu" class="md:hidden text-gray-500 hover:text-gray-300 text-xl p-2"><i class="ph ph-x"></i></button>
-        </div>
-
+        <div class="p-4 border-b border-[#0a0a0c] flex items-center justify-between shadow-sm bg-[#151619] hover:bg-[#1c1d21] cursor-pointer transition"><div class="flex items-center space-x-3"><div class="w-9 h-9 rounded-[10px] bg-[#5865F2] flex items-center justify-center font-extrabold text-lg text-white shadow-inner">D</div><div><h1 class="text-[15px] font-extrabold text-[#e4e5e7] tracking-wide">DOSH Server</h1></div></div><button id="close-menu" class="md:hidden text-gray-500 hover:text-gray-300 text-xl p-2"><i class="ph ph-x"></i></button></div>
         <nav class="flex-1 overflow-y-auto p-3 space-y-5">
-            <div>
-                <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">ช่องข้อความ</h2>
-                <ul class="space-y-0.5" id="channel-list">
-                    <li><a href="#" data-view="chat" data-channel="general" data-name="ประกาศทั่วไป" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-active font-medium text-[15px] group flex items-center"><i class="ph ph-hash text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i>ประกาศทั่วไป</a></li>
-                    <li><a href="#" data-view="chat" data-channel="project" data-name="อัปเดตงานโปรเจกต์" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] group flex items-center"><i class="ph ph-hash text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i>อัปเดตงานโปรเจกต์</a></li>
-                </ul>
-            </div>
-            <div>
-                <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">ช่องสำหรับพูด</h2>
-                <ul class="space-y-0.5">
-                    <li>
-                        <a href="#" data-view="voice" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center group">
-                            <i class="ph ph-speaker-high text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> ห้องนั่งเล่นคุยงาน
-                        </a>
-                        <div id="voice-active-users" class="pl-8 pt-1 pb-1 space-y-0.5"></div>
-                    </li>
-                </ul>
-            </div>
-            <div>
-                <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">เครื่องมือ</h2>
-                <ul class="space-y-0.5">
-                    <li><a href="#" data-view="board" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center group"><i class="ph ph-kanban text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> Task Board</a></li>
-                    <li><a href="#" data-view="whiteboard" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center group"><i class="ph ph-palette text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> กระดานไอเดีย</a></li>
-                    <li><a href="#" id="open-settings-btn" class="block px-3 py-1.5 rounded-md text-[#80848e] hover:bg-[#1c1d21] hover:text-[#dbdee1] font-medium text-[15px] transition flex items-center group"><i class="ph ph-gear text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> Settings</a></li>
-                    <li><a href="admin.html" id="admin-menu-btn" class="hidden block px-3 py-1.5 rounded-md text-[#da373c] hover:bg-[#da373c]/10 font-medium text-[15px] transition mt-2 flex items-center group"><i class="ph ph-shield-warning text-[20px] mr-2 transition"></i> Admin Panel</a></li>
-                </ul>
-            </div>
+            <div><h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">ช่องข้อความ</h2><ul class="space-y-0.5" id="channel-list"><li><a href="#" data-view="chat" data-channel="general" data-name="ประกาศทั่วไป" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-active font-medium text-[15px] group flex items-center"><i class="ph ph-hash text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i>ประกาศทั่วไป</a></li><li><a href="#" data-view="chat" data-channel="project" data-name="อัปเดตงานโปรเจกต์" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] group flex items-center"><i class="ph ph-hash text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i>อัปเดตงานโปรเจกต์</a></li></ul></div>
+            <div><h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">ช่องสำหรับพูด</h2><ul class="space-y-0.5"><li><a href="#" data-view="voice" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center group"><i class="ph ph-speaker-high text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> ห้องนั่งเล่นคุยงาน</a><div id="voice-active-users" class="pl-8 pt-1 pb-1 space-y-0.5"></div></li></ul></div>
+            <div><h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">เครื่องมือ</h2><ul class="space-y-0.5"><li><a href="#" data-view="board" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center group"><i class="ph ph-kanban text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> Task Board</a></li><li><a href="#" data-view="whiteboard" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center group"><i class="ph ph-palette text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> กระดานไอเดีย</a></li><li><a href="#" id="open-settings-btn" class="block px-3 py-1.5 rounded-md text-[#80848e] hover:bg-[#1c1d21] hover:text-[#dbdee1] font-medium text-[15px] transition flex items-center group"><i class="ph ph-gear text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> Settings</a></li><li><a href="admin.html" id="admin-menu-btn" class="hidden block px-3 py-1.5 rounded-md text-[#da373c] hover:bg-[#da373c]/10 font-medium text-[15px] transition mt-2 flex items-center group"><i class="ph ph-shield-warning text-[20px] mr-2 transition"></i> Admin Panel</a></li></ul></div>
         </nav>
-
-        <div class="p-2 bg-[#0a0a0c] flex items-center justify-between border-t border-[#050506]">
-            <div class="flex items-center space-x-2.5 hover:bg-[#1a1b1e] p-1.5 rounded-md cursor-pointer transition flex-1 overflow-hidden" id="mini-profile-btn">
-                <div class="relative flex-shrink-0"><img id="current-user-avatar" src="" class="w-8 h-8 rounded-full bg-gray-800 object-cover opacity-90"><div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#23a559] rounded-full border-[3px] border-[#0a0a0c]"></div></div>
-                <div class="overflow-hidden"><p id="current-user-name" class="text-[13px] font-bold text-[#d1d3d6] truncate leading-tight">Loading...</p><p id="current-user-status" class="text-[11px] text-[#6d717a] truncate leading-none mt-0.5">ออนไลน์</p></div>
-            </div>
-            <div class="flex items-center space-x-1 pl-1 pr-1"><button id="logout-btn" class="text-[#80848e] hover:text-[#da373c] p-1.5 hover:bg-[#1a1b1e] rounded-md transition tooltip relative" title="ออกจากระบบ"><span class="tooltip-text">ออกจากระบบ</span><i class="ph ph-sign-out text-[20px]"></i></button></div>
-        </div>
+        <div class="p-2 bg-[#0a0a0c] flex items-center justify-between border-t border-[#050506]"><div class="flex items-center space-x-2.5 hover:bg-[#1a1b1e] p-1.5 rounded-md cursor-pointer transition flex-1 overflow-hidden" id="mini-profile-btn"><div class="relative flex-shrink-0"><img id="current-user-avatar" src="" class="w-8 h-8 rounded-full bg-gray-800 object-cover opacity-90"><div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#23a559] rounded-full border-[3px] border-[#0a0a0c]"></div></div><div class="overflow-hidden"><p id="current-user-name" class="text-[13px] font-bold text-[#d1d3d6] truncate leading-tight">Loading...</p><p id="current-user-status" class="text-[11px] text-[#6d717a] truncate leading-none mt-0.5">ออนไลน์</p></div></div><div class="flex items-center space-x-1 pl-1 pr-1"><button id="logout-btn" class="text-[#80848e] hover:text-[#da373c] p-1.5 hover:bg-[#1a1b1e] rounded-md transition tooltip relative" title="ออกจากระบบ"><span class="tooltip-text">ออกจากระบบ</span><i class="ph ph-sign-out text-[20px]"></i></button></div></div>
     </aside>
 
     <main class="flex-1 flex flex-col bg-[#0f1013] relative overflow-hidden">
@@ -182,9 +120,43 @@
 
         <div id="view-voice" class="hidden flex-1 flex flex-col h-full bg-[#0e0f11] relative w-full">
             <header class="p-3.5 border-b border-[#151619] flex justify-between items-center shadow-md bg-[#0f1013] z-20 w-full"><div class="flex items-center"><button class="open-menu md:hidden mr-3 text-[#80848e] transition p-1"><i class="ph ph-list text-[24px]"></i></button><h2 class="text-base md:text-md font-bold text-[#e4e5e7] flex items-center"><i class="ph ph-speaker-high text-[20px] md:text-[22px] mr-2 text-[#5c6069]"></i> ห้องนั่งเล่นคุยงาน</h2></div><div class="flex items-center"><span class="text-[10px] md:text-[11px] text-[#23a559] font-bold bg-[#23a559]/10 px-2 py-1 rounded border border-[#23a559]/20 mr-2 md:mr-3 uppercase tracking-wide flex items-center"><i class="ph-fill ph-circle text-[8px] mr-1.5 animate-pulse"></i><span class="hidden md:inline">Voice Connected</span><span class="md:hidden">Connected</span></span><button id="open-members-voice" class="md:hidden text-[#80848e] hover:text-gray-300 transition p-1"><i class="ph ph-users text-[22px]"></i></button></div></header>
+            
+            <div id="watch-party-stage" class="hidden w-full bg-[#050505] border-b border-[#1e1f22] p-2 md:p-6 flex-col items-center justify-center relative z-10 shadow-inner">
+                <div class="w-full max-w-4xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl relative border border-[#1e1f22]">
+                    <div id="yt-player"></div>
+                </div>
+                <div class="mt-3 flex items-center justify-between w-full max-w-4xl text-[#80848e] text-[12px] bg-[#151619] px-4 py-2 rounded-lg border border-[#1e1f22]">
+                    <span class="flex items-center"><i class="ph-fill ph-broadcast text-[#23a559] mr-2 animate-pulse text-[16px]"></i> กำลังแชร์คลิปโดย: <span id="wp-host" class="font-bold text-[#e4e5e7] ml-1.5">-</span></span>
+                    <button id="close-wp-btn" class="text-[#da373c] hover:text-white transition hover:bg-[#da373c] px-3 py-1 rounded font-bold flex items-center"><i class="ph-fill ph-stop-circle mr-1 text-[16px]"></i> ปิดวิดีโอ</button>
+                </div>
+            </div>
+
             <div id="screen-share-stage" class="hidden w-full h-[40vh] md:h-[55vh] bg-[#050505] border-b border-[#1e1f22] p-1 md:p-6 flex items-center justify-center relative z-10 shadow-inner"></div>
-            <div id="voice-grid" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 auto-rows-max content-start z-10 bg-[#0e0f11] transition-all w-full"><div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]"><div class="w-20 h-20 md:w-24 md:h-24 bg-[#151619] rounded-full flex items-center justify-center mb-4 md:mb-5 shadow-inner border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] md:text-[48px] opacity-40"></i></div><p class="font-bold text-base md:text-lg text-[#949ba4] text-center">ไม่มีใครอยู่ในห้องเสียง</p><p class="text-xs md:text-sm mt-1 text-center px-4">กดเชื่อมต่อด้านล่างเพื่อปลุกห้องนี้ให้ตื่น!</p></div></div>
-            <div class="pt-3 pb-6 px-3 md:p-5 bg-[#050506] border-t border-[#0a0a0c] flex justify-center items-center shadow-[0_-15px_30px_rgba(0,0,0,0.5)] z-20 h-24 md:h-28 relative w-full"><button id="join-voice-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-6 py-2.5 md:px-8 md:py-3.5 rounded-full font-bold transition-all duration-200 shadow-lg hover:-translate-y-0.5 flex items-center text-[14px] md:text-[15px] opacity-90 hover:opacity-100"><i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span></button><div id="active-voice-ui" class="hidden flex items-center space-x-4 md:space-x-6"><div class="flex flex-col items-center group tooltip"><span class="tooltip-text hidden md:block">เปิด/ปิดไมค์</span><button id="mute-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#151619] text-gray-300 rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]"><i id="mute-icon" class="ph ph-microphone text-[20px] md:text-[24px]"></i></button></div><div class="flex flex-col items-center group tooltip"><span class="tooltip-text hidden md:block">แชร์หน้าจอ (30FPS)</span><button id="screen-share-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#151619] text-gray-300 rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]"><i id="screen-icon" class="ph ph-screencast text-[20px] md:text-[24px]"></i></button></div><div class="flex flex-col items-center group tooltip"><span class="tooltip-text hidden md:block">ตัดการเชื่อมต่อ</span><button id="leave-voice-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#da373c] text-white rounded-full flex items-center justify-center hover:bg-[#c92f33] transition-all duration-200 shadow-lg shadow-[#da373c]/20 hover:-translate-y-0.5 opacity-90 hover:opacity-100"><i class="ph-fill ph-phone-disconnect text-[22px] md:text-[26px]"></i></button></div></div></div>
+            <div id="voice-grid" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 auto-rows-max content-start z-10 bg-[#0e0f11] transition-all w-full"></div>
+            
+            <div class="pt-3 pb-6 px-3 md:p-5 bg-[#050506] border-t border-[#0a0a0c] flex justify-center items-center shadow-[0_-15px_30px_rgba(0,0,0,0.5)] z-20 h-24 md:h-28 relative w-full">
+                <button id="join-voice-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-6 py-2.5 md:px-8 md:py-3.5 rounded-full font-bold transition-all duration-200 shadow-lg hover:-translate-y-0.5 flex items-center text-[14px] md:text-[15px] opacity-90 hover:opacity-100"><i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span></button>
+                
+                <div id="wp-controls" class="hidden absolute top-[-60px] left-1/2 transform -translate-x-1/2 bg-[#151619] p-2 rounded-xl border border-[#2b2d31] shadow-2xl flex items-center space-x-2 w-[90%] max-w-md transition-all animate-[slideUpFade_0.2s_ease-out]">
+                    <i class="ph-fill ph-youtube-logo text-[#da373c] text-[28px] ml-1"></i>
+                    <input type="text" id="wp-link-input" placeholder="วางลิงก์ YouTube ที่นี่..." class="flex-1 bg-[#0e0f11] border border-[#2b2d31] focus:border-[#da373c] rounded-lg px-3 py-2 text-[13px] text-[#dbdee1] focus:outline-none transition shadow-inner">
+                    <button id="start-wp-btn" class="bg-[#da373c] hover:bg-[#c92f33] text-white px-4 py-2 rounded-lg font-bold text-[13px] transition shadow-md">เปิดคลิป</button>
+                </div>
+
+                <div id="active-voice-ui" class="hidden flex items-center space-x-4 md:space-x-6">
+                    
+                    <div class="flex flex-col items-center group tooltip">
+                        <span class="tooltip-text hidden md:block">ดู YouTube พร้อมกัน</span>
+                        <button id="toggle-wp-input-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#151619] text-[#da373c] rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]">
+                            <i class="ph-fill ph-youtube-logo text-[20px] md:text-[24px]"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex flex-col items-center group tooltip"><span class="tooltip-text hidden md:block">เปิด/ปิดไมค์</span><button id="mute-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#151619] text-gray-300 rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]"><i id="mute-icon" class="ph ph-microphone text-[20px] md:text-[24px]"></i></button></div>
+                    <div class="flex flex-col items-center group tooltip"><span class="tooltip-text hidden md:block">แชร์หน้าจอ (30FPS)</span><button id="screen-share-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#151619] text-gray-300 rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]"><i id="screen-icon" class="ph ph-screencast text-[20px] md:text-[24px]"></i></button></div>
+                    <div class="flex flex-col items-center group tooltip"><span class="tooltip-text hidden md:block">ตัดการเชื่อมต่อ</span><button id="leave-voice-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#da373c] text-white rounded-full flex items-center justify-center hover:bg-[#c92f33] transition-all duration-200 shadow-lg shadow-[#da373c]/20 hover:-translate-y-0.5 opacity-90 hover:opacity-100"><i class="ph-fill ph-phone-disconnect text-[22px] md:text-[26px]"></i></button></div>
+                </div>
+            </div>
         </div>
     </main>
 
