@@ -14,10 +14,10 @@ let localTracks = { audioTrack: null }, screenTrack = null, screenAudioTrack = n
 let isMuted = false, isSharingScreen = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general", currentUserRole = "Member"; 
 let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false, unreadCounts = { general: 0, project: 0 };
 let replyingTo = null;
+let messageToDelete = null; // 🌟 เก็บ ID ข้อความที่จะลบชั่วคราว
 
 const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); sfxMsg.volume = 0.5;
 
-// 🌟 สร้างฟังก์ชันแจ้งเตือน Toast (สวยล้ำ ไม่ใช้ alert ธรรมดา)
 window.showToast = (msg, type = "success") => {
     const toast = document.createElement("div");
     const icon = type === "success" ? `<i class="ph-fill ph-check-circle text-[#23a559] text-[20px]"></i>` : 
@@ -123,7 +123,6 @@ onSnapshot(collection(db, "users"), (snapshot) => {
             myStatusUI.textContent = u.customStatus || 'ออนไลน์';
             myStatusUI.className = u.customStatus ? 'text-[11px] text-[#23a559] truncate leading-none mt-0.5' : 'text-[11px] text-[#6d717a] truncate leading-none mt-0.5';
             document.getElementById('settings-custom-status').value = u.customStatus || ''; 
-            // โหลดชื่อปัจจุบัน
             document.getElementById('settings-username-input').value = currentUsername;
             
             if(u.bannerURL) { document.getElementById('settings-banner-preview').src = u.bannerURL; document.getElementById('settings-banner-preview').classList.remove('hidden'); }
@@ -175,7 +174,6 @@ async function uploadImage(file, type) {
 avatarInput.onchange = (e) => { if(e.target.files[0]) uploadImage(e.target.files[0], 'avatar'); avatarInput.value = ""; };
 bannerInput.onchange = (e) => { if(e.target.files[0]) uploadImage(e.target.files[0], 'banner'); bannerInput.value = ""; };
 
-// 🌟 บันทึกชื่อและสถานะ
 document.getElementById('save-settings-btn').onclick = async () => {
     const newName = document.getElementById('settings-username-input').value.trim() || currentUsername;
     const newStatus = document.getElementById('settings-custom-status').value.trim();
@@ -186,7 +184,7 @@ document.getElementById('save-settings-btn').onclick = async () => {
         currentUsername = newName;
         document.getElementById('current-user-name').textContent = currentUsername;
         
-        showToast("บันทึกการตั้งค่าโปรไฟล์สำเร็จ!", "success"); // แจ้งเตือนแบบใหม่!
+        showToast("บันทึกการตั้งค่าโปรไฟล์สำเร็จ!", "success"); 
         settingsModal.classList.add('hidden'); 
     } catch(e) { 
         showToast("เกิดข้อผิดพลาดในการบันทึก", "error");
@@ -211,11 +209,33 @@ document.getElementById('logout-btn').addEventListener('click', async () => { if
 window.addEventListener('beforeunload', () => { if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } });
 
 // ==========================================
-// 💬 7. ระบบแชท + ตอบกลับ (Reply)
+// 💬 7. ระบบแชท + ลบข้อความ (Modal ใหม่) + ตอบกลับ (Reply)
 // ==========================================
 const chatInput = document.getElementById('chat-input');
 chatInput.addEventListener('input', () => { if (!currentUserId) return; if (!isTyping) { isTyping = true; updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel }); } clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }, 2000); });
-window.deleteChatMsg = async (msgId) => { if(confirm('🗑️ ยืนยันการลบข้อความนี้ใช่ไหม? (แอดมินลบได้เท่านั้น)')) await deleteDoc(doc(db, "messages", msgId)); };
+
+// 🌟 ฟังก์ชันลบข้อความแบบใหม่ (ใช้ Custom Modal)
+const deleteModal = document.getElementById('delete-confirm-modal');
+window.deleteChatMsg = (msgId) => {
+    messageToDelete = msgId;
+    deleteModal.classList.remove('hidden');
+};
+document.getElementById('cancel-delete-btn').onclick = () => {
+    messageToDelete = null;
+    deleteModal.classList.add('hidden');
+};
+document.getElementById('confirm-delete-btn').onclick = async () => {
+    if (messageToDelete) {
+        try {
+            await deleteDoc(doc(db, "messages", messageToDelete));
+            showToast("ลบข้อความสำเร็จ", "success");
+        } catch (err) {
+            showToast("เกิดข้อผิดพลาดในการลบข้อความ", "error");
+        }
+        messageToDelete = null;
+        deleteModal.classList.add('hidden');
+    }
+};
 
 window.setReply = (msgId, senderName, rawText) => {
     replyingTo = { msgId, senderName, text: rawText.substring(0, 40) + (rawText.length > 40 ? '...' : '') };
@@ -316,23 +336,14 @@ const zones = { 'todo': document.getElementById('todo'), 'in_progress': document
 onSnapshot(collection(db, "tasks"), (snapshot) => { Object.values(zones).forEach(z => z.innerHTML = ''); snapshot.forEach((docSnap) => { const d = docSnap.data(), id = docSnap.id, s = d.status || 'todo'; let tC = "bg-[#1c1d21] text-[#d1d3d6] border border-[#2b2d31]"; if(d.tag && d.tag.includes('Dev')) tC = "bg-blue-500/10 text-blue-400 border border-blue-500/20"; if(d.tag && d.tag.includes('Music')) tC = "bg-pink-500/10 text-pink-400 border border-pink-500/20"; if(d.tag && d.tag.includes('Video')) tC = "bg-purple-500/10 text-purple-400 border border-purple-500/20"; if(d.tag && d.tag.includes('Design')) tC = "bg-[#23a559]/10 text-[#23a559] border border-[#23a559]/20"; const cardHTML = `<div draggable="true" data-id="${id}" class="task-card bg-[#1c1d21] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${s === 'done' ? 'border-[#3f4147] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]"><div class="flex space-x-2 mb-2.5"><span class="${tC} text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center"><i class="ph-fill ph-tag text-[10px] mr-1"></i>${d.tag}</span></div><p class="text-[13px] md:text-[14px] font-medium text-[#d1d3d6] ${s === 'done' ? 'line-through text-[#6d717a]' : ''} leading-snug">${d.title}</p></div>`; if (zones[s]) zones[s].insertAdjacentHTML('beforeend', cardHTML); }); document.querySelectorAll('.task-card').forEach(c => { c.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', c.getAttribute('data-id')); setTimeout(() => c.classList.add('opacity-30'), 0); }); c.addEventListener('dragend', () => c.classList.remove('opacity-30')); }); });
 Object.keys(zones).forEach(s => { const z = zones[s]; z.addEventListener('dragover', (e) => { e.preventDefault(); z.classList.add('drop-zone-active'); }); z.addEventListener('dragleave', () => z.classList.remove('drop-zone-active')); z.addEventListener('drop', async (e) => { e.preventDefault(); z.classList.remove('drop-zone-active'); const tId = e.dataTransfer.getData('text/plain'); if (tId) await updateDoc(doc(db, "tasks", tId), { status: s }); }); });
 
-// 🌟 ระบบเพิ่มงานผ่าน Modal ใหม่!
 const taskModal = document.getElementById('task-modal');
-document.getElementById('add-task-btn').addEventListener('click', () => {
-    document.getElementById('task-title-input').value = '';
-    taskModal.classList.remove('hidden');
-});
+document.getElementById('add-task-btn').addEventListener('click', () => { document.getElementById('task-title-input').value = ''; taskModal.classList.remove('hidden'); });
 document.getElementById('close-task-modal').addEventListener('click', () => taskModal.classList.add('hidden'));
 
 document.getElementById('confirm-task-btn').addEventListener('click', async () => {
     const title = document.getElementById('task-title-input').value.trim();
     const tag = document.getElementById('task-tag-input').value;
-    
-    if (!title) {
-        showToast("กรุณากรอกชื่องานก่อนครับ!", "error");
-        return;
-    }
-    
+    if (!title) { showToast("กรุณากรอกชื่องานก่อนครับ!", "error"); return; }
     await addDoc(collection(db, "tasks"), { title: title, tag: tag, status: 'todo', timestamp: serverTimestamp() });
     taskModal.classList.add('hidden');
     showToast("เพิ่มงานใหม่ลงในกระดานแล้ว!", "success");
