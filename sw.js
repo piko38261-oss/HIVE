@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dosh-pwa-cache-v2'; // 🌟 เปลี่ยนตรงนี้เป็น v2 เพื่อบังคับล้างแคชเก่า!
+const CACHE_NAME = 'dosh-pwa-cache-v3'; // 🌟 เปลี่ยนตรงนี้เป็น v2 เพื่อบังคับล้างแคชเก่า!
 const urlsToCache = [
   './',
   './index.html',
