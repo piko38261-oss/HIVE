@@ -12,31 +12,56 @@
 </head>
 <body class="bg-[#0e0f11] text-gray-300 h-[100dvh] flex overflow-hidden relative">
 
-    <div id="settings-modal" class="fixed inset-0 z-[60] bg-black/80 hidden flex items-center justify-center backdrop-blur-sm transition-opacity">
-        <div class="bg-[#1e1f22] w-[90%] max-w-sm rounded-2xl shadow-2xl border border-[#2b2d31] p-6 relative animate-[slideUpFade_0.3s_ease-out]">
-            <button id="close-settings-btn" class="absolute top-4 right-4 text-[#80848e] hover:text-[#e4e5e7] transition"><i class="ph ph-x text-[24px]"></i></button>
-            <h2 class="text-lg font-bold text-white mb-5 text-center tracking-wide">ตั้งค่าโปรไฟล์</h2>
+    <div id="settings-modal" class="fixed inset-0 z-[60] bg-black/80 hidden flex items-center justify-center backdrop-blur-sm transition-opacity p-4">
+        <div class="bg-[#1e1f22] w-full max-w-[340px] rounded-2xl shadow-2xl border border-[#2b2d31] overflow-hidden relative animate-[slideUpFade_0.2s_ease-out]">
+            <button id="close-settings-btn" class="absolute top-3 right-3 bg-black/50 hover:bg-black text-white p-1.5 rounded-full z-10 transition"><i class="ph ph-x text-[18px]"></i></button>
             
-            <div class="flex flex-col items-center space-y-4">
-                <div class="relative group cursor-pointer" id="settings-avatar-wrapper">
-                    <img id="settings-avatar-preview" src="" class="w-24 h-24 rounded-full object-cover border-4 border-[#2b2d31] shadow-lg transition-all duration-300 group-hover:brightness-50">
-                    <div class="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                        <i class="ph-fill ph-camera text-white text-3xl drop-shadow-md"></i>
-                        <span class="text-white text-xs font-bold mt-1 drop-shadow-md">เปลี่ยนรูป</span>
+            <div class="relative w-full h-28 bg-[#5865F2] group cursor-pointer" id="settings-banner-wrapper">
+                <img id="settings-banner-preview" src="" class="w-full h-full object-cover transition-all duration-300 group-hover:brightness-50 hidden">
+                <div class="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/30">
+                    <i class="ph-fill ph-image text-white text-2xl drop-shadow-md"></i>
+                    <span class="text-white text-[10px] font-bold mt-1 drop-shadow-md uppercase tracking-widest">เปลี่ยนภาพปก</span>
+                </div>
+            </div>
+            <input type="file" id="settings-banner-input" accept="image/png, image/jpeg, image/webp" class="hidden">
+
+            <div class="px-5 pb-5 relative">
+                <div class="relative group cursor-pointer w-20 h-20 -mt-10 mb-3" id="settings-avatar-wrapper">
+                    <img id="settings-avatar-preview" src="" class="w-full h-full rounded-full object-cover border-[6px] border-[#1e1f22] bg-[#1a1b1e] shadow-lg transition-all duration-300 group-hover:brightness-50">
+                    <div class="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full">
+                        <i class="ph-fill ph-camera text-white text-xl"></i>
                     </div>
                 </div>
                 <input type="file" id="settings-avatar-input" accept="image/png, image/jpeg, image/webp" class="hidden">
-                <div class="text-center w-full">
-                    <p id="settings-username-display" class="text-[16px] font-extrabold text-[#e4e5e7]">Loading...</p>
-                </div>
 
-                <div class="w-full mt-2">
+                <div class="w-full">
+                    <p id="settings-username-display" class="text-[18px] font-extrabold text-white mb-4">Loading...</p>
                     <label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">สถานะส่วนตัว (Custom Status)</label>
-                    <input type="text" id="settings-custom-status" maxlength="30" placeholder="เช่น กำลังปั่นงาน 💻, กินข้าว 🍜" class="w-full bg-[#151619] border border-[#2b2d31] focus:border-[#5865F2] rounded-md px-3 py-2 text-[13px] text-[#dbdee1] focus:outline-none transition">
+                    <input type="text" id="settings-custom-status" maxlength="30" placeholder="เช่น กำลังปั่นงาน 💻, กินข้าว 🍜" class="w-full bg-[#111214] border border-[#2b2d31] focus:border-[#5865F2] rounded-md px-3 py-2 text-[13px] text-[#dbdee1] focus:outline-none transition">
                 </div>
 
-                <button id="save-settings-btn" class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-2.5 rounded-md transition shadow-md mt-2 text-[14px]">บันทึกการตั้งค่า</button>
-                <p id="settings-status" class="text-[12px] font-medium text-[#5c6069] h-4 transition-all text-center"></p>
+                <button id="save-settings-btn" class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-2.5 rounded-md transition shadow-md mt-4 text-[14px]">บันทึกการตั้งค่า</button>
+                <p id="settings-status" class="text-[12px] font-medium text-[#5c6069] h-4 mt-2 transition-all text-center"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-card-modal" class="fixed inset-0 z-[70] bg-black/60 hidden flex items-center justify-center backdrop-blur-sm transition-opacity p-4">
+        <div class="bg-[#151619] w-full max-w-[320px] rounded-2xl shadow-2xl border border-[#2b2d31] overflow-hidden relative animate-[slideUpFade_0.2s_ease-out]">
+            <button id="close-profile-card" class="absolute top-3 right-3 bg-black/50 hover:bg-black text-white p-1.5 rounded-full z-10 transition"><i class="ph ph-x text-[16px]"></i></button>
+            <div class="w-full h-28 bg-[#5865F2] relative">
+                <img id="profile-card-banner" src="" class="w-full h-full object-cover hidden">
+            </div>
+            <div class="px-5 pb-6 relative">
+                <img id="profile-card-avatar" src="" class="w-20 h-20 rounded-full border-[6px] border-[#151619] object-cover absolute -top-10 left-4 bg-[#1e1f22] shadow-md">
+                <div class="pt-12">
+                    <h3 id="profile-card-name" class="text-[20px] font-extrabold text-white leading-none">Name</h3>
+                    <div id="profile-card-badges" class="flex space-x-2 mt-2"></div>
+                    <div class="mt-4 bg-[#111214] p-3 rounded-lg border border-[#1e1f22]">
+                        <h4 class="text-[10px] font-extrabold text-[#e4e5e7] uppercase mb-1 tracking-wider">สถานะส่วนตัว</h4>
+                        <p id="profile-card-status" class="text-[13px] text-[#dbdee1] leading-snug"></p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -120,7 +145,7 @@
                         <i class="ph ph-arrow-bend-up-left mr-1.5 text-[#80848e] text-[14px]"></i>
                         <span class="text-[#80848e] mr-1">กำลังตอบกลับ</span> 
                         <span id="reply-to-name" class="font-bold mr-1 text-[#e4e5e7]">@Name</span> 
-                        <span id="reply-to-text" class="truncate max-w-[150px] md:max-w-xs text-[#80848e]">Text</span>
+                        <span id="reply-to-text" class="truncate max-w-[150px] md:max-w-xs text-[#80848e] ml-1">Text</span>
                     </div>
                     <button id="cancel-reply-btn" class="text-[#80848e] hover:text-[#da373c] transition"><i class="ph-fill ph-x-circle text-[16px]"></i></button>
                 </div>
