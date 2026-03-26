@@ -10,70 +10,38 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
         body { font-family: 'Inter', sans-serif; overscroll-behavior-y: none; }
-        
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #35373c; }
-
         .channel-active { background-color: #232429; color: #e4e5e7; }
         .channel-inactive { color: #80848e; }
         .channel-inactive:hover { background-color: #1c1d21; color: #dbdee1; }
-        
         .nav-item { position: relative; }
-        .nav-item::before {
-            content: ''; position: absolute; left: -8px; top: 50%; transform: translateY(-50%);
-            width: 4px; height: 0px; background: #e4e5e7; border-radius: 0 4px 4px 0; transition: height 0.2s ease, background 0.2s;
-        }
+        .nav-item::before { content: ''; position: absolute; left: -8px; top: 50%; transform: translateY(-50%); width: 4px; height: 0px; background: #e4e5e7; border-radius: 0 4px 4px 0; transition: height 0.2s ease, background 0.2s; }
         .nav-item.channel-active::before { height: 32px; background: #e4e5e7; }
         .nav-item.channel-inactive:hover::before { height: 20px; background: #80848e; }
-
         .sidebar-mobile { transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .sidebar-mobile.open { transform: translateX(0); }
         .overlay { display: none; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
         .overlay.active { display: block; animation: fadeIn 0.3s ease-out forwards; }
-        
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
         .msg-enter { animation: slideUpFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes slideUpFade {
-            0% { opacity: 0; transform: translateY(12px) scale(0.98); }
-            100% { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
+        @keyframes slideUpFade { 0% { opacity: 0; transform: translateY(12px) scale(0.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
         .drop-zone-active { background-color: #1a1b1e !important; border-color: #5865F2 !important; border-style: dashed; border-width: 2px;}
-
-        .speaking-ring {
-            outline: 3px solid #5865F2;
-            outline-offset: 2px;
-            box-shadow: 0 0 15px rgba(88, 101, 242, 0.5);
-            animation: pulse-ring 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
-        }
-        @keyframes pulse-ring {
-            0% { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(88, 101, 242, 0); outline-color: #7280fe; }
-            100% { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0); outline-color: #5865F2; }
-        }
-
-        .tooltip .tooltip-text {
-            visibility: hidden; width: max-content; background-color: #050505; color: #e4e5e7; text-align: center;
-            border-radius: 6px; padding: 6px 10px; position: absolute; z-index: 50; top: -40px; left: 50%;
-            transform: translateX(-50%) scale(0.9); opacity: 0; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-            font-size: 12px; font-weight: bold; box-shadow: 0 8px 16px rgba(0,0,0,0.5); pointer-events: none;
-        }
-        .tooltip .tooltip-text::after {
-            content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px;
-            border-width: 5px; border-style: solid; border-color: #050505 transparent transparent transparent;
-        }
+        .speaking-ring { outline: 3px solid #5865F2; outline-offset: 2px; box-shadow: 0 0 15px rgba(88, 101, 242, 0.5); animation: pulse-ring 1.5s infinite cubic-bezier(0.66, 0, 0, 1); }
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(88, 101, 242, 0); outline-color: #7280fe; } 100% { box-shadow: 0 0 0 0 rgba(88, 101, 242, 0); outline-color: #5865F2; } }
+        .tooltip .tooltip-text { visibility: hidden; width: max-content; background-color: #050505; color: #e4e5e7; text-align: center; border-radius: 6px; padding: 6px 10px; position: absolute; z-index: 50; top: -40px; left: 50%; transform: translateX(-50%) scale(0.9); opacity: 0; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); font-size: 12px; font-weight: bold; box-shadow: 0 8px 16px rgba(0,0,0,0.5); pointer-events: none; }
+        .tooltip .tooltip-text::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: #050505 transparent transparent transparent; }
         .tooltip:hover .tooltip-text { visibility: visible; opacity: 1; transform: translateX(-50%) scale(1); }
-        
-        @media (max-width: 768px) {
-            .tooltip .tooltip-text { display: none !important; }
-        }
-
+        @media (max-width: 768px) { .tooltip .tooltip-text { display: none !important; } }
+        /* 🌟 Reaction Emoji Styles */
+        .reaction-btn { transition: transform 0.1s ease, background-color 0.2s ease; }
+        .reaction-btn:active { transform: scale(0.85); }
+        .chat-msg-row:hover .reaction-bar { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .reaction-bar { opacity: 0; pointer-events: none; transform: translateY(4px); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
         #screen-share-stage div { border-radius: 8px; overflow: hidden; }
         #screen-share-stage video { object-fit: contain !important; }
-        
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
         input[type="color"]::-webkit-color-swatch { border: 2px solid #2b2d31; border-radius: 6px; }
     </style>
@@ -84,7 +52,6 @@
         <div class="bg-[#1e1f22] w-[90%] max-w-sm rounded-2xl shadow-2xl border border-[#2b2d31] p-6 relative animate-[slideUpFade_0.3s_ease-out]">
             <button id="close-settings-btn" class="absolute top-4 right-4 text-[#80848e] hover:text-[#e4e5e7] transition"><i class="ph ph-x text-[24px]"></i></button>
             <h2 class="text-lg font-bold text-white mb-6 text-center tracking-wide">ตั้งค่าโปรไฟล์</h2>
-            
             <div class="flex flex-col items-center space-y-5">
                 <div class="relative group cursor-pointer" id="settings-avatar-wrapper">
                     <img id="settings-avatar-preview" src="" class="w-28 h-28 rounded-full object-cover border-4 border-[#2b2d31] shadow-lg transition-all duration-300 group-hover:brightness-50">
@@ -94,7 +61,6 @@
                     </div>
                 </div>
                 <input type="file" id="settings-avatar-input" accept="image/png, image/jpeg, image/webp" class="hidden">
-                
                 <div class="text-center w-full">
                     <p id="settings-username-display" class="text-lg font-extrabold text-[#e4e5e7] mb-1">Loading...</p>
                     <p id="settings-status" class="text-[12px] font-medium text-[#5c6069] h-4 transition-all"></p>
@@ -109,9 +75,7 @@
         <div class="p-4 border-b border-[#0a0a0c] flex items-center justify-between shadow-sm bg-[#151619] hover:bg-[#1c1d21] cursor-pointer transition">
             <div class="flex items-center space-x-3">
                 <div class="w-9 h-9 rounded-[10px] bg-[#5865F2] flex items-center justify-center font-extrabold text-lg text-white shadow-inner">D</div>
-                <div>
-                    <h1 class="text-[15px] font-extrabold text-[#e4e5e7] tracking-wide">DOSH Server</h1>
-                </div>
+                <div><h1 class="text-[15px] font-extrabold text-[#e4e5e7] tracking-wide">DOSH Server</h1></div>
             </div>
             <button id="close-menu" class="md:hidden text-gray-500 hover:text-gray-300 text-xl p-2"><i class="ph ph-x"></i></button>
         </div>
@@ -124,7 +88,6 @@
                     <li><a href="#" data-view="chat" data-channel="project" data-name="อัปเดตงานโปรเจกต์" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] group flex items-center"><i class="ph ph-hash text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i>อัปเดตงานโปรเจกต์</a></li>
                 </ul>
             </div>
-
             <div>
                 <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">ช่องสำหรับพูด</h2>
                 <ul class="space-y-0.5">
@@ -136,7 +99,6 @@
                     </li>
                 </ul>
             </div>
-
             <div>
                 <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">เครื่องมือ</h2>
                 <ul class="space-y-0.5">
@@ -160,10 +122,7 @@
                 </div>
             </div>
             <div class="flex items-center space-x-1 pl-1 pr-1">
-                <button id="logout-btn" class="text-[#80848e] hover:text-[#da373c] p-1.5 hover:bg-[#1a1b1e] rounded-md transition tooltip relative" title="ออกจากระบบ">
-                    <span class="tooltip-text">ออกจากระบบ</span>
-                    <i class="ph ph-sign-out text-[20px]"></i>
-                </button>
+                <button id="logout-btn" class="text-[#80848e] hover:text-[#da373c] p-1.5 hover:bg-[#1a1b1e] rounded-md transition tooltip relative" title="ออกจากระบบ"><span class="tooltip-text">ออกจากระบบ</span><i class="ph ph-sign-out text-[20px]"></i></button>
             </div>
         </div>
     </aside>
@@ -182,73 +141,39 @@
             <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-2 relative scroll-smooth w-full"></div>
             
             <div class="px-2 md:px-4 pb-6 md:pb-6 pt-1 bg-[#0f1013] w-full flex flex-col justify-end">
-                
-                <div id="typing-indicator" class="text-[11px] text-[#5865F2] font-medium h-5 pl-2 mb-1 flex items-center opacity-0 transition-opacity duration-200">
-                    </div>
-
+                <div id="typing-indicator" class="text-[11px] text-[#5865F2] font-medium h-5 pl-2 mb-1 flex items-center opacity-0 transition-opacity duration-200"></div>
                 <div class="flex items-center bg-[#1a1b1e] rounded-xl px-3 md:px-4 py-2 md:py-2.5 shadow-sm border border-transparent focus-within:border-[#5865F2]/50 transition duration-200">
                     <input type="file" id="file-input" accept="image/png, image/jpeg, image/gif" class="hidden">
-                    <button id="attach-btn" class="text-[#80848e] hover:text-[#d1d3d6] mr-2 md:mr-3 bg-[#232429] hover:bg-[#2b2d33] w-8 h-8 rounded-full flex items-center justify-center font-bold transition flex-shrink-0">
-                        <i class="ph ph-plus-circle text-[22px]"></i>
-                    </button>
+                    <button id="attach-btn" class="text-[#80848e] hover:text-[#d1d3d6] mr-2 md:mr-3 bg-[#232429] hover:bg-[#2b2d33] w-8 h-8 rounded-full flex items-center justify-center font-bold transition flex-shrink-0"><i class="ph ph-plus-circle text-[22px]"></i></button>
                     <input id="chat-input" type="text" placeholder="ส่งข้อความถึง #ห้องแชท" class="flex-1 bg-transparent border-none focus:outline-none text-[14px] md:text-[15px] text-[#dbdee1] placeholder-[#5c6069] min-w-0">
-                    <button id="send-btn" class="ml-2 text-[#80848e] hover:text-[#5865F2] transition flex items-center justify-center p-1 md:p-0 flex-shrink-0">
-                        <i class="ph-fill ph-paper-plane-right text-[24px]"></i>
-                    </button>
+                    <button id="send-btn" class="ml-2 text-[#80848e] hover:text-[#5865F2] transition flex items-center justify-center p-1 md:p-0 flex-shrink-0"><i class="ph-fill ph-paper-plane-right text-[24px]"></i></button>
                 </div>
             </div>
         </div>
 
         <div id="view-board" class="hidden flex-1 flex flex-col h-full w-full">
             <header class="p-3.5 border-b border-[#151619] flex justify-between items-center shadow-sm bg-[#0f1013]">
-                <div class="flex items-center">
-                    <button class="open-menu md:hidden mr-3 text-gray-500 transition p-1"><i class="ph ph-list text-[24px]"></i></button>
-                    <h2 class="text-base md:text-lg font-bold text-[#e4e5e7] flex items-center"><i class="ph ph-kanban text-[24px] mr-2 text-[#5c6069]"></i> Task Board</h2>
-                </div>
-                <button id="add-task-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-3 md:px-4 py-1.5 rounded-md text-[13px] md:text-sm font-bold transition shadow-sm opacity-90 hover:opacity-100 flex items-center">
-                    <i class="ph ph-plus-circle text-[16px] md:text-[18px] mr-1 md:mr-1.5"></i> <span class="hidden md:inline">สร้างงานใหม่</span><span class="md:hidden">เพิ่มงาน</span>
-                </button>
+                <div class="flex items-center"><button class="open-menu md:hidden mr-3 text-gray-500 transition p-1"><i class="ph ph-list text-[24px]"></i></button><h2 class="text-base md:text-lg font-bold text-[#e4e5e7] flex items-center"><i class="ph ph-kanban text-[24px] mr-2 text-[#5c6069]"></i> Task Board</h2></div>
+                <button id="add-task-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-3 md:px-4 py-1.5 rounded-md text-[13px] md:text-sm font-bold transition shadow-sm opacity-90 hover:opacity-100 flex items-center"><i class="ph ph-plus-circle text-[16px] md:text-[18px] mr-1 md:mr-1.5"></i> <span class="hidden md:inline">สร้างงานใหม่</span><span class="md:hidden">เพิ่มงาน</span></button>
             </header>
             <div class="flex-1 overflow-x-auto p-4 md:p-6 flex space-x-4 md:space-x-5 items-start bg-[#0f1013] snap-x">
-                <div class="w-[85vw] max-w-[320px] md:w-80 flex-shrink-0 flex flex-col bg-[#151619] rounded-xl p-3 max-h-full shadow-lg border border-[#1e1f22] snap-center">
-                    <h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex items-center"><i class="ph-fill ph-push-pin text-[14px] mr-1.5"></i> ต้องทำ (TO DO)</h3>
-                    <div id="todo" class="drop-zone space-y-2 overflow-y-auto min-h-[150px] p-1 scroll-smooth"></div>
-                </div>
-                <div class="w-[85vw] max-w-[320px] md:w-80 flex-shrink-0 flex flex-col bg-[#151619] rounded-xl p-3 max-h-full shadow-lg border border-[#1e1f22] snap-center">
-                    <h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex items-center"><i class="ph-fill ph-lightning text-[14px] mr-1.5 text-yellow-500"></i> กำลังทำ (IN PROGRESS)</h3>
-                    <div id="in_progress" class="drop-zone space-y-2 overflow-y-auto min-h-[150px] p-1 scroll-smooth"></div>
-                </div>
-                <div class="w-[85vw] max-w-[320px] md:w-80 flex-shrink-0 flex flex-col bg-[#151619] rounded-xl p-3 max-h-full shadow-lg border border-[#1e1f22] snap-center">
-                    <h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex items-center"><i class="ph-fill ph-check-circle text-[14px] mr-1.5 text-[#23a559]"></i> เสร็จสิ้น (DONE)</h3>
-                    <div id="done" class="drop-zone space-y-2 overflow-y-auto min-h-[150px] p-1 scroll-smooth"></div>
-                </div>
+                <div class="w-[85vw] max-w-[320px] md:w-80 flex-shrink-0 flex flex-col bg-[#151619] rounded-xl p-3 max-h-full shadow-lg border border-[#1e1f22] snap-center"><h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex items-center"><i class="ph-fill ph-push-pin text-[14px] mr-1.5"></i> ต้องทำ (TO DO)</h3><div id="todo" class="drop-zone space-y-2 overflow-y-auto min-h-[150px] p-1 scroll-smooth"></div></div>
+                <div class="w-[85vw] max-w-[320px] md:w-80 flex-shrink-0 flex flex-col bg-[#151619] rounded-xl p-3 max-h-full shadow-lg border border-[#1e1f22] snap-center"><h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex items-center"><i class="ph-fill ph-lightning text-[14px] mr-1.5 text-yellow-500"></i> กำลังทำ (IN PROGRESS)</h3><div id="in_progress" class="drop-zone space-y-2 overflow-y-auto min-h-[150px] p-1 scroll-smooth"></div></div>
+                <div class="w-[85vw] max-w-[320px] md:w-80 flex-shrink-0 flex flex-col bg-[#151619] rounded-xl p-3 max-h-full shadow-lg border border-[#1e1f22] snap-center"><h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex items-center"><i class="ph-fill ph-check-circle text-[14px] mr-1.5 text-[#23a559]"></i> เสร็จสิ้น (DONE)</h3><div id="done" class="drop-zone space-y-2 overflow-y-auto min-h-[150px] p-1 scroll-smooth"></div></div>
             </div>
         </div>
 
         <div id="view-whiteboard" class="hidden flex-1 flex flex-col h-full bg-[#151619] w-full">
             <header class="p-3 border-b border-[#1e1f22] flex justify-between items-center shadow-sm bg-[#0f1013] z-10 overflow-x-auto w-full">
-                <div class="flex items-center flex-shrink-0">
-                    <button class="open-menu md:hidden mr-3 text-gray-500 transition p-1"><i class="ph ph-list text-[24px]"></i></button>
-                    <h2 class="text-base md:text-md font-bold text-[#e4e5e7] flex items-center"><i class="ph ph-palette text-[20px] md:text-[22px] mr-1 md:mr-2 text-[#5c6069]"></i> กระดานไอเดีย</h2>
-                </div>
+                <div class="flex items-center flex-shrink-0"><button class="open-menu md:hidden mr-3 text-gray-500 transition p-1"><i class="ph ph-list text-[24px]"></i></button><h2 class="text-base md:text-md font-bold text-[#e4e5e7] flex items-center"><i class="ph ph-palette text-[20px] md:text-[22px] mr-1 md:mr-2 text-[#5c6069]"></i> กระดานไอเดีย</h2></div>
                 <div class="flex items-center space-x-2 md:space-x-4 bg-[#1a1b1e] p-1.5 px-2 md:px-3 rounded-lg border border-[#2b2d31] ml-2 md:ml-4 flex-shrink-0">
-                    <div class="flex items-center space-x-1 md:space-x-2 tooltip" title="เปลี่ยนสี">
-                        <span class="tooltip-text hidden md:block">เลือกสีปากกา</span>
-                        <input type="color" id="wb-color" value="#5865F2" class="w-6 h-6 md:w-7 md:h-7 rounded cursor-pointer bg-transparent border-none p-0 outline-none">
-                    </div>
+                    <div class="flex items-center space-x-1 md:space-x-2 tooltip" title="เปลี่ยนสี"><span class="tooltip-text hidden md:block">เลือกสีปากกา</span><input type="color" id="wb-color" value="#5865F2" class="w-6 h-6 md:w-7 md:h-7 rounded cursor-pointer bg-transparent border-none p-0 outline-none"></div>
                     <div class="h-6 w-px bg-[#35373c]"></div>
-                    <div class="flex items-center space-x-1 md:space-x-2 tooltip" title="ขนาดเส้น">
-                        <span class="tooltip-text hidden md:block">ปรับขนาดเส้น</span>
-                        <i class="ph ph-paint-brush-broad text-[#80848e] hidden md:block"></i>
-                        <input type="range" id="wb-size" min="1" max="30" value="3" class="w-16 md:w-28 cursor-pointer accent-[#5865F2]">
-                    </div>
+                    <div class="flex items-center space-x-1 md:space-x-2 tooltip" title="ขนาดเส้น"><span class="tooltip-text hidden md:block">ปรับขนาดเส้น</span><i class="ph ph-paint-brush-broad text-[#80848e] hidden md:block"></i><input type="range" id="wb-size" min="1" max="30" value="3" class="w-16 md:w-28 cursor-pointer accent-[#5865F2]"></div>
                     <div class="h-6 w-px bg-[#35373c]"></div>
-                    <button id="wb-clear" class="bg-[#da373c]/10 text-[#da373c] hover:bg-[#da373c] hover:text-white px-2 md:px-3 py-1 md:py-1.5 rounded-md text-[12px] md:text-[13px] font-bold transition flex items-center">
-                        <i class="ph ph-trash text-[16px] md:mr-1.5"></i> <span class="hidden md:inline">ล้างกระดาน</span>
-                    </button>
+                    <button id="wb-clear" class="bg-[#da373c]/10 text-[#da373c] hover:bg-[#da373c] hover:text-white px-2 md:px-3 py-1 md:py-1.5 rounded-md text-[12px] md:text-[13px] font-bold transition flex items-center"><i class="ph ph-trash text-[16px] md:mr-1.5"></i> <span class="hidden md:inline">ล้างกระดาน</span></button>
                 </div>
             </header>
-            
             <div class="flex-1 relative overflow-hidden bg-[#e4e5e7] cursor-crosshair shadow-inner touch-none" id="canvas-container" style="background-image: radial-gradient(#b5bac1 1.5px, transparent 1.5px); background-size: 25px 25px;">
                 <div id="wb-status" class="absolute top-4 left-4 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full font-medium backdrop-blur-sm z-20 transition-opacity duration-300 opacity-0 flex items-center"></div>
                 <canvas id="whiteboard-canvas" class="absolute top-0 left-0 w-full h-full z-10"></canvas>
@@ -257,63 +182,26 @@
 
         <div id="view-voice" class="hidden flex-1 flex flex-col h-full bg-[#0e0f11] relative w-full">
             <header class="p-3.5 border-b border-[#151619] flex justify-between items-center shadow-md bg-[#0f1013] z-20 w-full">
-                <div class="flex items-center">
-                    <button class="open-menu md:hidden mr-3 text-[#80848e] transition p-1"><i class="ph ph-list text-[24px]"></i></button>
-                    <h2 class="text-base md:text-md font-bold text-[#e4e5e7] flex items-center"><i class="ph ph-speaker-high text-[20px] md:text-[22px] mr-2 text-[#5c6069]"></i> ห้องนั่งเล่นคุยงาน</h2>
-                </div>
-                <div class="flex items-center">
-                    <span class="text-[10px] md:text-[11px] text-[#23a559] font-bold bg-[#23a559]/10 px-2 py-1 rounded border border-[#23a559]/20 mr-2 md:mr-3 uppercase tracking-wide flex items-center"><i class="ph-fill ph-circle text-[8px] mr-1.5 animate-pulse"></i><span class="hidden md:inline">Voice Connected</span><span class="md:hidden">Connected</span></span>
-                    <button id="open-members-voice" class="md:hidden text-[#80848e] hover:text-gray-300 transition p-1"><i class="ph ph-users text-[22px]"></i></button>
-                </div>
+                <div class="flex items-center"><button class="open-menu md:hidden mr-3 text-[#80848e] transition p-1"><i class="ph ph-list text-[24px]"></i></button><h2 class="text-base md:text-md font-bold text-[#e4e5e7] flex items-center"><i class="ph ph-speaker-high text-[20px] md:text-[22px] mr-2 text-[#5c6069]"></i> ห้องนั่งเล่นคุยงาน</h2></div>
+                <div class="flex items-center"><span class="text-[10px] md:text-[11px] text-[#23a559] font-bold bg-[#23a559]/10 px-2 py-1 rounded border border-[#23a559]/20 mr-2 md:mr-3 uppercase tracking-wide flex items-center"><i class="ph-fill ph-circle text-[8px] mr-1.5 animate-pulse"></i><span class="hidden md:inline">Voice Connected</span><span class="md:hidden">Connected</span></span><button id="open-members-voice" class="md:hidden text-[#80848e] hover:text-gray-300 transition p-1"><i class="ph ph-users text-[22px]"></i></button></div>
             </header>
-
             <div id="screen-share-stage" class="hidden w-full h-[40vh] md:h-[55vh] bg-[#050505] border-b border-[#1e1f22] p-1 md:p-6 flex items-center justify-center relative z-10 shadow-inner"></div>
-
             <div id="voice-grid" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 auto-rows-max content-start z-10 bg-[#0e0f11] transition-all w-full">
-                <div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]">
-                    <div class="w-20 h-20 md:w-24 md:h-24 bg-[#151619] rounded-full flex items-center justify-center mb-4 md:mb-5 shadow-inner border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] md:text-[48px] opacity-40"></i></div>
-                    <p class="font-bold text-base md:text-lg text-[#949ba4] text-center">ไม่มีใครอยู่ในห้องเสียง</p>
-                    <p class="text-xs md:text-sm mt-1 text-center px-4">กดเชื่อมต่อด้านล่างเพื่อปลุกห้องนี้ให้ตื่น!</p>
-                </div>
+                <div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]"><div class="w-20 h-20 md:w-24 md:h-24 bg-[#151619] rounded-full flex items-center justify-center mb-4 md:mb-5 shadow-inner border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] md:text-[48px] opacity-40"></i></div><p class="font-bold text-base md:text-lg text-[#949ba4] text-center">ไม่มีใครอยู่ในห้องเสียง</p><p class="text-xs md:text-sm mt-1 text-center px-4">กดเชื่อมต่อด้านล่างเพื่อปลุกห้องนี้ให้ตื่น!</p></div>
             </div>
-
             <div class="pt-3 pb-6 px-3 md:p-5 bg-[#050506] border-t border-[#0a0a0c] flex justify-center items-center shadow-[0_-15px_30px_rgba(0,0,0,0.5)] z-20 h-24 md:h-28 relative w-full">
-                
-                <button id="join-voice-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-6 py-2.5 md:px-8 md:py-3.5 rounded-full font-bold transition-all duration-200 shadow-lg hover:-translate-y-0.5 flex items-center text-[14px] md:text-[15px] opacity-90 hover:opacity-100">
-                    <i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>
-                </button>
-                
+                <button id="join-voice-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-6 py-2.5 md:px-8 md:py-3.5 rounded-full font-bold transition-all duration-200 shadow-lg hover:-translate-y-0.5 flex items-center text-[14px] md:text-[15px] opacity-90 hover:opacity-100"><i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span></button>
                 <div id="active-voice-ui" class="hidden flex items-center space-x-4 md:space-x-6">
-                    <div class="flex flex-col items-center group tooltip">
-                        <span class="tooltip-text hidden md:block">เปิด/ปิดไมค์</span>
-                        <button id="mute-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#151619] text-gray-300 rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]">
-                            <i id="mute-icon" class="ph ph-microphone text-[20px] md:text-[24px]"></i>
-                        </button>
-                    </div>
-
-                    <div class="flex flex-col items-center group tooltip">
-                        <span class="tooltip-text hidden md:block">แชร์หน้าจอ (30FPS)</span>
-                        <button id="screen-share-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#151619] text-gray-300 rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]">
-                            <i id="screen-icon" class="ph ph-screencast text-[20px] md:text-[24px]"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="flex flex-col items-center group tooltip">
-                        <span class="tooltip-text hidden md:block">ตัดการเชื่อมต่อ</span>
-                        <button id="leave-voice-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#da373c] text-white rounded-full flex items-center justify-center hover:bg-[#c92f33] transition-all duration-200 shadow-lg shadow-[#da373c]/20 hover:-translate-y-0.5 opacity-90 hover:opacity-100">
-                            <i class="ph-fill ph-phone-disconnect text-[22px] md:text-[26px]"></i>
-                        </button>
-                    </div>
+                    <div class="flex flex-col items-center group tooltip"><span class="tooltip-text hidden md:block">เปิด/ปิดไมค์</span><button id="mute-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#151619] text-gray-300 rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]"><i id="mute-icon" class="ph ph-microphone text-[20px] md:text-[24px]"></i></button></div>
+                    <div class="flex flex-col items-center group tooltip"><span class="tooltip-text hidden md:block">แชร์หน้าจอ (30FPS)</span><button id="screen-share-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#151619] text-gray-300 rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]"><i id="screen-icon" class="ph ph-screencast text-[20px] md:text-[24px]"></i></button></div>
+                    <div class="flex flex-col items-center group tooltip"><span class="tooltip-text hidden md:block">ตัดการเชื่อมต่อ</span><button id="leave-voice-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#da373c] text-white rounded-full flex items-center justify-center hover:bg-[#c92f33] transition-all duration-200 shadow-lg shadow-[#da373c]/20 hover:-translate-y-0.5 opacity-90 hover:opacity-100"><i class="ph-fill ph-phone-disconnect text-[22px] md:text-[26px]"></i></button></div>
                 </div>
             </div>
         </div>
     </main>
 
     <aside id="members-sidebar" class="fixed inset-y-0 right-0 z-50 w-64 md:w-64 bg-[#151619] border-l border-[#0a0a0c] transform translate-x-full md:relative md:translate-x-0 transition-transform duration-300 flex flex-col shadow-[-2px_0_8px_rgba(0,0,0,0.2)]">
-        <div class="p-4 border-b border-[#0a0a0c] flex justify-between items-center bg-[#151619]">
-            <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-widest">ออนไลน์ — <span id="member-count">0</span></h2>
-            <button id="close-members" class="md:hidden text-[#80848e] hover:text-gray-300 p-2"><i class="ph ph-x text-[18px]"></i></button>
-        </div>
+        <div class="p-4 border-b border-[#0a0a0c] flex justify-between items-center bg-[#151619]"><h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-widest">ออนไลน์ — <span id="member-count">0</span></h2><button id="close-members" class="md:hidden text-[#80848e] hover:text-gray-300 p-2"><i class="ph ph-x text-[18px]"></i></button></div>
         <div id="members-list" class="flex-1 p-2 space-y-0.5 overflow-y-auto"></div>
     </aside>
 
@@ -322,46 +210,17 @@
         import { getAuth, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // ==========================================
-        // 🚨 1. ตั้งค่า Firebase & Agora
-        // ==========================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I",
-            authDomain: "apoko-hq.firebaseapp.com",
-            projectId: "apoko-hq",
-            storageBucket: "apoko-hq.firebasestorage.app",
-            messagingSenderId: "122632343459",
-            appId: "1:122632343459:web:c225aaff8464f1b0c35416"
-        };
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a"; 
-
-        const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
+        const firebaseConfig = { apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I", authDomain: "apoko-hq.firebaseapp.com", projectId: "apoko-hq", storageBucket: "apoko-hq.firebasestorage.app", messagingSenderId: "122632343459", appId: "1:122632343459:web:c225aaff8464f1b0c35416" };
+        const app = initializeApp(firebaseConfig); const auth = getAuth(app); const db = getFirestore(app);
+        const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a"; const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
         
         const rtcClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        let localTracks = { audioTrack: null };
-        let isMuted = false;
-        let myNumericUid = null;
-        let screenTrack = null;
-        let screenAudioTrack = null;
-        let isSharingScreen = false;
+        let localTracks = { audioTrack: null }, screenTrack = null, screenAudioTrack = null;
+        let isMuted = false, isSharingScreen = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general"; 
+        let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false;
 
-        let currentUserId = null, currentUsername = "Guest", activeChannel = "general"; 
-        let allMessages = [], usersData = {}; 
-
-        // 🌟 ตัวแปรสำหรับระบบพิมพ์ข้อความ
-        let typingTimeout = null;
-        let isTyping = false;
-
-        // ==========================================
-        // 🌟 2. ระบบสลับหน้าต่าง (Navigation)
-        // ==========================================
         const views = { chat: document.getElementById('view-chat'), board: document.getElementById('view-board'), voice: document.getElementById('view-voice'), whiteboard: document.getElementById('view-whiteboard') };
-        const membersSidebar = document.getElementById('members-sidebar');
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('overlay');
+        const membersSidebar = document.getElementById('members-sidebar'), sidebar = document.getElementById('sidebar'), overlay = document.getElementById('overlay');
 
         document.querySelectorAll('.open-menu, #open-members-voice').forEach(btn => btn.onclick = () => { sidebar.classList.add('open'); overlay.classList.add('active'); });
         document.getElementById('close-menu').onclick = () => { sidebar.classList.remove('open'); overlay.classList.remove('active'); };
@@ -370,690 +229,157 @@
         overlay.onclick = () => { sidebar.classList.remove('open'); membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); };
 
         document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const view = btn.getAttribute('data-view');
-                if(!view) return; 
-                
-                // รีเซ็ตการพิมพ์เมื่อย้ายห้อง
-                if (isTyping && currentUserId) {
-                    isTyping = false; clearTimeout(typingTimeout);
-                    updateDoc(doc(db, "users", currentUserId), { isTyping: false });
-                }
-
-                document.querySelectorAll('.nav-btn').forEach(b => {
-                    b.classList.remove('channel-active', 'text-[#e4e5e7]'); 
-                    b.classList.add('channel-inactive', 'text-[#80848e]');
-                });
-                btn.classList.remove('channel-inactive', 'text-[#80848e]');
-                btn.classList.add('channel-active', 'text-[#e4e5e7]');
-
-                Object.values(views).forEach(v => v.classList.add('hidden'));
-                views[view].classList.remove('hidden');
-
-                if (view === 'chat' || view === 'voice') {
-                    membersSidebar.classList.remove('hidden', 'md:hidden');
-                    if (view === 'chat') {
-                        activeChannel = btn.getAttribute('data-channel');
-                        document.getElementById('chat-header-title').textContent = btn.getAttribute('data-name');
-                        renderMessages();
-                    }
-                } else { membersSidebar.classList.add('hidden', 'md:hidden'); }
-                
-                if (view === 'whiteboard') { setTimeout(initCanvasSize, 100); }
-
-                sidebar.classList.remove('open'); overlay.classList.remove('active');
-            });
-        });
-
-        // ==========================================
-        // 🟢 3. โหลดรายชื่อสมาชิก & แสดงคนกำลังพิมพ์
-        // ==========================================
-        onSnapshot(collection(db, "users"), (snapshot) => {
-            const membersList = document.getElementById('members-list');
-            const voiceActiveList = document.getElementById('voice-active-users');
-            const voiceGrid = document.getElementById('voice-grid'); 
-            const typingIndicator = document.getElementById('typing-indicator');
-            
-            membersList.innerHTML = ''; if (voiceActiveList) voiceActiveList.innerHTML = ''; 
-            let voiceGridHTML = ''; let usersInVoiceCount = 0;
-            let peopleTyping = []; // 🌟 เก็บรายชื่อคนกำลังพิมพ์
-
-            document.getElementById('member-count').textContent = snapshot.size; 
-            usersData = {}; 
-
-            snapshot.forEach((docSnap) => {
-                const user = docSnap.data();
-                const userName = user.username || 'Unknown';
-                const userAvatar = user.photoURL || `https://ui-avatars.com/api/?name=${userName}&background=5865F2&color=fff&rounded=true&bold=true`;
-                
-                usersData[userName] = { avatar: userAvatar, id: docSnap.id, agoraUid: user.agoraUid }; 
-
-                // 🌟 ตรวจสอบว่าใครกำลังพิมพ์ข้อความในห้องนี้อยู่บ้าง (ยกเว้นตัวเอง)
-                if (user.isTyping && user.typingChannel === activeChannel && docSnap.id !== currentUserId) {
-                    peopleTyping.push(userName);
-                }
-
-                const isOnline = user.status === 'online';
-                const statusColor = isOnline ? 'bg-[#23a559]' : 'bg-[#5c6069]';
-                const roleDisplay = user.role === 'Admin' ? `<span class="text-[#da373c] font-extrabold ml-1.5 text-[9px] md:text-[10px] bg-[#da373c]/10 px-1.5 py-0.5 rounded uppercase">Admin</span>` : '';
-                const nameStyle = user.role === 'Banned' ? 'line-through text-[#da373c]' : (isOnline ? 'text-[#d1d3d6]' : 'text-[#6d717a]');
-
-                const muteIconSmall = user.isMuted ? '<i class="ph-fill ph-microphone-slash text-[#da373c] ml-auto text-[14px]"></i>' : '';
-                const muteIconLarge = user.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#151619] rounded-full p-1.5 border-2 border-[#0e0f11] shadow-sm flex items-center justify-center"><i class="ph-fill ph-microphone-slash text-[#da373c] text-[14px]"></i></div>' : '';
-
-                const screenBadgeSmall = user.isSharingScreen ? '<span class="ml-2 text-[9px] bg-[#5865F2] text-white px-1.5 py-0.5 rounded flex items-center font-bold tracking-wider" title="กำลังแชร์จอ"><i class="ph-fill ph-screencast mr-1"></i>LIVE</span>' : '';
-                const screenBadgeGrid = user.isSharingScreen ? '<div class="absolute top-0 right-0 bg-[#5865F2] text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl flex items-center animate-pulse"><i class="ph-fill ph-screencast mr-1"></i>LIVE</div>' : '';
-
-                membersList.insertAdjacentHTML('beforeend', `
-                <div class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#1c1d21] hover:text-[#e4e5e7] transition group ${!isOnline ? 'opacity-50' : ''}">
-                    <div class="relative flex-shrink-0">
-                        <img id="img-avatar-${docSnap.id}" src="${userAvatar}" class="w-8 h-8 rounded-full object-cover transition-all duration-200 opacity-90">
-                        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619]"></div>
-                    </div>
-                    <div class="overflow-hidden flex-1 flex items-center">
-                        <p class="text-[14px] font-medium truncate ${nameStyle}">${userName} ${roleDisplay}</p>
-                    </div>
-                </div>`);
-
-                if (user.inVoice && voiceActiveList) {
-                    voiceActiveList.insertAdjacentHTML('beforeend', `
-                        <div class="flex items-center space-x-2.5 text-[13px] text-[#80848e] py-1 px-2 hover:bg-[#1c1d21] hover:text-[#dbdee1] rounded-md transition group cursor-pointer ml-2">
-                            <div class="relative flex-shrink-0">
-                                <img id="img-sidebar-voice-${docSnap.id}" src="${userAvatar}" class="w-6 h-6 rounded-full object-cover transition-all duration-200 opacity-90">
-                            </div>
-                            <span class="truncate font-medium flex-1 flex items-center">${userName} ${screenBadgeSmall}</span>
-                            ${muteIconSmall}
-                        </div>
-                    `);
-                }
-
-                if (user.inVoice) {
-                    usersInVoiceCount++;
-                    voiceGridHTML += `
-                        <div class="bg-[#151619] rounded-xl p-4 md:p-6 flex flex-col items-center justify-center relative shadow-lg border border-[#1e1f22] hover:border-[#3f4147] transition duration-300 h-auto min-h-[130px] md:min-h-[160px] group animate-[fadeIn_0.3s_ease-out]">
-                            ${screenBadgeGrid}
-                            <div class="relative mb-2 md:mb-4 flex-shrink-0">
-                                <img id="img-grid-voice-${docSnap.id}" src="${userAvatar}" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover bg-gray-900 border-[3px] border-transparent transition-all duration-300 shadow-md opacity-95">
-                                ${muteIconLarge}
-                            </div>
-                            <p class="font-bold text-[#e4e5e7] text-[13px] md:text-[15px] truncate w-full text-center mt-auto flex items-center justify-center">${userName}</p>
-                        </div>
-                    `;
-                }
-            });
-
-            // 🌟 อัปเดตข้อความ "กำลังพิมพ์..."
-            if (typingIndicator) {
-                if (peopleTyping.length > 0) {
-                    typingIndicator.innerHTML = `<i class="ph-fill ph-chat-teardrop-dots mr-1.5 animate-bounce"></i> ${peopleTyping.join(', ')} กำลังพิมพ์ข้อความ...`;
-                    typingIndicator.classList.remove('opacity-0');
-                } else {
-                    typingIndicator.classList.add('opacity-0');
-                }
-            }
-
-            if (voiceGrid) {
-                if (usersInVoiceCount > 0) { voiceGrid.innerHTML = voiceGridHTML; } 
-                else {
-                    voiceGrid.innerHTML = `
-                        <div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]">
-                            <div class="w-20 h-20 md:w-24 md:h-24 bg-[#151619] rounded-full flex items-center justify-center mb-4 md:mb-5 shadow-inner border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] md:text-[48px] opacity-40"></i></div>
-                            <p class="font-bold text-base md:text-lg text-[#949ba4] text-center">ไม่มีใครอยู่ในห้องเสียง</p>
-                            <p class="text-xs md:text-sm mt-1 text-center px-4">กดเชื่อมต่อด้านล่างเพื่อปลุกห้องนี้ให้ตื่น!</p>
-                        </div>`;
-                }
-            }
-            renderMessages();
-        });
-
-        // ==========================================
-        // 🎨 4. ระบบตั้งค่าโปรไฟล์ส่วนตัว (อัปโหลดรูป)
-        // ==========================================
-        const settingsModal = document.getElementById('settings-modal');
-        const openSettingsBtns = [document.getElementById('open-settings-btn'), document.getElementById('mini-profile-btn')];
-        const closeSettingsBtn = document.getElementById('close-settings-btn');
-        const settingsAvatarPreview = document.getElementById('settings-avatar-preview');
-        const settingsAvatarInput = document.getElementById('settings-avatar-input');
-        const settingsAvatarWrapper = document.getElementById('settings-avatar-wrapper');
-        const settingsStatus = document.getElementById('settings-status');
-        const settingsUsernameDisplay = document.getElementById('settings-username-display');
-
-        // เปิดหน้าต่างตั้งค่า
-        openSettingsBtns.forEach(btn => {
             btn.onclick = (e) => {
-                e.preventDefault();
-                settingsAvatarPreview.src = document.getElementById('current-user-avatar').src;
-                settingsUsernameDisplay.textContent = currentUsername;
-                settingsModal.classList.remove('hidden');
+                e.preventDefault(); const view = btn.getAttribute('data-view'); if(!view) return; 
+                if (isTyping && currentUserId) { isTyping = false; clearTimeout(typingTimeout); updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }
+                document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#e4e5e7]'); b.classList.add('channel-inactive', 'text-[#80848e]'); });
+                btn.classList.remove('channel-inactive', 'text-[#80848e]'); btn.classList.add('channel-active', 'text-[#e4e5e7]');
+                Object.values(views).forEach(v => v.classList.add('hidden')); views[view].classList.remove('hidden');
+                if (view === 'chat' || view === 'voice') { membersSidebar.classList.remove('hidden', 'md:hidden'); if (view === 'chat') { activeChannel = btn.getAttribute('data-channel'); document.getElementById('chat-header-title').textContent = btn.getAttribute('data-name'); renderMessages(); } } else { membersSidebar.classList.add('hidden', 'md:hidden'); }
+                if (view === 'whiteboard') setTimeout(initCanvasSize, 100);
                 sidebar.classList.remove('open'); overlay.classList.remove('active');
             };
         });
 
-        // ปิดหน้าต่างตั้งค่า
-        closeSettingsBtn.onclick = () => {
-            settingsModal.classList.add('hidden');
-            settingsStatus.textContent = "";
+        onSnapshot(collection(db, "users"), (snapshot) => {
+            const membersList = document.getElementById('members-list'), voiceActiveList = document.getElementById('voice-active-users'), voiceGrid = document.getElementById('voice-grid'), typingIndicator = document.getElementById('typing-indicator');
+            membersList.innerHTML = ''; if (voiceActiveList) voiceActiveList.innerHTML = ''; let voiceGridHTML = '', usersInVoiceCount = 0, peopleTyping = [];
+            document.getElementById('member-count').textContent = snapshot.size; usersData = {}; 
+
+            snapshot.forEach((docSnap) => {
+                const u = docSnap.data(), id = docSnap.id, userName = u.username || 'Unknown';
+                const userAvatar = u.photoURL || `https://ui-avatars.com/api/?name=${userName}&background=5865F2&color=fff&rounded=true&bold=true`;
+                usersData[userName] = { avatar: userAvatar, id: id, agoraUid: u.agoraUid }; 
+                if (u.isTyping && u.typingChannel === activeChannel && id !== currentUserId) peopleTyping.push(userName);
+
+                const isOnline = u.status === 'online', statusColor = isOnline ? 'bg-[#23a559]' : 'bg-[#5c6069]';
+                const roleDisplay = u.role === 'Admin' ? `<span class="text-[#da373c] font-extrabold ml-1.5 text-[9px] md:text-[10px] bg-[#da373c]/10 px-1.5 py-0.5 rounded uppercase">Admin</span>` : '';
+                const nameStyle = u.role === 'Banned' ? 'line-through text-[#da373c]' : (isOnline ? 'text-[#d1d3d6]' : 'text-[#6d717a]');
+                const muteIconSmall = u.isMuted ? '<i class="ph-fill ph-microphone-slash text-[#da373c] ml-auto text-[14px]"></i>' : '';
+                const muteIconLarge = u.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#151619] rounded-full p-1.5 border-2 border-[#0e0f11] shadow-sm flex items-center justify-center"><i class="ph-fill ph-microphone-slash text-[#da373c] text-[14px]"></i></div>' : '';
+                const screenBadgeSmall = u.isSharingScreen ? '<span class="ml-2 text-[9px] bg-[#5865F2] text-white px-1.5 py-0.5 rounded flex items-center font-bold tracking-wider" title="กำลังแชร์จอ"><i class="ph-fill ph-screencast mr-1"></i>LIVE</span>' : '';
+                const screenBadgeGrid = u.isSharingScreen ? '<div class="absolute top-0 right-0 bg-[#5865F2] text-white text-[10px] font-bold px-2 py-1 rounded-bl-lg rounded-tr-xl flex items-center animate-pulse"><i class="ph-fill ph-screencast mr-1"></i>LIVE</div>' : '';
+
+                membersList.insertAdjacentHTML('beforeend', `<div class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#1c1d21] hover:text-[#e4e5e7] transition group ${!isOnline ? 'opacity-50' : ''}"><div class="relative flex-shrink-0"><img id="img-avatar-${id}" src="${userAvatar}" class="w-8 h-8 rounded-full object-cover transition-all duration-200 opacity-90"><div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619]"></div></div><div class="overflow-hidden flex-1 flex items-center"><p class="text-[14px] font-medium truncate ${nameStyle}">${userName} ${roleDisplay}</p></div></div>`);
+                if (u.inVoice && voiceActiveList) voiceActiveList.insertAdjacentHTML('beforeend', `<div class="flex items-center space-x-2.5 text-[13px] text-[#80848e] py-1 px-2 hover:bg-[#1c1d21] hover:text-[#dbdee1] rounded-md transition group cursor-pointer ml-2"><div class="relative flex-shrink-0"><img id="img-sidebar-voice-${id}" src="${userAvatar}" class="w-6 h-6 rounded-full object-cover transition-all duration-200 opacity-90"></div><span class="truncate font-medium flex-1 flex items-center">${userName} ${screenBadgeSmall}</span>${muteIconSmall}</div>`);
+                if (u.inVoice) { usersInVoiceCount++; voiceGridHTML += `<div class="bg-[#151619] rounded-xl p-4 md:p-6 flex flex-col items-center justify-center relative shadow-lg border border-[#1e1f22] hover:border-[#3f4147] transition duration-300 h-auto min-h-[130px] md:min-h-[160px] group animate-[fadeIn_0.3s_ease-out]">${screenBadgeGrid}<div class="relative mb-2 md:mb-4 flex-shrink-0"><img id="img-grid-voice-${id}" src="${userAvatar}" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover bg-gray-900 border-[3px] border-transparent transition-all duration-300 shadow-md opacity-95">${muteIconLarge}</div><p class="font-bold text-[#e4e5e7] text-[13px] md:text-[15px] truncate w-full text-center mt-auto flex items-center justify-center">${userName}</p></div>`; }
+            });
+
+            if (typingIndicator) { if (peopleTyping.length > 0) { typingIndicator.innerHTML = `<i class="ph-fill ph-chat-teardrop-dots mr-1.5 animate-bounce"></i> ${peopleTyping.join(', ')} กำลังพิมพ์ข้อความ...`; typingIndicator.classList.remove('opacity-0'); } else { typingIndicator.classList.add('opacity-0'); } }
+            if (voiceGrid) { if (usersInVoiceCount > 0) { voiceGrid.innerHTML = voiceGridHTML; } else { voiceGrid.innerHTML = `<div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]"><div class="w-20 h-20 md:w-24 md:h-24 bg-[#151619] rounded-full flex items-center justify-center mb-4 md:mb-5 shadow-inner border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] md:text-[48px] opacity-40"></i></div><p class="font-bold text-base md:text-lg text-[#949ba4] text-center">ไม่มีใครอยู่ในห้องเสียง</p><p class="text-xs md:text-sm mt-1 text-center px-4">กดเชื่อมต่อด้านล่างเพื่อปลุกห้องนี้ให้ตื่น!</p></div>`; } }
+            renderMessages();
+        });
+
+        const settingsModal = document.getElementById('settings-modal'), avatarInput = document.getElementById('settings-avatar-input'), statusTxt = document.getElementById('settings-status');
+        document.getElementById('open-settings-btn').onclick = document.getElementById('mini-profile-btn').onclick = (e) => { e.preventDefault(); document.getElementById('settings-avatar-preview').src = document.getElementById('current-user-avatar').src; document.getElementById('settings-username-display').textContent = currentUsername; settingsModal.classList.remove('hidden'); sidebar.classList.remove('open'); overlay.classList.remove('active'); };
+        document.getElementById('close-settings-btn').onclick = () => { settingsModal.classList.add('hidden'); statusTxt.textContent = ""; };
+        document.getElementById('settings-avatar-wrapper').onclick = () => avatarInput.click();
+        avatarInput.onchange = async (e) => {
+            const f = e.target.files[0]; if(!f) return;
+            statusTxt.className = "text-yellow-500 text-[12px] font-medium h-4 transition-all"; statusTxt.textContent = "กำลังอัปโหลดรูปภาพ... ⏳";
+            document.getElementById('settings-avatar-wrapper').classList.add('opacity-50', 'pointer-events-none');
+            try { const fd = new FormData(); fd.append("image", f); const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const r = await res.json(); if (r.success) { await updateProfile(auth.currentUser, { photoURL: r.data.url }); await updateDoc(doc(db, "users", currentUserId), { photoURL: r.data.url }); document.getElementById('settings-avatar-preview').src = r.data.url; document.getElementById('current-user-avatar').src = r.data.url; statusTxt.className = "text-[#23a559] text-[12px] font-medium h-4 transition-all"; statusTxt.textContent = "เปลี่ยนรูปโปรไฟล์สำเร็จ! ✅"; setTimeout(() => statusTxt.textContent = "", 3000); } } catch(err) { statusTxt.className = "text-[#da373c] text-[12px] font-medium h-4 transition-all"; statusTxt.textContent = "เกิดข้อผิดพลาดในการอัปโหลด ❌"; } finally { document.getElementById('settings-avatar-wrapper').classList.remove('opacity-50', 'pointer-events-none'); avatarInput.value = ""; }
         };
 
-        // กดที่รูปเพื่ออัปโหลด
-        settingsAvatarWrapper.onclick = () => settingsAvatarInput.click();
-
-        // เมื่อเลือกรูปใหม่
-        settingsAvatarInput.onchange = async (e) => {
-            const file = e.target.files[0];
-            if(!file) return;
-            
-            settingsStatus.classList.replace('text-[#5c6069]', 'text-yellow-500');
-            settingsStatus.textContent = "กำลังอัปโหลดรูปภาพ... ⏳";
-            settingsAvatarWrapper.classList.add('opacity-50', 'pointer-events-none');
-
-            try {
-                const formData = new FormData(); 
-                formData.append("image", file);
-                const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
-                const result = await response.json();
-                
-                if (result.success) {
-                    const newPhotoUrl = result.data.url;
-                    
-                    // 1. อัปเดตใน Firebase Auth
-                    await updateProfile(auth.currentUser, { photoURL: newPhotoUrl });
-                    // 2. อัปเดตใน Firestore (เพื่อให้คนอื่นเห็นรูปใหม่เราด้วย)
-                    await updateDoc(doc(db, "users", currentUserId), { photoURL: newPhotoUrl });
-                    
-                    settingsAvatarPreview.src = newPhotoUrl;
-                    document.getElementById('current-user-avatar').src = newPhotoUrl;
-                    
-                    settingsStatus.classList.replace('text-yellow-500', 'text-[#23a559]');
-                    settingsStatus.textContent = "เปลี่ยนรูปโปรไฟล์สำเร็จ! ✅";
-                    setTimeout(() => settingsStatus.textContent = "", 3000);
-                }
-            } catch(err) {
-                settingsStatus.classList.replace('text-yellow-500', 'text-[#da373c]');
-                settingsStatus.textContent = "เกิดข้อผิดพลาดในการอัปโหลด ❌";
-            } finally {
-                settingsAvatarWrapper.classList.remove('opacity-50', 'pointer-events-none');
-                settingsAvatarInput.value = "";
-            }
-        };
-
-        // ==========================================
-        // 🌟 ระบบ AUTO-RECONNECT
-        // ==========================================
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUserId = user.uid; currentUsername = user.displayName || user.email.split('@')[0];
                 document.getElementById('current-user-name').textContent = currentUsername;
                 document.getElementById('current-user-avatar').src = user.photoURL || `https://ui-avatars.com/api/?name=${currentUsername}&background=5865F2&color=fff&rounded=true&bold=true`;
-                try {
-                    const userDoc = await getDoc(doc(db, "users", currentUserId));
-                    if (userDoc.exists() && userDoc.data().role === 'Admin') { document.getElementById('admin-menu-btn').classList.remove('hidden'); }
-                } catch (err) {}
-
+                try { const userDoc = await getDoc(doc(db, "users", currentUserId)); if (userDoc.exists() && userDoc.data().role === 'Admin') document.getElementById('admin-menu-btn').classList.remove('hidden'); } catch (err) {}
                 const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
-
-                if (wasInVoice) {
-                    await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e));
-                    setTimeout(() => {
-                        joinVoice();
-                        document.querySelectorAll('.nav-btn').forEach(b => {
-                            b.classList.remove('channel-active', 'text-[#e4e5e7]'); 
-                            b.classList.add('channel-inactive', 'text-[#80848e]');
-                            if (b.getAttribute('data-view') === 'voice') {
-                                b.classList.remove('channel-inactive', 'text-[#80848e]');
-                                b.classList.add('channel-active', 'text-[#e4e5e7]');
-                            }
-                        });
-                        Object.values(views).forEach(v => v.classList.add('hidden'));
-                        views['voice'].classList.remove('hidden');
-                        membersSidebar.classList.remove('hidden', 'md:hidden');
-                    }, 1500); 
-                } else {
-                    await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }).catch(e=>console.log(e));
-                }
-
+                if (wasInVoice) { await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e)); setTimeout(() => { joinVoice(); document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#e4e5e7]'); b.classList.add('channel-inactive', 'text-[#80848e]'); if (b.getAttribute('data-view') === 'voice') { b.classList.remove('channel-inactive', 'text-[#80848e]'); b.classList.add('channel-active', 'text-[#e4e5e7]'); } }); Object.values(views).forEach(v => v.classList.add('hidden')); views['voice'].classList.remove('hidden'); membersSidebar.classList.remove('hidden', 'md:hidden'); }, 1500); } else { await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }).catch(e=>console.log(e)); }
             } else { window.location.href = "index.html"; }
         });
 
-        document.getElementById('logout-btn').addEventListener('click', async () => {
-            if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } catch (e) {} }
-            localStorage.removeItem('dosh_active_voice');
-            if (localTracks.audioTrack) { await leaveVoice(); } signOut(auth);
-        });
+        document.getElementById('logout-btn').addEventListener('click', async () => { if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } catch (e) {} } localStorage.removeItem('dosh_active_voice'); if (localTracks.audioTrack) { await leaveVoice(); } signOut(auth); });
 
-        // ==========================================
-        // 🎨 4.5 ระบบกระดานไอเดีย (Shared Whiteboard)
-        // ==========================================
-        const canvas = document.getElementById('whiteboard-canvas');
-        const ctx = canvas.getContext('2d');
-        const canvasContainer = document.getElementById('canvas-container');
-        const wbStatus = document.getElementById('wb-status');
-        
-        let isDrawing = false;
-        let wbColor = document.getElementById('wb-color');
-        let wbSize = document.getElementById('wb-size');
-
-        function initCanvasSize() {
-            if(canvas.width !== canvasContainer.clientWidth || canvas.height !== canvasContainer.clientHeight) {
-                const tempImage = canvas.toDataURL(); 
-                canvas.width = canvasContainer.clientWidth;
-                canvas.height = canvasContainer.clientHeight;
-                if(tempImage !== "data:,") {
-                    const img = new Image();
-                    img.onload = () => ctx.drawImage(img, 0, 0);
-                    img.src = tempImage;
-                }
-            }
-        }
-        window.addEventListener('resize', initCanvasSize);
-
-        function getMousePos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: clientX - rect.left, y: clientY - rect.top };
-        }
-
-        function startDrawing(e) {
-            if(e.type === 'touchstart') e.preventDefault();
-            isDrawing = true;
-            draw(e);
-        }
-
-        function draw(e) {
-            if (!isDrawing) return;
-            if(e.type === 'touchmove') e.preventDefault();
-            
-            const pos = getMousePos(e);
-            ctx.lineWidth = wbSize.value;
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = wbColor.value;
-
-            ctx.lineTo(pos.x, pos.y);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y);
-        }
-
-        function stopDrawing() {
-            if (!isDrawing) return;
-            isDrawing = false;
-            ctx.beginPath();
-            syncWhiteboard(); 
-        }
-
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseout', stopDrawing);
-        
-        canvas.addEventListener('touchstart', startDrawing, {passive: false});
-        canvas.addEventListener('touchmove', draw, {passive: false});
-        canvas.addEventListener('touchend', stopDrawing);
-
-        document.getElementById('wb-clear').addEventListener('click', () => {
-            if(confirm("คุณแน่ใจหรือไม่ที่จะลบกระดานทั้งหมด? (เพื่อนทุกคนจะโดนลบด้วย)")) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                syncWhiteboard(true);
-            }
-        });
-
-        async function syncWhiteboard(isClear = false) {
-            if(!currentUserId) return;
-            const dataUrl = isClear ? "" : canvas.toDataURL(); 
-            await setDoc(doc(db, "appData", "whiteboard"), { 
-                image: dataUrl, 
-                updatedBy: currentUsername, 
-                timestamp: serverTimestamp() 
-            }, { merge: true });
-        }
-
-        onSnapshot(doc(db, "appData", "whiteboard"), (docSnap) => {
-            if (docSnap.exists() && !isDrawing) {
-                const data = docSnap.data();
-                if (data.updatedBy && data.updatedBy !== currentUsername) {
-                    wbStatus.innerHTML = `<i class="ph ph-pencil-simple text-[14px] mr-1.5"></i> ${data.updatedBy} เพิ่งอัปเดตกระดาน`;
-                    wbStatus.classList.remove('opacity-0');
-                    setTimeout(() => wbStatus.classList.add('opacity-0'), 3000);
-                }
-                if(data.image) {
-                    const img = new Image();
-                    img.onload = () => {
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0);
-                    };
-                    img.src = data.image;
-                } else { ctx.clearRect(0, 0, canvas.width, canvas.height); }
-            }
-        });
-
-        // ==========================================
-        // 🎙️ 5. ระบบห้องคุยเสียง (Voice & Screen Share)
-        // ==========================================
-        const joinBtn = document.getElementById('join-voice-btn');
-        const leaveBtn = document.getElementById('leave-voice-btn');
-        const muteBtn = document.getElementById('mute-btn');
-        const screenShareBtn = document.getElementById('screen-share-btn');
-        const activeVoiceUI = document.getElementById('active-voice-ui');
-        const screenShareStage = document.getElementById('screen-share-stage');
-
-        async function joinVoice() {
-            try {
-                joinBtn.innerHTML = "กำลังเชื่อมต่อ...";
-                myNumericUid = Math.floor(Math.random() * 1000000); 
-                
-                rtcClient.on("user-published", async (user, mediaType) => { 
-                    await rtcClient.subscribe(user, mediaType); 
-                    if (mediaType === "audio") { user.audioTrack.play(); }
-                    if (mediaType === "video") {
-                        screenShareStage.classList.remove('hidden');
-                        
-                        const existing = document.getElementById(`video-wrapper-${user.uid}`);
-                        if(existing) existing.remove();
-
-                        let playerContainer = document.createElement("div");
-                        playerContainer.id = `video-wrapper-${user.uid}`;
-                        playerContainer.style.width = "100%";
-                        playerContainer.style.height = "100%";
-                        playerContainer.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center";
-                        screenShareStage.appendChild(playerContainer);
-                        
-                        user.videoTrack.play(playerContainer, { fit: "contain" });
-                    }
-                });
-
-                rtcClient.on("user-unpublished", async (user, mediaType) => {
-                    if (mediaType === "video") {
-                        const playerContainer = document.getElementById(`video-wrapper-${user.uid}`);
-                        if (playerContainer) playerContainer.remove();
-                        if (screenShareStage.children.length === 0) { screenShareStage.classList.add('hidden'); }
-                    }
-                });
-
-                rtcClient.enableAudioVolumeIndicator();
-                rtcClient.on("volume-indicator", volumes => {
-                    document.querySelectorAll('.speaking-ring').forEach(img => img.classList.remove('speaking-ring'));
-                    volumes.forEach(volume => {
-                        if (volume.level > 10) { 
-                            let speakingUserId = null;
-                            if (volume.uid === myNumericUid || volume.uid === 0) { speakingUserId = currentUserId; } 
-                            else { for (const key in usersData) { if (usersData[key].agoraUid === volume.uid) { speakingUserId = usersData[key].id; break; } } }
-
-                            if (speakingUserId) {
-                                const avatar1 = document.getElementById(`img-avatar-${speakingUserId}`);
-                                const avatar2 = document.getElementById(`img-sidebar-voice-${speakingUserId}`);
-                                const avatar3 = document.getElementById(`img-grid-voice-${speakingUserId}`);
-                                if(avatar1) avatar1.classList.add('speaking-ring');
-                                if(avatar2) avatar2.classList.add('speaking-ring');
-                                if(avatar3) avatar3.classList.add('speaking-ring');
-                            }
-                        }
-                    });
-                });
-
-                await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid);
-                
-                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
-                    AEC: true,
-                    ANS: true,
-                    AGC: true
-                });
-                
-                await rtcClient.publish(localTracks.audioTrack);
-                
-                isMuted = false;
-                await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false, isSharingScreen: false });
-                localStorage.setItem('dosh_active_voice', 'true');
-
-                joinBtn.classList.add('hidden');
-                activeVoiceUI.classList.remove('hidden');
-                muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]');
-                document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]";
-
-            } catch (err) { 
-                console.error(err);
-                localStorage.removeItem('dosh_active_voice');
-                alert("เชื่อมต่อไมค์ไม่สำเร็จ กรุณากดอนุญาตการใช้ไมโครโฟน"); 
-                joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
-            }
-        }
-
-        screenShareBtn.onclick = async () => {
-            const screenIcon = document.getElementById('screen-icon');
-            if (!isSharingScreen) {
-                try {
-                    const screenResult = await AgoraRTC.createScreenVideoTrack({ 
-                        encoderConfig: { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 }, 
-                        optimizationMode: "motion" 
-                    }, "auto");
-                    
-                    if (Array.isArray(screenResult)) {
-                        screenTrack = screenResult[0];
-                        screenAudioTrack = screenResult[1];
-                        await rtcClient.publish([screenTrack, screenAudioTrack]);
-                    } else {
-                        screenTrack = screenResult;
-                        await rtcClient.publish(screenTrack);
-                    }
-                    
-                    isSharingScreen = true;
-                    await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: true });
-                    
-                    screenShareBtn.classList.replace('bg-[#151619]', 'bg-[#23a559]');
-                    screenShareBtn.classList.replace('text-gray-300', 'text-white');
-                    screenIcon.className = "ph-fill ph-screencast text-[20px] md:text-[24px]";
-                    
-                    screenShareStage.classList.remove('hidden');
-                    
-                    let playerContainer = document.createElement("div");
-                    playerContainer.id = `video-wrapper-local`;
-                    playerContainer.style.width = "100%";
-                    playerContainer.style.height = "100%";
-                    playerContainer.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center";
-                    screenShareStage.appendChild(playerContainer);
-                    
-                    screenTrack.play(playerContainer, { fit: "contain" });
-
-                    screenTrack.on("track-ended", stopScreenShare);
-
-                } catch (err) { console.log("ยกเลิกแชร์หน้าจอ", err); }
-            } else { await stopScreenShare(); }
-        };
-
-        async function stopScreenShare() {
-            if (screenTrack) { await rtcClient.unpublish(screenTrack); screenTrack.stop(); screenTrack.close(); screenTrack = null; }
-            if (screenAudioTrack) { await rtcClient.unpublish(screenAudioTrack); screenAudioTrack.stop(); screenAudioTrack.close(); screenAudioTrack = null; }
-            
-            isSharingScreen = false;
-            if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: false });
-            
-            screenShareBtn.classList.replace('bg-[#23a559]', 'bg-[#151619]');
-            screenShareBtn.classList.replace('text-white', 'text-gray-300');
-            document.getElementById('screen-icon').className = "ph ph-screencast text-[20px] md:text-[24px]";
-            
-            const localPlayer = document.getElementById(`video-wrapper-local`);
-            if (localPlayer) localPlayer.remove();
-            if (screenShareStage.children.length === 0) { screenShareStage.classList.add('hidden'); }
-        }
-
-        async function leaveVoice() {
-            if (isSharingScreen) await stopScreenShare(); 
-            if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); }
-            await rtcClient.leave();
-            
-            if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }); }
-            
-            localStorage.removeItem('dosh_active_voice');
-
-            document.querySelectorAll('.speaking-ring').forEach(img => img.classList.remove('speaking-ring'));
-            joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>';
-            activeVoiceUI.classList.add('hidden');
-        }
-
-        joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
-        muteBtn.onclick = async () => {
-            isMuted = !isMuted; localTracks.audioTrack.setEnabled(!isMuted); 
-            await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted });
-            const muteIcon = document.getElementById('mute-icon');
-            if (isMuted) {
-                muteBtn.classList.remove('bg-[#151619]'); muteBtn.classList.add('bg-gray-800', 'text-[#da373c]');
-                muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]";
-            } else { 
-                muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); 
-                muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; 
-            }
-        };
-        window.addEventListener('beforeunload', () => { 
-            if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { 
-                updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); 
-            } 
-        });
-
-        // ==========================================
-        // 💬 6. ระบบแชท & กำลังพิมพ์ (Typing Indicator)
-        // ==========================================
         const chatInput = document.getElementById('chat-input');
-        
-        // 🌟 ดักจับตอนกดแป้นพิมพ์
-        chatInput.addEventListener('input', () => {
+        chatInput.addEventListener('input', () => { if (!currentUserId) return; if (!isTyping) { isTyping = true; updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel }); } clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }, 2000); });
+
+        onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => { allMessages = []; snapshot.forEach((docSnap) => { allMessages.push({ id: docSnap.id, ...docSnap.data() }); }); renderMessages(); });
+
+        window.toggleReaction = async (msgId, emoji) => {
             if (!currentUserId) return;
-            
-            if (!isTyping) {
-                isTyping = true;
-                updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel });
-            }
-
-            // ถ้าหยุดพิมพ์ครบ 2 วินาที ให้ลบสถานะกำลังพิมพ์ออก
-            clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => {
-                isTyping = false;
-                updateDoc(doc(db, "users", currentUserId), { isTyping: false });
-            }, 2000);
-        });
-
-        onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => {
-            allMessages = []; snapshot.forEach((docSnap) => { allMessages.push(docSnap.data()); });
-            renderMessages();
-        });
+            const msgRef = doc(db, "messages", msgId);
+            const msgDoc = await getDoc(msgRef);
+            if (!msgDoc.exists()) return;
+            const data = msgDoc.data();
+            let reactions = data.reactions || {};
+            let usersReacted = reactions[emoji] || [];
+            if (usersReacted.includes(currentUserId)) { usersReacted = usersReacted.filter(id => id !== currentUserId); } else { usersReacted.push(currentUserId); }
+            if (usersReacted.length === 0) { delete reactions[emoji]; } else { reactions[emoji] = usersReacted; }
+            await updateDoc(msgRef, { reactions: reactions });
+        };
 
         function renderMessages() {
-            const chatContainer = document.getElementById('chat-container');
-            chatContainer.innerHTML = ''; 
+            const chatContainer = document.getElementById('chat-container'); chatContainer.innerHTML = ''; 
             const filteredMessages = allMessages.filter(msg => msg.channel === activeChannel);
-            
-            if(filteredMessages.length === 0) return chatContainer.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full text-[#6d717a] animate-[fadeIn_0.4s_ease-out]">
-                    <div class="w-14 h-14 md:w-16 md:h-16 bg-[#151619] rounded-full flex items-center justify-center mb-3 md:mb-4 border border-[#1e1f22]"><i class="ph ph-chat-teardrop-dots text-[28px] md:text-[36px] opacity-70"></i></div>
-                    <p class="font-bold text-base md:text-lg text-[#949ba4]">ยินดีต้อนรับสู่ #${activeChannel === 'general' ? 'ประกาศทั่วไป' : 'อัปเดตงานโปรเจกต์'}</p>
-                    <p class="text-xs md:text-sm mt-1 text-center">นี่คือจุดเริ่มต้นของช่องนี้ เขียนทักทายทีมของคุณได้เลย</p>
-                </div>`;
-
+            if(filteredMessages.length === 0) return chatContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-[#6d717a] animate-[fadeIn_0.4s_ease-out]"><div class="w-14 h-14 md:w-16 md:h-16 bg-[#151619] rounded-full flex items-center justify-center mb-3 md:mb-4 border border-[#1e1f22]"><i class="ph ph-chat-teardrop-dots text-[28px] md:text-[36px] opacity-70"></i></div><p class="font-bold text-base md:text-lg text-[#949ba4]">ยินดีต้อนรับสู่ #${activeChannel === 'general' ? 'ประกาศทั่วไป' : 'อัปเดตงานโปรเจกต์'}</p><p class="text-xs md:text-sm mt-1 text-center">นี่คือจุดเริ่มต้นของช่องนี้ เขียนทักทายทีมของคุณได้เลย</p></div>`;
             let lastSender = null; 
             
-            filteredMessages.forEach((data) => {
-                let timeString = "...";
-                if (data.timestamp) timeString = data.timestamp.toDate().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            filteredMessages.forEach((m) => {
+                let timeString = m.timestamp ? m.timestamp.toDate().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : "...";
+                let msgAvatarUrl = usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}&background=5865F2&color=fff&rounded=true&bold=true`;
+                let contentHTML = m.text ? `<p class="text-[#d1d3d6] mt-0.5 leading-relaxed text-[14px] md:text-[15px]">${m.text}</p>` : '';
+                if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" onload="document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;" class="mt-2 rounded-lg max-w-[80%] md:max-w-sm shadow-sm cursor-pointer hover:opacity-80 transition">`;
                 
-                let msgAvatarUrl = `https://ui-avatars.com/api/?name=${data.senderName}&background=5865F2&color=fff&rounded=true&bold=true`;
-                if(usersData[data.senderName]) msgAvatarUrl = usersData[data.senderName].avatar;
-                
-                let contentHTML = data.text ? `<p class="text-[#d1d3d6] mt-0.5 leading-relaxed text-[14px] md:text-[15px]">${data.text}</p>` : '';
-                if (data.imageUrl) contentHTML += `<img src="${data.imageUrl}" onload="document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;" class="mt-2 rounded-lg max-w-[80%] md:max-w-sm shadow-sm cursor-pointer hover:opacity-80 transition">`;
-                
-                if (lastSender === data.senderName) {
-                    chatContainer.insertAdjacentHTML('beforeend', `
-                    <div class="flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-1 -mx-2 md:-mx-4 group transition duration-150 msg-enter">
-                        <div class="w-8 md:w-10 flex-shrink-0 text-right"><span class="text-[9px] md:text-[10px] text-[#5c6069] opacity-0 group-hover:opacity-100 transition leading-relaxed">${timeString}</span></div>
-                        <div class="min-w-0 flex-1">${contentHTML}</div>
-                    </div>`);
-                } else {
-                    chatContainer.insertAdjacentHTML('beforeend', `
-                    <div class="flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-2 mt-4 -mx-2 md:-mx-4 group transition duration-150 msg-enter">
-                        <img src="${msgAvatarUrl}" class="w-8 h-8 md:w-10 md:h-10 rounded-full flex-shrink-0 object-cover cursor-pointer hover:opacity-80 transition opacity-95">
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-baseline space-x-2"><span class="font-medium text-[14px] md:text-[15px] hover:underline cursor-pointer text-[#e4e5e7] tracking-wide">${data.senderName}</span><span class="text-[10px] md:text-[11px] text-[#6d717a]">${timeString}</span></div>
-                            ${contentHTML}
-                        </div>
-                    </div>`);
+                let reactsHTML = '';
+                if (m.reactions && Object.keys(m.reactions).length > 0) {
+                    reactsHTML = `<div class="flex flex-wrap gap-1.5 mt-2">`;
+                    Object.entries(m.reactions).forEach(([emoji, usersArr]) => {
+                        const count = usersArr.length;
+                        const hasReacted = usersArr.includes(currentUserId);
+                        const activeStyle = hasReacted ? 'bg-[#5865F2]/20 border-[#5865F2]/50 text-[#dbdee1]' : 'bg-[#1e1f22] border-[#2b2d31] text-[#80848e] hover:bg-[#2b2d31]';
+                        if (count > 0) reactsHTML += `<div class="border rounded-md px-1.5 py-0.5 text-[12px] flex items-center cursor-pointer transition ${activeStyle}" onclick="toggleReaction('${m.id}', '${emoji}')">${emoji} <span class="ml-1 font-bold ${hasReacted ? 'text-[#5865F2]' : ''}">${count}</span></div>`;
+                    });
+                    reactsHTML += `</div>`;
                 }
-                lastSender = data.senderName;
+
+                const reactBarUI = `<div class="reaction-bar absolute -top-4 right-4 bg-[#151619] border border-[#1e1f22] rounded-lg p-1 shadow-xl flex items-center space-x-1 z-20"><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '👍')">👍</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '❤️')">❤️</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '😂')">😂</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '🔥')">🔥</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '😮')">😮</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '✅')">✅</button></div>`;
+
+                if (lastSender === m.senderName) {
+                    chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-1 -mx-2 md:-mx-4 group transition duration-150 msg-enter relative"><div class="w-8 md:w-10 flex-shrink-0 text-right"><span class="text-[9px] md:text-[10px] text-[#5c6069] opacity-0 group-hover:opacity-100 transition leading-relaxed">${timeString}</span></div><div class="min-w-0 flex-1 pb-1">${contentHTML}${reactsHTML}</div>${reactBarUI}</div>`);
+                } else {
+                    chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-2 mt-4 -mx-2 md:-mx-4 group transition duration-150 msg-enter relative"><img src="${msgAvatarUrl}" class="w-8 h-8 md:w-10 md:h-10 rounded-full flex-shrink-0 object-cover cursor-pointer hover:opacity-80 transition opacity-95"><div class="min-w-0 flex-1 pb-1"><div class="flex items-baseline space-x-2"><span class="font-medium text-[14px] md:text-[15px] hover:underline cursor-pointer text-[#e4e5e7] tracking-wide">${m.senderName}</span><span class="text-[10px] md:text-[11px] text-[#6d717a]">${timeString}</span></div>${contentHTML}${reactsHTML}</div>${reactBarUI}</div>`);
+                }
+                lastSender = m.senderName;
             });
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        async function sendMessage() {
-            const text = chatInput.value.trim(); if (!text) return;
-            chatInput.value = ''; 
-            
-            // 🌟 พอกดส่งปุ๊บ ให้ลบสถานะกำลังพิมพ์ทันที
-            clearTimeout(typingTimeout);
-            isTyping = false;
-            updateDoc(doc(db, "users", currentUserId), { isTyping: false });
+        async function sendMessage() { const txt = chatInput.value.trim(); if (!txt) return; chatInput.value = ''; clearTimeout(typingTimeout); isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); await addDoc(collection(db, "messages"), { text: txt, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp(), reactions: {} }); }
+        document.getElementById('send-btn').onclick = sendMessage; chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+        document.getElementById('attach-btn').onclick = () => document.getElementById('file-input').click();
+        document.getElementById('file-input').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; chatInput.placeholder = "กำลังอัปโหลดไฟล์..."; chatInput.disabled = true; try { const fd = new FormData(); fd.append("image", f); const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const r = await res.json(); if (r.success) await addDoc(collection(db, "messages"), { text: "", imageUrl: r.data.url, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp(), reactions: {} }); } catch (err) { alert("อัปโหลดพลาด"); } finally { chatInput.placeholder = "ส่งข้อความถึง #ห้องแชท"; chatInput.disabled = false; chatInput.value = ""; chatInput.focus(); } };
 
-            await addDoc(collection(db, "messages"), { text: text, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp() });
-        }
-        document.getElementById('send-btn').addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+        const canvas = document.getElementById('whiteboard-canvas'), ctx = canvas.getContext('2d'), canvasContainer = document.getElementById('canvas-container'), wbStatus = document.getElementById('wb-status');
+        let isDrawing = false;
+        function initCanvasSize() { if(canvas.width !== canvasContainer.clientWidth || canvas.height !== canvasContainer.clientHeight) { const temp = canvas.toDataURL(); canvas.width = canvasContainer.clientWidth; canvas.height = canvasContainer.clientHeight; if(temp !== "data:,") { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0); img.src = temp; } } }
+        window.addEventListener('resize', initCanvasSize);
+        function getMousePos(e) { const r = canvas.getBoundingClientRect(); const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY; return { x: x - r.left, y: y - r.top }; }
+        function startDrawing(e) { if(e.type === 'touchstart') e.preventDefault(); isDrawing = true; draw(e); }
+        function draw(e) { if (!isDrawing) return; if(e.type === 'touchmove') e.preventDefault(); const p = getMousePos(e); ctx.lineWidth = document.getElementById('wb-size').value; ctx.lineCap = 'round'; ctx.strokeStyle = document.getElementById('wb-color').value; ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
+        function stopDrawing() { if (!isDrawing) return; isDrawing = false; ctx.beginPath(); syncWhiteboard(); }
+        canvas.onmousedown = startDrawing; canvas.onmousemove = draw; canvas.onmouseup = canvas.onmouseout = stopDrawing; canvas.addEventListener('touchstart', startDrawing, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchend', stopDrawing);
+        document.getElementById('wb-clear').onclick = () => { if(confirm("ล้างกระดานทั้งหมด?")) { ctx.clearRect(0, 0, canvas.width, canvas.height); syncWhiteboard(true); } };
+        async function syncWhiteboard(isC = false) { if(!currentUserId) return; await setDoc(doc(db, "appData", "whiteboard"), { image: isC ? "" : canvas.toDataURL(), updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); }
+        onSnapshot(doc(db, "appData", "whiteboard"), (d) => { if (d.exists() && !isDrawing) { const val = d.data(); if (val.updatedBy && val.updatedBy !== currentUsername) { wbStatus.innerHTML = `<i class="ph ph-pencil-simple mr-1.5"></i> ${val.updatedBy} เพิ่งอัปเดตกระดาน`; wbStatus.classList.remove('opacity-0'); setTimeout(() => wbStatus.classList.add('opacity-0'), 3000); } if(val.image) { const img = new Image(); img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); }; img.src = val.image; } else { ctx.clearRect(0, 0, canvas.width, canvas.height); } } });
 
-        document.getElementById('attach-btn').addEventListener('click', () => document.getElementById('file-input').click());
-        document.getElementById('file-input').addEventListener('change', async (e) => {
-            const file = e.target.files[0]; if (!file) return;
-            chatInput.placeholder = "กำลังอัปโหลดไฟล์..."; chatInput.disabled = true;
-            try {
-                const formData = new FormData(); formData.append("image", file);
-                const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
-                const result = await response.json();
-                if (result.success) await addDoc(collection(db, "messages"), { text: "", imageUrl: result.data.url, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp() });
-            } catch (err) { alert("อัปโหลดพลาด"); } 
-            finally { chatInput.placeholder = "ส่งข้อความถึง #ห้องแชท"; chatInput.disabled = false; chatInput.value = ""; chatInput.focus(); }
-        });
+        const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.getElementById('leave-voice-btn'), muteBtn = document.getElementById('mute-btn'), ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
+        async function joinVoice() { try { joinBtn.innerHTML = "กำลังเชื่อมต่อ..."; myNumericUid = Math.floor(Math.random() * 1000000); rtcClient.on("user-published", async (u, t) => { await rtcClient.subscribe(u, t); if (t === "audio") u.audioTrack.play(); if (t === "video") { ssStage.classList.remove('hidden'); const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); } }); rtcClient.on("user-unpublished", async (u, t) => { if (t === "video") { const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); } }); rtcClient.enableAudioVolumeIndicator(); rtcClient.on("volume-indicator", vs => { document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); vs.forEach(v => { if (v.level > 10) { let sId = null; if (v.uid === myNumericUid || v.uid === 0) { sId = currentUserId; } else { for (const k in usersData) { if (usersData[k].agoraUid === v.uid) { sId = usersData[k].id; break; } } } if (sId) { const a1 = document.getElementById(`img-avatar-${sId}`), a2 = document.getElementById(`img-sidebar-voice-${sId}`), a3 = document.getElementById(`img-grid-voice-${sId}`); if(a1) a1.classList.add('speaking-ring'); if(a2) a2.classList.add('speaking-ring'); if(a3) a3.classList.add('speaking-ring'); } } }); }); await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid); localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true }); await rtcClient.publish(localTracks.audioTrack); isMuted = false; await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false, isSharingScreen: false }); localStorage.setItem('dosh_active_voice', 'true'); joinBtn.classList.add('hidden'); document.getElementById('active-voice-ui').classList.remove('hidden'); muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]"; } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); alert("เชื่อมต่อไมค์ไม่สำเร็จ"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } }
+        ssBtn.onclick = async () => { const sIco = document.getElementById('screen-icon'); if (!isSharingScreen) { try { const res = await AgoraRTC.createScreenVideoTrack({ encoderConfig: { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 }, optimizationMode: "motion" }, "auto"); if (Array.isArray(res)) { screenTrack = res[0]; screenAudioTrack = res[1]; await rtcClient.publish([screenTrack, screenAudioTrack]); } else { screenTrack = res; await rtcClient.publish(screenTrack); } isSharingScreen = true; await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: true }); ssBtn.classList.replace('bg-[#151619]', 'bg-[#23a559]'); ssBtn.classList.replace('text-gray-300', 'text-white'); sIco.className = "ph-fill ph-screencast text-[20px] md:text-[24px]"; ssStage.classList.remove('hidden'); let pc = document.createElement("div"); pc.id = `v-wrap-local`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); screenTrack.play(pc, { fit: "contain" }); screenTrack.on("track-ended", stopScreenShare); } catch (err) { console.log(err); } } else { await stopScreenShare(); } };
+        async function stopScreenShare() { if (screenTrack) { await rtcClient.unpublish(screenTrack); screenTrack.stop(); screenTrack.close(); screenTrack = null; } if (screenAudioTrack) { await rtcClient.unpublish(screenAudioTrack); screenAudioTrack.stop(); screenAudioTrack.close(); screenAudioTrack = null; } isSharingScreen = false; if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: false }); ssBtn.classList.replace('bg-[#23a559]', 'bg-[#151619]'); ssBtn.classList.replace('text-white', 'text-gray-300'); document.getElementById('screen-icon').className = "ph ph-screencast text-[20px] md:text-[24px]"; const pc = document.getElementById(`v-wrap-local`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); }
+        async function leaveVoice() { if (isSharingScreen) await stopScreenShare(); if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); } await rtcClient.leave(); if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }); } localStorage.removeItem('dosh_active_voice'); document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; document.getElementById('active-voice-ui').classList.add('hidden'); }
+        joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
+        muteBtn.onclick = async () => { isMuted = !isMuted; localTracks.audioTrack.setEnabled(!isMuted); await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); const muteIcon = document.getElementById('mute-icon'); if (isMuted) { muteBtn.classList.remove('bg-[#151619]'); muteBtn.classList.add('bg-gray-800', 'text-[#da373c]'); muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; } else { muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; } };
+        window.addEventListener('beforeunload', () => { if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } });
 
-        // ==========================================
         // 📋 7. ระบบกระดานงาน (Task Board)
-        // ==========================================
         const zones = { 'todo': document.getElementById('todo'), 'in_progress': document.getElementById('in_progress'), 'done': document.getElementById('done') };
-
-        onSnapshot(collection(db, "tasks"), (snapshot) => {
-            Object.values(zones).forEach(zone => zone.innerHTML = '');
-            snapshot.forEach((docSnap) => {
-                const data = docSnap.data(), id = docSnap.id, status = data.status || 'todo';
-                let tagColor = "bg-[#1c1d21] text-[#d1d3d6] border border-[#2b2d31]";
-                if(data.tag && data.tag.includes('Dev')) tagColor = "bg-blue-500/10 text-blue-400 border border-blue-500/20";
-                if(data.tag && data.tag.includes('Music')) tagColor = "bg-pink-500/10 text-pink-400 border border-pink-500/20";
-                if(data.tag && data.tag.includes('Video')) tagColor = "bg-purple-500/10 text-purple-400 border border-purple-500/20";
-                if(data.tag && data.tag.includes('Design')) tagColor = "bg-[#23a559]/10 text-[#23a559] border border-[#23a559]/20";
-
-                const cardHTML = `
-                    <div draggable="true" data-id="${id}" class="task-card bg-[#1c1d21] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${status === 'done' ? 'border-[#3f4147] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]">
-                        <div class="flex space-x-2 mb-2.5"><span class="${tagColor} text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center"><i class="ph-fill ph-tag text-[10px] mr-1"></i>${data.tag}</span></div>
-                        <p class="text-[13px] md:text-[14px] font-medium text-[#d1d3d6] ${status === 'done' ? 'line-through text-[#6d717a]' : ''} leading-snug">${data.title}</p>
-                    </div>`;
-                if (zones[status]) zones[status].insertAdjacentHTML('beforeend', cardHTML);
-            });
-
-            document.querySelectorAll('.task-card').forEach(card => {
-                card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', card.getAttribute('data-id')); setTimeout(() => card.classList.add('opacity-30'), 0); });
-                card.addEventListener('dragend', () => card.classList.remove('opacity-30'));
-            });
-        });
-
-        Object.keys(zones).forEach(status => {
-            const zone = zones[status];
-            zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drop-zone-active'); });
-            zone.addEventListener('dragleave', () => zone.classList.remove('drop-zone-active'));
-            zone.addEventListener('drop', async (e) => {
-                e.preventDefault(); zone.classList.remove('drop-zone-active');
-                const taskId = e.dataTransfer.getData('text/plain');
-                if (taskId) await updateDoc(doc(db, "tasks", taskId), { status: status });
-            });
-        });
-
-        document.getElementById('add-task-btn').addEventListener('click', async () => {
-            const title = prompt("ชื่องาน:"); if (!title) return;
-            const tag = prompt("สายงาน (เช่น Dev, Music, Video, Design):", "Dev");
-            await addDoc(collection(db, "tasks"), { title: title, tag: tag || 'General', status: 'todo', timestamp: serverTimestamp() });
-        });
+        onSnapshot(collection(db, "tasks"), (snapshot) => { Object.values(zones).forEach(z => z.innerHTML = ''); snapshot.forEach((docSnap) => { const d = docSnap.data(), id = docSnap.id, s = d.status || 'todo'; let tC = "bg-[#1c1d21] text-[#d1d3d6] border border-[#2b2d31]"; if(d.tag && d.tag.includes('Dev')) tC = "bg-blue-500/10 text-blue-400 border border-blue-500/20"; if(d.tag && d.tag.includes('Music')) tC = "bg-pink-500/10 text-pink-400 border border-pink-500/20"; if(d.tag && d.tag.includes('Video')) tC = "bg-purple-500/10 text-purple-400 border border-purple-500/20"; if(d.tag && d.tag.includes('Design')) tC = "bg-[#23a559]/10 text-[#23a559] border border-[#23a559]/20"; const cardHTML = `<div draggable="true" data-id="${id}" class="task-card bg-[#1c1d21] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${s === 'done' ? 'border-[#3f4147] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]"><div class="flex space-x-2 mb-2.5"><span class="${tC} text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center"><i class="ph-fill ph-tag text-[10px] mr-1"></i>${d.tag}</span></div><p class="text-[13px] md:text-[14px] font-medium text-[#d1d3d6] ${s === 'done' ? 'line-through text-[#6d717a]' : ''} leading-snug">${d.title}</p></div>`; if (zones[s]) zones[s].insertAdjacentHTML('beforeend', cardHTML); }); document.querySelectorAll('.task-card').forEach(c => { c.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', c.getAttribute('data-id')); setTimeout(() => c.classList.add('opacity-30'), 0); }); c.addEventListener('dragend', () => c.classList.remove('opacity-30')); }); });
+        Object.keys(zones).forEach(s => { const z = zones[s]; z.addEventListener('dragover', (e) => { e.preventDefault(); z.classList.add('drop-zone-active'); }); z.addEventListener('dragleave', () => z.classList.remove('drop-zone-active')); z.addEventListener('drop', async (e) => { e.preventDefault(); z.classList.remove('drop-zone-active'); const tId = e.dataTransfer.getData('text/plain'); if (tId) await updateDoc(doc(db, "tasks", tId), { status: s }); }); });
+        document.getElementById('add-task-btn').addEventListener('click', async () => { const t = prompt("ชื่องาน:"); if (!t) return; const tag = prompt("สายงาน (เช่น Dev, Music, Video, Design):", "Dev"); await addDoc(collection(db, "tasks"), { title: t, tag: tag || 'General', status: 'todo', timestamp: serverTimestamp() }); });
 
     </script>
 </body>
