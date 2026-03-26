@@ -2,115 +2,80 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>DOSH - Login & Register</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tab-active { border-bottom: 2px solid #5865F2; color: #f2f3f5; }
+        .tab-inactive { color: #80848e; }
+        .tab-inactive:hover { color: #dbdee1; background-color: #1c1d21; }
+    </style>
 </head>
-<body class="bg-gray-900 text-gray-100 h-screen flex items-center justify-center font-sans relative overflow-hidden">
+<body class="bg-[#0e0f11] text-gray-300 h-screen flex items-center justify-center p-4">
 
-    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"></div>
-
-    <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700 z-10 relative overflow-hidden">
+    <div class="bg-[#151619] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-[#1e1f22] animate-[fadeIn_0.5s_ease-out]">
         
-        <div class="text-center mb-6">
-            <div class="w-14 h-14 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-3xl mx-auto mb-4 shadow-lg shadow-indigo-500/30">A</div>
-            <h1 id="form-title" class="text-2xl font-bold text-gray-100 transition-all">เข้าสู่ระบบ DOSH</h1>
-            <p id="form-subtitle" class="text-sm text-gray-400 mt-2 transition-all">ยินดีต้อนรับกลับเข้าสู่พื้นที่ทำงาน</p>
+        <div class="p-6 text-center border-b border-[#1e1f22]">
+            <div class="w-14 h-14 rounded-[14px] bg-[#5865F2] mx-auto flex items-center justify-center font-extrabold text-3xl text-white shadow-inner mb-4 hover:scale-105 transition-transform duration-200">D</div>
+            <h1 class="text-xl font-bold text-[#f2f3f5] tracking-wide">ยินดีต้อนรับสู่ DOSH</h1>
+            <p class="text-sm text-[#80848e] mt-1.5">Workspace & Lounge สำหรับทีม</p>
         </div>
 
-        <form id="login-form" class="space-y-5">
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-1">อีเมล</label>
-                <input id="login-email" type="email" placeholder="email@company.com" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder-gray-600">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-1">รหัสผ่าน</label>
-                <input id="login-password" type="password" placeholder="••••••••" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder-gray-600">
-            </div>
-            
-            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-lg transition duration-200 mt-2 shadow-lg shadow-indigo-500/30">
-                เข้าสู่ระบบ
-            </button>
-            
-            <div class="mt-6 text-center text-sm text-gray-500 border-t border-gray-700 pt-6">
-                ยังไม่มีบัญชีใช่ไหม? 
-                <a href="#" id="show-register" class="text-indigo-400 hover:text-indigo-300 font-medium transition">สมัครสมาชิกที่นี่</a>
-            </div>
-        </form>
+        <div class="flex border-b border-[#1e1f22] bg-[#0f1013]">
+            <button id="tab-login" class="flex-1 py-3.5 text-[15px] font-bold tab-active transition duration-200">เข้าสู่ระบบ</button>
+            <button id="tab-register" class="flex-1 py-3.5 text-[15px] font-bold tab-inactive transition duration-200">สมัครสมาชิก</button>
+        </div>
 
-        <form id="register-form" class="space-y-5 hidden">
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-1">ชื่อผู้ใช้ (Username)</label>
-                <input id="reg-username" type="text" placeholder="เช่น APOKO" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder-gray-600">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-1">อีเมล (Email)</label>
-                <input id="reg-email" type="email" placeholder="email@company.com" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder-gray-600">
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-1">สายงานหลัก (Role)</label>
-                <div class="relative">
-                    <select id="reg-role" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition appearance-none cursor-pointer">
-                        <option value="" disabled selected>-- เลือกสายงานของคุณ --</option>
-                        <option value="Dev (นักพัฒนา)">💻 Developer (นักพัฒนา)</option>
-                        <option value="Design (ออกแบบ)">🎨 Design (ออกแบบ)</option>
-                        <option value="Video (ตัดต่อวีดีโอ)">🎬 Video (ตัดต่อวีดีโอ)</option>
-                        <option value="Music (เสียงและดนตรี)">🎵 Music (เสียงและดนตรี)</option>
-                        <option value="Member">🎮 General / Member</option>
-                    </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
-                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                    </div>
+        <div class="p-6 md:p-8">
+            
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">อีเมล <span class="text-[#da373c]">*</span></label>
+                    <input type="email" id="login-email" required class="w-full bg-[#1e1f22] border border-transparent focus:border-[#5865F2] rounded-md px-3 py-2.5 text-[15px] text-[#dbdee1] focus:outline-none transition shadow-inner">
                 </div>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-1">รหัสผ่าน (อย่างน้อย 6 ตัว)</label>
-                <input id="reg-password" type="password" placeholder="••••••••" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder-gray-600">
-            </div>
-            
-            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-lg transition duration-200 mt-2 shadow-lg shadow-indigo-500/30">
-                สร้างบัญชีผู้ใช้
-            </button>
-            
-            <div class="mt-6 text-center text-sm text-gray-500 border-t border-gray-700 pt-6">
-                มีบัญชีอยู่แล้วใช่ไหม? 
-                <a href="#" id="show-login" class="text-indigo-400 hover:text-indigo-300 font-medium transition">กลับไปหน้าเข้าสู่ระบบ</a>
-            </div>
-        </form>
+                <div>
+                    <label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">รหัสผ่าน <span class="text-[#da373c]">*</span></label>
+                    <input type="password" id="login-password" required class="w-full bg-[#1e1f22] border border-transparent focus:border-[#5865F2] rounded-md px-3 py-2.5 text-[15px] text-[#dbdee1] focus:outline-none transition shadow-inner">
+                </div>
+                <button type="submit" class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-3 rounded-md transition shadow-md mt-4 text-[15px]">เข้าสู่ระบบ</button>
+            </form>
 
+            <form id="register-form" class="space-y-4 hidden animate-[fadeIn_0.3s_ease-out]">
+                <div>
+                    <label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">ชื่อแสดงผลในแอป <span class="text-[#da373c]">*</span></label>
+                    <input type="text" id="reg-username" required placeholder="เช่น Guy Samo" class="w-full bg-[#1e1f22] border border-transparent focus:border-[#5865F2] rounded-md px-3 py-2.5 text-[15px] text-[#dbdee1] placeholder-[#5c6069] focus:outline-none transition shadow-inner">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">อีเมล <span class="text-[#da373c]">*</span></label>
+                    <input type="email" id="reg-email" required class="w-full bg-[#1e1f22] border border-transparent focus:border-[#5865F2] rounded-md px-3 py-2.5 text-[15px] text-[#dbdee1] focus:outline-none transition shadow-inner">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">รหัสผ่าน <span class="text-xs normal-case font-normal text-[#5c6069]">(ขั้นต่ำ 6 ตัวอักษร)</span> <span class="text-[#da373c]">*</span></label>
+                    <input type="password" id="reg-password" required minlength="6" class="w-full bg-[#1e1f22] border border-transparent focus:border-[#5865F2] rounded-md px-3 py-2.5 text-[15px] text-[#dbdee1] focus:outline-none transition shadow-inner">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">ตำแหน่ง (Role) <span class="text-[#da373c]">*</span></label>
+                    <select id="reg-role" class="w-full bg-[#1e1f22] border border-transparent focus:border-[#5865F2] rounded-md px-3 py-2.5 text-[15px] text-[#dbdee1] focus:outline-none transition shadow-inner cursor-pointer">
+                        <option value="Member">Member (สมาชิกทั่วไป)</option>
+                        <option value="Admin">Admin (ผู้ดูแลระบบ)</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-[#23a559] hover:bg-[#1e8a49] text-white font-bold py-3 rounded-md transition shadow-md mt-4 text-[15px]">สมัครและเข้าใช้งาน</button>
+            </form>
+
+        </div>
     </div>
-
-    <script>
-        const loginFormDOM = document.getElementById('login-form');
-        const registerFormDOM = document.getElementById('register-form');
-        const showRegisterBtn = document.getElementById('show-register');
-        const showLoginBtn = document.getElementById('show-login');
-        const formTitle = document.getElementById('form-title');
-        const formSubtitle = document.getElementById('form-subtitle');
-
-        showRegisterBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            loginFormDOM.classList.add('hidden');
-            registerFormDOM.classList.remove('hidden');
-            formTitle.textContent = 'สมัครสมาชิก DOSH';
-            formSubtitle.textContent = 'กรอกข้อมูลเพื่อเข้าร่วมพื้นที่ทำงานและไลฟ์สไตล์';
-        });
-
-        showLoginBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            registerFormDOM.classList.add('hidden');
-            loginFormDOM.classList.remove('hidden');
-            formTitle.textContent = 'เข้าสู่ระบบ DOSH';
-            formSubtitle.textContent = 'ยินดีต้อนรับกลับเข้าสู่พื้นที่ทำงาน';
-        });
-    </script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+        // ==========================================
+        // 🚨 ตั้งค่า Firebase
+        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I",
             authDomain: "apoko-hq.firebaseapp.com",
@@ -124,60 +89,105 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // ระบบสมัครสมาชิก (Register)
-        const registerForm = document.getElementById('register-form');
-    registerForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    // 🌟 ใส่ .trim() ต่อท้าย .value ทุกอัน เพื่อตัดช่องว่างที่มือถือชอบแอบเติม
-    const username = document.getElementById('reg-username').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
-    const password = document.getElementById('reg-password').value.trim();
-    const role = document.getElementById('reg-role').value;
+        // ==========================================
+        // 🌟 ระบบสลับหน้า (Login / Register)
+        // ==========================================
+        const tabLogin = document.getElementById('tab-login');
+        const tabRegister = document.getElementById('tab-register');
+        const formLogin = document.getElementById('login-form');
+        const formRegister = document.getElementById('register-form');
 
-    // 🌟 เพิ่มระบบเช็คความยาวรหัสผ่าน ดักไว้ก่อนส่งไป Firebase
-    if (password.length < 6) {
-        alert("⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรครับ!");
-        return; // หยุดการทำงานถ้าโค้ดสั้นไป
-    }
+        tabLogin.onclick = () => {
+            tabLogin.classList.replace('tab-inactive', 'tab-active');
+            tabRegister.classList.replace('tab-active', 'tab-inactive');
+            formLogin.classList.remove('hidden');
+            formRegister.classList.add('hidden');
+        };
 
-    createUserWithEmailAndPassword(auth, email, password)
-        .then(async (userCredential) => {
-            const user = userCredential.user;
-            await updateProfile(user, { displayName: username });
-            await setDoc(doc(db, "users", user.uid), {
-                username: username,
-                email: email,
-                role: role,
-                status: 'online'
-            });
-            alert("สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ " + username);
-            window.location.href = "app.html";
-        })
-        .catch((error) => {
-            // แปลงข้อความ Error ภาษาอังกฤษ ให้เป็นภาษาไทยเข้าใจง่าย
-            let errorMsg = "เกิดข้อผิดพลาด: " + error.message;
-            if (error.code === 'auth/email-already-in-use') errorMsg = "อีเมลนี้ถูกใช้งานไปแล้วครับ!";
-            if (error.code === 'auth/invalid-email') errorMsg = "รูปแบบอีเมลไม่ถูกต้องครับ!";
-            
-            alert(errorMsg);
-        });
-    }); 
+        tabRegister.onclick = () => {
+            tabRegister.classList.replace('tab-inactive', 'tab-active');
+            tabLogin.classList.replace('tab-active', 'tab-inactive');
+            formRegister.classList.remove('hidden');
+            formLogin.classList.add('hidden');
+        };
 
-        // ระบบเข้าสู่ระบบ (Login)
-        const loginForm = document.getElementById('login-form');
-        loginForm.addEventListener('submit', (e) => {
+        // ==========================================
+        // 🔑 ระบบ Login
+        // ==========================================
+        formLogin.addEventListener('submit', (e) => {
             e.preventDefault();
+            // ใช้ .trim() ป้องกันมือถือแอบใส่เว้นวรรค
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+            const btn = e.target.querySelector('button');
             
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
+            btn.innerHTML = "กำลังเข้าสู่ระบบ..."; btn.disabled = true;
 
             signInWithEmailAndPassword(auth, email, password)
-                .then((userCredential) => {
-                    window.location.href = "app.html"; // 🌟 พาไปหน้า SPA
+                .then(() => {
+                    window.location.href = "app.html"; // เข้าสู่ระบบสำเร็จ วาร์ปไปหน้าหลัก
                 })
                 .catch((error) => {
-                    alert("อีเมล หรือ รหัสผ่าน ไม่ถูกต้อง!");
+                    alert("เข้าสู่ระบบไม่สำเร็จ: รหัสผ่านผิด หรือยังไม่ได้สมัครสมาชิกครับ");
+                    btn.innerHTML = "เข้าสู่ระบบ"; btn.disabled = false;
+                });
+        });
+
+        // ==========================================
+        // 📝 ระบบ Register + 🤖 System Bot
+        // ==========================================
+        formRegister.addEventListener('submit', (e) => {
+            e.preventDefault();
+            // ใช้ .trim() ป้องกันมือถือแอบใส่เว้นวรรค
+            const username = document.getElementById('reg-username').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-password').value.trim();
+            const role = document.getElementById('reg-role').value;
+            const btn = e.target.querySelector('button');
+
+            // เช็ครหัสผ่าน 6 ตัวอักษร
+            if (password.length < 6) {
+                alert("⚠️ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรครับ!");
+                return;
+            }
+
+            btn.innerHTML = "กำลังสร้างบัญชี..."; btn.disabled = true;
+
+            createUserWithEmailAndPassword(auth, email, password)
+                .then(async (userCredential) => {
+                    const user = userCredential.user;
+                    await updateProfile(user, { displayName: username });
+                    
+                    // 1. เซฟข้อมูลสมาชิกลง Database Users
+                    await setDoc(doc(db, "users", user.uid), {
+                        username: username,
+                        email: email,
+                        role: role,
+                        status: 'online',
+                        inVoice: false,
+                        isMuted: false,
+                        isSharingScreen: false
+                    });
+
+                    // 🌟 2. ให้ System Bot แจ้งเตือนเข้าห้อง #ประกาศทั่วไป (general)
+                    await addDoc(collection(db, "messages"), {
+                        text: `🎉 ยินดีต้อนรับสมาชิกใหม่ **@${username}** เข้าสู่ DOSH Server! แวะมาทักทายเพื่อนๆ กันได้เลยนะ`,
+                        senderName: "🤖 System Bot",
+                        channel: "general", // ส่งเข้าห้องประกาศทั่วไป
+                        timestamp: serverTimestamp()
+                    });
+
+                    alert("สมัครสมาชิกสำเร็จ! ยินดีต้อนรับ " + username);
+                    window.location.href = "app.html"; 
+                })
+                .catch((error) => {
+                    // แปลง Error ภาษาอังกฤษเป็นภาษาไทย
+                    let errorMsg = "เกิดข้อผิดพลาด: " + error.message;
+                    if (error.code === 'auth/email-already-in-use') errorMsg = "อีเมลนี้ถูกใช้งานไปแล้วในระบบครับ!";
+                    if (error.code === 'auth/invalid-email') errorMsg = "รูปแบบอีเมลไม่ถูกต้องครับ!";
+                    
+                    alert(errorMsg);
+                    btn.innerHTML = "สมัครและเข้าใช้งาน"; btn.disabled = false;
                 });
         });
     </script>
