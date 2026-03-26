@@ -21,6 +21,9 @@ let localTracks = { audioTrack: null }, screenTrack = null, screenAudioTrack = n
 let isMuted = false, isSharingScreen = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general", currentUserRole = "Member"; 
 let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false;
 
+// 🌟 ตัวแปรเก็บจำนวนข้อความที่ยังไม่ได้อ่าน
+let unreadCounts = { general: 0, project: 0 };
+
 const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
 sfxMsg.volume = 0.5;
 
@@ -52,14 +55,48 @@ document.getElementById('open-members').onclick = () => { membersSidebar.classLi
 document.getElementById('close-members').onclick = () => { membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); };
 overlay.onclick = () => { sidebar.classList.remove('open'); membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); };
 
+// ฟังก์ชันอัปเดตป้ายแจ้งเตือนสีแดง (Unread Badge)
+function updateUnreadBadge(channel) {
+    const btn = document.querySelector(`.nav-btn[data-channel="${channel}"]`);
+    if (!btn) return;
+    let badge = btn.querySelector('.unread-badge');
+    
+    if (unreadCounts[channel] > 0) {
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'unread-badge bg-[#da373c] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-auto animate-[fadeIn_0.2s_ease-out] shadow-sm';
+            btn.appendChild(badge);
+        }
+        badge.textContent = unreadCounts[channel] > 99 ? '99+' : unreadCounts[channel];
+    } else {
+        if (badge) badge.remove();
+    }
+}
+
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.onclick = (e) => {
         e.preventDefault(); const view = btn.getAttribute('data-view'); if(!view) return; 
         if (isTyping && currentUserId) { isTyping = false; clearTimeout(typingTimeout); updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }
+        
         document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#e4e5e7]'); b.classList.add('channel-inactive', 'text-[#80848e]'); });
         btn.classList.remove('channel-inactive', 'text-[#80848e]'); btn.classList.add('channel-active', 'text-[#e4e5e7]');
+        
         Object.values(views).forEach(v => v.classList.add('hidden')); views[view].classList.remove('hidden');
-        if (view === 'chat' || view === 'voice') { membersSidebar.classList.remove('hidden', 'md:hidden'); if (view === 'chat') { activeChannel = btn.getAttribute('data-channel'); document.getElementById('chat-header-title').textContent = btn.getAttribute('data-name'); renderMessages(); } } else { membersSidebar.classList.add('hidden', 'md:hidden'); }
+        
+        if (view === 'chat' || view === 'voice') { 
+            membersSidebar.classList.remove('hidden', 'md:hidden'); 
+            if (view === 'chat') { 
+                activeChannel = btn.getAttribute('data-channel'); 
+                document.getElementById('chat-header-title').textContent = btn.getAttribute('data-name'); 
+                
+                // 🌟 เคลียร์แจ้งเตือนข้อความเมื่อกดเข้าห้องนี้
+                unreadCounts[activeChannel] = 0;
+                updateUnreadBadge(activeChannel);
+
+                renderMessages(); 
+            } 
+        } else { membersSidebar.classList.add('hidden', 'md:hidden'); }
+        
         if (view === 'whiteboard') setTimeout(initCanvasSize, 100);
         sidebar.classList.remove('open'); overlay.classList.remove('active');
     };
@@ -134,7 +171,7 @@ document.getElementById('logout-btn').addEventListener('click', async () => { if
 window.addEventListener('beforeunload', () => { if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } });
 
 // ==========================================
-// 💬 6. ระบบแชท + System Bot + แจ้งเตือน
+// 💬 6. ระบบแชท + System Bot + แจ้งเตือน + Badge
 // ==========================================
 const chatInput = document.getElementById('chat-input');
 chatInput.addEventListener('input', () => { if (!currentUserId) return; if (!isTyping) { isTyping = true; updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel }); } clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }, 2000); });
@@ -151,10 +188,23 @@ onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snap
         snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
                 const m = change.doc.data();
-                if (m.senderName !== currentUsername && m.channel === activeChannel) {
-                    sfxMsg.play().catch(()=>{}); 
+                
+                // ดักจับเฉพาะข้อความที่คนอื่นส่งมา
+                if (m.senderName !== currentUsername) {
+                    
+                    // 🔴 1. ถ้ายิงมาห้องอื่นที่เราไม่ได้อยู่ ให้เพิ่มตัวเลขป้ายแดง!
+                    if (m.channel !== activeChannel) {
+                        unreadCounts[m.channel] = (unreadCounts[m.channel] || 0) + 1;
+                        updateUnreadBadge(m.channel);
+                    } else {
+                        // 🔔 2. ถ้าอยู่ห้องเดียวกัน ให้เล่นเสียงเตือน (SFX)
+                        sfxMsg.play().catch(()=>{}); 
+                    }
+
+                    // 💬 3. แจ้งเตือน Push Notification ขอบจอ (เมื่อเปิดไปแท็บอื่น)
                     if ("Notification" in window && Notification.permission === "granted" && document.hidden) {
-                        new Notification(`💬 DOSH: ข้อความใหม่จาก ${m.senderName}`, {
+                        const roomLabel = m.channel === 'general' ? 'ประกาศทั่วไป' : 'อัปเดตงานโปรเจกต์';
+                        new Notification(`💬 [${roomLabel}] ${m.senderName}`, {
                             body: m.text || "ส่งรูปภาพ 🖼️", icon: usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}`
                         });
                     }
@@ -181,11 +231,8 @@ function renderMessages() {
     let lastSender = null; 
     filteredMessages.forEach((m) => {
         let timeString = m.timestamp ? m.timestamp.toDate().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : "...";
-        
-        // 🌟 แปลงระบบข้อความ **ตัวหนา** แบบ Markdown
         let formattedText = m.text ? m.text.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-[#e4e5e7]">$1</span>') : '';
 
-        // 🤖 🌟 เช็คว่าถ้าเป็นข้อความจาก System Bot ให้โชว์หน้าตาแบบหุ่นยนต์สุดล้ำ!
         if (m.senderName === "🤖 System Bot") {
             chatContainer.insertAdjacentHTML('beforeend', `
             <div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-3 mt-4 -mx-2 md:-mx-4 group transition duration-150 relative items-center border-l-[3px] border-transparent hover:border-[#5865F2]">
@@ -200,13 +247,10 @@ function renderMessages() {
                     <p class="text-[#949ba4] mt-1 text-[13px] md:text-[14px] leading-relaxed">${formattedText}</p>
                 </div>
             </div>`);
-            lastSender = "system_bot"; // รีเซ็ตการรวมข้อความ
-            return; // ข้ามการทำ UI แบบคนปกติไปเลย
+            lastSender = "system_bot"; 
+            return; 
         }
 
-        // =======================================
-        // การทำงานของแชทคนธรรมดา (ด้านล่างนี้)
-        // =======================================
         let msgAvatarUrl = usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}&background=5865F2&color=fff&rounded=true&bold=true`;
         let contentHTML = formattedText ? `<p class="text-[#d1d3d6] mt-0.5 leading-relaxed text-[14px] md:text-[15px]">${formattedText}</p>` : '';
         if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" onclick="openLightbox('${m.imageUrl}')" onload="document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;" class="mt-2 rounded-lg max-w-[80%] md:max-w-sm shadow-sm cursor-zoom-in hover:opacity-80 transition">`;
