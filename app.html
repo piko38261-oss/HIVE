@@ -69,7 +69,6 @@
         #screen-share-stage div { border-radius: 8px; overflow: hidden; }
         #screen-share-stage video { object-fit: contain !important; }
         
-        /* สไตล์กระดานวาดรูป */
         input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
         input[type="color"]::-webkit-color-swatch { border: 2px solid #2b2d31; border-radius: 6px; }
     </style>
@@ -115,7 +114,6 @@
                 <ul class="space-y-0.5">
                     <li><a href="#" data-view="board" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">📋</span> Task Board</a></li>
                     <li><a href="#" data-view="whiteboard" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">🎨</span> กระดานไอเดีย</a></li>
-                    
                     <li><a href="settings.html" class="block px-3 py-1.5 rounded-md text-[#80848e] hover:bg-[#1c1d21] hover:text-[#dbdee1] font-medium text-[15px] transition flex items-center"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">⚙️</span> Settings</a></li>
                     <li><a href="admin.html" id="admin-menu-btn" class="hidden block px-3 py-1.5 rounded-md text-[#da373c] hover:bg-[#da373c]/10 font-medium text-[15px] transition mt-2 flex items-center"><span class="mr-1.5 text-lg leading-none">🛡️</span> Admin Panel</a></li>
                 </ul>
@@ -216,7 +214,6 @@
             
             <div class="flex-1 relative overflow-hidden bg-[#e4e5e7] cursor-crosshair shadow-inner" id="canvas-container" style="background-image: radial-gradient(#b5bac1 1.5px, transparent 1.5px); background-size: 25px 25px;">
                 <div id="wb-status" class="absolute top-4 left-4 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full font-bold backdrop-blur-sm z-20 transition-opacity duration-300 opacity-0"></div>
-                
                 <canvas id="whiteboard-canvas" class="absolute top-0 left-0 w-full h-full z-10"></canvas>
             </div>
         </div>
@@ -233,8 +230,7 @@
                 </div>
             </header>
 
-            <div id="screen-share-stage" class="hidden w-full h-[55vh] bg-[#050505] border-b border-[#1e1f22] p-2 md:p-6 flex items-center justify-center relative z-10 shadow-inner">
-            </div>
+            <div id="screen-share-stage" class="hidden w-full h-[55vh] bg-[#050505] border-b border-[#1e1f22] p-2 md:p-6 flex items-center justify-center relative z-10 shadow-inner"></div>
 
             <div id="voice-grid" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 auto-rows-max content-start z-10 bg-[#0e0f11] transition-all">
                 <div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]">
@@ -257,7 +253,7 @@
                     </div>
 
                     <div class="flex flex-col items-center group tooltip">
-                        <span class="tooltip-text">แชร์หน้าจอ</span>
+                        <span class="tooltip-text">แชร์หน้าจอ (30FPS)</span>
                         <button id="screen-share-btn" class="w-14 h-14 bg-[#151619] text-gray-300 rounded-full text-2xl flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]">🖥️</button>
                     </div>
                     
@@ -283,7 +279,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        // 🚨 อัปเดตบรรทัดนี้: เพิ่ม setDoc สำหรับเซฟรูปลงฐานข้อมูล 🚨
         import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // ==========================================
@@ -314,7 +309,6 @@
         // ==========================================
         // 🌟 2. ระบบสลับหน้าต่าง (Navigation)
         // ==========================================
-        // ✨ เพิ่ม whiteboard เข้าไปในตัวแปร views
         const views = { chat: document.getElementById('view-chat'), board: document.getElementById('view-board'), voice: document.getElementById('view-voice'), whiteboard: document.getElementById('view-whiteboard') };
         const membersSidebar = document.getElementById('members-sidebar');
         const sidebar = document.getElementById('sidebar');
@@ -354,10 +348,7 @@
                     }
                 } else { membersSidebar.classList.add('hidden', 'md:hidden'); }
                 
-                // 🎨 ถ้ากดเปิดหน้ากระดานไอเดีย ให้ปรับขนาดผ้าใบให้เต็มจอพอดี
-                if (view === 'whiteboard') {
-                    setTimeout(initCanvasSize, 100); 
-                }
+                if (view === 'whiteboard') { setTimeout(initCanvasSize, 100); }
 
                 sidebar.classList.remove('open'); overlay.classList.remove('active');
             });
@@ -462,7 +453,7 @@
         });
 
         // ==========================================
-        // 🎨 4.5 ระบบกระดานไอเดีย (Shared Whiteboard Real-time)
+        // 🎨 4.5 ระบบกระดานไอเดีย (Shared Whiteboard)
         // ==========================================
         const canvas = document.getElementById('whiteboard-canvas');
         const ctx = canvas.getContext('2d');
@@ -473,15 +464,11 @@
         let wbColor = document.getElementById('wb-color');
         let wbSize = document.getElementById('wb-size');
 
-        // ฟังก์ชันตั้งค่าขนาด Canvas ให้พอดีกับหน้าจอ
         function initCanvasSize() {
             if(canvas.width !== canvasContainer.clientWidth || canvas.height !== canvasContainer.clientHeight) {
-                // เซฟภาพเดิมไว้ก่อนปรับขนาด
                 const tempImage = canvas.toDataURL(); 
                 canvas.width = canvasContainer.clientWidth;
                 canvas.height = canvasContainer.clientHeight;
-                
-                // วาดภาพเดิมกลับคืน
                 if(tempImage !== "data:,") {
                     const img = new Image();
                     img.onload = () => ctx.drawImage(img, 0, 0);
@@ -491,7 +478,6 @@
         }
         window.addEventListener('resize', initCanvasSize);
 
-        // ฟังก์ชันดึงพิกัดเมาส์ (รองรับทั้งคอมและมือถือ)
         function getMousePos(e) {
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -524,10 +510,9 @@
             if (!isDrawing) return;
             isDrawing = false;
             ctx.beginPath();
-            syncWhiteboard(); // 🌟 อัปโหลดภาพขึ้น Firebase ทันทีที่ยกเมาส์/นิ้ว
+            syncWhiteboard(); 
         }
 
-        // ดักจับ Event
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
@@ -537,7 +522,6 @@
         canvas.addEventListener('touchmove', draw, {passive: false});
         canvas.addEventListener('touchend', stopDrawing);
 
-        // ปุ่มล้างกระดาน
         document.getElementById('wb-clear').addEventListener('click', () => {
             if(confirm("คุณแน่ใจหรือไม่ที่จะลบกระดานทั้งหมด? (เพื่อนทุกคนจะโดนลบด้วย)")) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -545,12 +529,9 @@
             }
         });
 
-        // 🌟 ฟังก์ชันส่งข้อมูลภาพวาดไปให้เพื่อนทุกคน
         async function syncWhiteboard(isClear = false) {
             if(!currentUserId) return;
-            const dataUrl = isClear ? "" : canvas.toDataURL(); // ถ้ากดล้าง จะส่งข้อมูลว่างๆ ไป
-            
-            // ใช้ setDoc แบบ merge เพื่ออัปเดตไฟล์เดียวให้ทุกคนดูพร้อมกัน
+            const dataUrl = isClear ? "" : canvas.toDataURL(); 
             await setDoc(doc(db, "appData", "whiteboard"), { 
                 image: dataUrl, 
                 updatedBy: currentUsername, 
@@ -558,18 +539,14 @@
             }, { merge: true });
         }
 
-        // 🌟 รับข้อมูลภาพวาดเวลามีเพื่อนคนอื่นวาด
         onSnapshot(doc(db, "appData", "whiteboard"), (docSnap) => {
             if (docSnap.exists() && !isDrawing) {
                 const data = docSnap.data();
-                
-                // แจ้งเตือนเล็กๆ ว่าใครเพิ่งวาด
                 if (data.updatedBy && data.updatedBy !== currentUsername) {
                     wbStatus.textContent = `✏️ ${data.updatedBy} เพิ่งอัปเดตกระดาน`;
                     wbStatus.classList.remove('opacity-0');
                     setTimeout(() => wbStatus.classList.add('opacity-0'), 3000);
                 }
-
                 if(data.image) {
                     const img = new Image();
                     img.onload = () => {
@@ -577,16 +554,13 @@
                         ctx.drawImage(img, 0, 0);
                     };
                     img.src = data.image;
-                } else {
-                    // ถ้าข้อมูลว่างเปล่า (มีคนกดล้างกระดาน)
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                }
+                } else { ctx.clearRect(0, 0, canvas.width, canvas.height); }
             }
         });
 
 
         // ==========================================
-        // 🎙️ 5. ระบบห้องคุยเสียง (Voice & Screen)
+        // 🎙️ 5. ระบบห้องคุยเสียง (Voice & 🚀 Screen Share 30FPS)
         // ==========================================
         const joinBtn = document.getElementById('join-voice-btn');
         const leaveBtn = document.getElementById('leave-voice-btn');
@@ -657,10 +631,20 @@
             } catch (err) { alert("เกิดข้อผิดพลาดในการเชื่อมต่อไมค์"); joinBtn.innerHTML = '<span class="text-xl mr-2">📞</span> เข้าร่วมการแชทด้วยเสียง'; }
         }
 
+        // 🚀 อัปเกรดแชร์หน้าจอให้ลื่นไหล 30 FPS ด้วย Motion Mode
         screenShareBtn.onclick = async () => {
             if (!isSharingScreen) {
                 try {
-                    screenTrack = await AgoraRTC.createScreenVideoTrack({ encoderConfig: "1080p_1", optimizationMode: "detail" });
+                    screenTrack = await AgoraRTC.createScreenVideoTrack({ 
+                        encoderConfig: {
+                            width: 1920,
+                            height: 1080,
+                            frameRate: 30,       // เฟรมเรต 30FPS
+                            bitrateMax: 3000     // บิตเรตสูงสุด
+                        }, 
+                        optimizationMode: "motion" // เน้นความลื่นไหล
+                    }, "auto");
+                    
                     await rtcClient.publish(screenTrack);
                     isSharingScreen = true;
                     
