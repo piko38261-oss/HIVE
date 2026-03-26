@@ -13,8 +13,6 @@ const rtcClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 let localTracks = { audioTrack: null }, screenTrack = null, screenAudioTrack = null;
 let isMuted = false, isSharingScreen = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general", currentUserRole = "Member"; 
 let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false, unreadCounts = { general: 0, project: 0 };
-
-// 🌟 ตัวแปรเก็บข้อมูลการตอบกลับ (Quote Reply)
 let replyingTo = null;
 
 const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); sfxMsg.volume = 0.5;
@@ -67,7 +65,7 @@ window.showUserProfile = (userName) => {
     if (u.banner) { bannerImg.src = u.banner; bannerImg.classList.remove('hidden'); } 
     else { bannerImg.classList.add('hidden'); }
 
-    document.getElementById('profile-card-status').textContent = u.customStatus || 'ไม่มีสถานะ';
+    document.getElementById('profile-card-status').textContent = u.customStatus || 'ไม่ได้ตั้งสถานะ';
     
     let badges = '';
     if(u.role === 'Admin') badges += '<span class="bg-[#da373c]/20 text-[#da373c] px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-[#da373c]/30">Admin</span>';
@@ -127,7 +125,7 @@ onSnapshot(collection(db, "users"), (snapshot) => {
 });
 
 // ==========================================
-// 🎨 5. Settings (บันทึกรูปโปรไฟล์ & ภาพปก & สถานะ)
+// 🎨 5. Settings (บันทึกรูปโปรไฟล์ & ภาพปก & สถานะ) + แจ้งเตือน Alert
 // ==========================================
 const settingsModal = document.getElementById('settings-modal'), statusTxt = document.getElementById('settings-status');
 const avatarInput = document.getElementById('settings-avatar-input'), bannerInput = document.getElementById('settings-banner-input');
@@ -154,7 +152,9 @@ async function uploadImage(file, type) {
                 await updateDoc(doc(db, "users", currentUserId), { bannerURL: r.data.url });
                 document.getElementById('settings-banner-preview').src = r.data.url; document.getElementById('settings-banner-preview').classList.remove('hidden');
             }
-            statusTxt.className = "text-[#23a559] text-[12px] font-medium h-4 transition-all text-center mt-2"; statusTxt.textContent = "อัปโหลดสำเร็จ! ✅"; setTimeout(() => statusTxt.textContent = "", 3000); 
+            statusTxt.className = "text-[#23a559] text-[12px] font-medium h-4 transition-all text-center mt-2"; 
+            statusTxt.textContent = "อัปโหลดสำเร็จ! ✅"; 
+            setTimeout(() => statusTxt.textContent = "", 3000); 
         } 
     } catch(err) { statusTxt.className = "text-[#da373c] text-[12px] font-medium h-4 transition-all text-center mt-2"; statusTxt.textContent = "เกิดข้อผิดพลาดในการอัปโหลด ❌"; } 
     finally { document.getElementById(`settings-${type}-wrapper`).classList.remove('opacity-50', 'pointer-events-none'); }
@@ -165,8 +165,21 @@ bannerInput.onchange = (e) => { if(e.target.files[0]) uploadImage(e.target.files
 
 document.getElementById('save-settings-btn').onclick = async () => {
     const newStatus = document.getElementById('settings-custom-status').value.trim();
-    statusTxt.className = "text-yellow-500 text-[12px] font-medium h-4 transition-all text-center mt-2"; statusTxt.textContent = "กำลังบันทึกข้อมูล... ⏳";
-    try { await updateDoc(doc(db, "users", currentUserId), { customStatus: newStatus }); statusTxt.className = "text-[#23a559] text-[12px] font-medium h-4 transition-all text-center mt-2"; statusTxt.textContent = "บันทึกการตั้งค่าสำเร็จ! ✅"; setTimeout(() => { statusTxt.textContent = ""; settingsModal.classList.add('hidden'); }, 1500); } catch(e) { statusTxt.className = "text-[#da373c] text-[12px] font-medium h-4 transition-all text-center mt-2"; statusTxt.textContent = "เกิดข้อผิดพลาด ❌"; }
+    statusTxt.className = "text-yellow-500 text-[12px] font-medium h-4 transition-all text-center mt-2"; 
+    statusTxt.textContent = "กำลังบันทึกข้อมูล... ⏳";
+    try { 
+        await updateDoc(doc(db, "users", currentUserId), { customStatus: newStatus }); 
+        statusTxt.className = "text-[#23a559] text-[12px] font-medium h-4 transition-all text-center mt-2"; 
+        statusTxt.textContent = "บันทึกการตั้งค่าสำเร็จ! ✅"; 
+        
+        // 🌟 เด้งแจ้งเตือนกลางจอเพื่อความชัวร์ 100% ว่าบันทึกแล้ว!
+        alert("✅ บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้วครับ!");
+        
+        settingsModal.classList.add('hidden'); 
+    } catch(e) { 
+        statusTxt.className = "text-[#da373c] text-[12px] font-medium h-4 transition-all text-center mt-2"; 
+        statusTxt.textContent = "เกิดข้อผิดพลาด ❌"; 
+    }
 };
 
 // ==========================================
@@ -187,19 +200,18 @@ document.getElementById('logout-btn').addEventListener('click', async () => { if
 window.addEventListener('beforeunload', () => { if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } });
 
 // ==========================================
-// 💬 7. ระบบแชท + System Bot + ตอบกลับ (Reply)
+// 💬 7. ระบบแชท + ตอบกลับ (Reply)
 // ==========================================
 const chatInput = document.getElementById('chat-input');
 chatInput.addEventListener('input', () => { if (!currentUserId) return; if (!isTyping) { isTyping = true; updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel }); } clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }, 2000); });
 window.deleteChatMsg = async (msgId) => { if(confirm('🗑️ ยืนยันการลบข้อความนี้ใช่ไหม? (แอดมินลบได้เท่านั้น)')) await deleteDoc(doc(db, "messages", msgId)); };
 
-// 🌟 ฟังก์ชันจัดการการตอบกลับ (Quote Message)
+// ฟังก์ชันเซ็ตสถานะการตอบกลับ
 window.setReply = (msgId, senderName, rawText) => {
     replyingTo = { msgId, senderName, text: rawText.substring(0, 40) + (rawText.length > 40 ? '...' : '') };
     document.getElementById('reply-to-name').textContent = `@${senderName}`;
     document.getElementById('reply-to-text').textContent = replyingTo.text;
-    document.getElementById('reply-banner').classList.remove('hidden'); 
-    chatInput.focus();
+    document.getElementById('reply-banner').classList.remove('hidden'); chatInput.focus();
 };
 document.getElementById('cancel-reply-btn').onclick = () => { replyingTo = null; document.getElementById('reply-banner').classList.add('hidden'); };
 
@@ -242,18 +254,15 @@ function renderMessages() {
             reactsHTML += `</div>`;
         }
 
-        // 🌟 ดึงข้อมูลถ้ามีการตอบกลับ (Quote Message)
         let replyBlockHTML = ''; let isReply = !!m.replyTo;
         if (isReply) {
             const replyAvatar = usersData[m.replyTo.senderName] ? usersData[m.replyTo.senderName].avatar : `https://ui-avatars.com/api/?name=${m.replyTo.senderName}`;
             replyBlockHTML = `<div class="flex items-center space-x-1.5 mb-1 opacity-70 hover:opacity-100 cursor-pointer transition select-none"><div class="w-4 h-4 border-l-2 border-t-2 border-[#5c6069] rounded-tl-md ml-3 mt-1"></div><img src="${replyAvatar}" class="w-4 h-4 rounded-full object-cover opacity-80"><span class="text-[11px] font-bold text-[#e4e5e7]">@${m.replyTo.senderName}</span><span class="text-[11px] text-[#80848e] truncate max-w-[150px] md:max-w-xs">${m.replyTo.text}</span></div>`;
         }
 
-        // 🌟 ซ่อมปุ่มลูกศรตอบกลับ (ใส่กลับมาแล้วครับ!)
         const safeTextForReply = m.text ? m.text.replace(/'/g, "\\'").replace(/"/g, "&quot;") : 'ส่งรูปภาพ 🖼️';
         const replyBtn = `<div class="w-px h-4 bg-[#35373c] mx-1"></div><button onclick="setReply('${m.id}', '${m.senderName}', '${safeTextForReply}')" class="reaction-btn hover:bg-[#2b2d31] text-[#80848e] hover:text-[#dbdee1] rounded p-1 text-[16px]" title="ตอบกลับ"><i class="ph ph-arrow-bend-up-left"></i></button>`;
         const adminDeleteBtn = (currentUserRole === 'Admin') ? `<div class="w-px h-4 bg-[#35373c] mx-1"></div><button onclick="deleteChatMsg('${m.id}')" class="reaction-btn hover:bg-[#da373c]/20 text-[#da373c] rounded p-1 text-[16px]" title="ลบข้อความ"><i class="ph-fill ph-trash"></i></button>` : '';
-        
         const actionMenuUI = `<div class="reaction-bar absolute -top-3 right-4 bg-[#151619] border border-[#1e1f22] rounded-lg p-1 shadow-xl flex items-center space-x-1 z-20"><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '👍')">👍</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '❤️')">❤️</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '😂')">😂</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '🔥')">🔥</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '😮')">😮</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '✅')">✅</button>${replyBtn}${adminDeleteBtn}</div>`;
 
         if (lastSender === m.senderName && !isReply) {
@@ -266,13 +275,7 @@ function renderMessages() {
     chatContainer.insertAdjacentHTML('beforeend', '<div class="h-4 w-full flex-shrink-0"></div>'); chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// 🌟 แนบข้อมูลการตอบกลับไปตอนกดส่ง
-async function sendMessage() { 
-    const txt = chatInput.value.trim(); if (!txt) return; chatInput.value = ''; 
-    clearTimeout(typingTimeout); isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); 
-    await addDoc(collection(db, "messages"), { text: txt, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp(), reactions: {}, replyTo: replyingTo }); 
-    replyingTo = null; document.getElementById('reply-banner').classList.add('hidden'); 
-}
+async function sendMessage() { const txt = chatInput.value.trim(); if (!txt) return; chatInput.value = ''; clearTimeout(typingTimeout); isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); await addDoc(collection(db, "messages"), { text: txt, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp(), reactions: {}, replyTo: replyingTo }); replyingTo = null; document.getElementById('reply-banner').classList.add('hidden'); }
 document.getElementById('send-btn').onclick = sendMessage; chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
 document.getElementById('attach-btn').onclick = () => document.getElementById('file-input').click();
 document.getElementById('file-input').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; chatInput.placeholder = "กำลังอัปโหลดไฟล์..."; chatInput.disabled = true; try { const fd = new FormData(); fd.append("image", f); const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const r = await res.json(); if (r.success) { await addDoc(collection(db, "messages"), { text: "", imageUrl: r.data.url, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp(), reactions: {}, replyTo: replyingTo }); replyingTo = null; document.getElementById('reply-banner').classList.add('hidden'); } } catch (err) { alert("อัปโหลดพลาด"); } finally { chatInput.placeholder = "ส่งข้อความถึง #ห้องแชท"; chatInput.disabled = false; chatInput.value = ""; chatInput.focus(); } };
