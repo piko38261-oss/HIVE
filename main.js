@@ -21,16 +21,10 @@ let localTracks = { audioTrack: null }, screenTrack = null, screenAudioTrack = n
 let isMuted = false, isSharingScreen = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general", currentUserRole = "Member"; 
 let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false;
 
-// 🎵 เสียงแจ้งเตือน (SFX)
 const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
 sfxMsg.volume = 0.5;
 
-// ขออนุญาตแจ้งเตือน (Notification) เมื่อคลิกหน้าจอครั้งแรก
-document.body.addEventListener('click', () => {
-    if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
-}, { once: true });
-
-// 🔍 สร้างระบบ Lightbox (ซูมรูปภาพ) ฝังเข้าไปในหน้าเว็บแบบไดนามิก
+// 🔍 ระบบ Lightbox (ซูมรูปภาพ)
 const lightbox = document.createElement('div');
 lightbox.className = 'fixed inset-0 bg-black/95 z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 cursor-zoom-out p-4';
 lightbox.innerHTML = `<img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl scale-95 transition-transform duration-300"><button class="absolute top-6 right-6 text-white hover:text-gray-300 transition"><i class="ph ph-x text-[32px]"></i></button>`;
@@ -38,7 +32,7 @@ document.body.appendChild(lightbox);
 
 window.openLightbox = (url) => {
     document.getElementById('lightbox-img').src = url;
-    lightbox.classList.remove('hidden'); void lightbox.offsetWidth; // Reflow
+    lightbox.classList.remove('hidden'); void lightbox.offsetWidth;
     lightbox.classList.remove('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-95', 'scale-100');
 };
 lightbox.onclick = () => {
@@ -98,7 +92,7 @@ onSnapshot(collection(db, "users"), (snapshot) => {
         if (u.inVoice) { usersInVoiceCount++; voiceGridHTML += `<div class="bg-[#151619] rounded-xl p-4 md:p-6 flex flex-col items-center justify-center relative shadow-lg border border-[#1e1f22] h-auto min-h-[130px] animate-[fadeIn_0.3s_ease-out]">${screenBadgeGrid}<div class="relative mb-2 flex-shrink-0"><img id="img-grid-voice-${id}" src="${userAvatar}" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover bg-gray-900 border-[3px] border-transparent shadow-md">${muteIconLarge}</div><p class="font-bold text-[#e4e5e7] text-[13px] md:text-[15px] truncate w-full text-center mt-auto">${userName}</p></div>`; }
     });
 
-    if (typingIndicator) { if (peopleTyping.length > 0) { typingIndicator.innerHTML = `<i class="ph-fill ph-chat-teardrop-dots mr-1.5 animate-bounce"></i> ${peopleTyping.join(', ')} กำลังพิมพ์ข้อความ...`; typingIndicator.classList.remove('opacity-0'); } else { typingIndicator.classList.add('opacity-0'); } }
+    if (typingIndicator) { if (peopleTyping.length > 0) { typingIndicator.innerHTML = `<i class="ph-fill ph-chat-teardrop-dots mr-1.5 animate-bounce"></i> ${peopleTyping.join(', ')} กำลังพิมพ์...`; typingIndicator.classList.remove('opacity-0'); } else { typingIndicator.classList.add('opacity-0'); } }
     if (voiceGrid) { if (usersInVoiceCount > 0) { voiceGrid.innerHTML = voiceGridHTML; } else { voiceGrid.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a]"><div class="w-20 h-20 md:w-24 md:h-24 bg-[#151619] rounded-full flex items-center justify-center mb-4 border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] opacity-40"></i></div><p class="font-bold text-base text-[#949ba4]">ไม่มีใครอยู่ในห้องเสียง</p></div>`; } }
     renderMessages();
 });
@@ -129,6 +123,9 @@ onAuthStateChanged(auth, async (user) => {
         
         try { const userDoc = await getDoc(doc(db, "users", currentUserId)); if (userDoc.exists()) { currentUserRole = userDoc.data().role; if (currentUserRole === 'Admin') document.getElementById('admin-menu-btn').classList.remove('hidden'); } } catch (err) {}
         
+        // 🌟 ขออนุญาตแจ้งเตือนเมื่อ Login
+        if ("Notification" in window && Notification.permission === "default") { Notification.requestPermission(); }
+
         const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
         if (wasInVoice) { await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e)); setTimeout(() => { joinVoice(); document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#e4e5e7]'); b.classList.add('channel-inactive', 'text-[#80848e]'); if (b.getAttribute('data-view') === 'voice') { b.classList.remove('channel-inactive', 'text-[#80848e]'); b.classList.add('channel-active', 'text-[#e4e5e7]'); } }); Object.values(views).forEach(v => v.classList.add('hidden')); views['voice'].classList.remove('hidden'); membersSidebar.classList.remove('hidden', 'md:hidden'); }, 1500); } else { await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }).catch(e=>console.log(e)); }
     } else { window.location.href = "index.html"; }
@@ -143,7 +140,6 @@ window.addEventListener('beforeunload', () => { if (currentUserId && localStorag
 const chatInput = document.getElementById('chat-input');
 chatInput.addEventListener('input', () => { if (!currentUserId) return; if (!isTyping) { isTyping = true; updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel }); } clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }, 2000); });
 
-// ลบแชทจากหน้าแอป (เฉพาะ Admin)
 window.deleteChatMsg = async (msgId) => { if(confirm('🗑️ ยืนยันการลบข้อความนี้ใช่ไหม? (แอดมินลบได้เท่านั้น)')) await deleteDoc(doc(db, "messages", msgId)); };
 
 let isInitialLoad = true;
@@ -152,13 +148,12 @@ onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snap
     snapshot.forEach((docSnap) => { allMessages.push({ id: docSnap.id, ...docSnap.data() }); }); 
     renderMessages(); 
 
-    // 🔔 ระบบ Notification & Sound (ดักจับข้อความใหม่ที่เพิ่งเข้ามา)
     if (!isInitialLoad) {
         snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
                 const m = change.doc.data();
                 if (m.senderName !== currentUsername && m.channel === activeChannel) {
-                    sfxMsg.play().catch(()=>{}); // เล่นเสียงติ๊ง!
+                    sfxMsg.play().catch(()=>{}); 
                     if ("Notification" in window && Notification.permission === "granted" && document.hidden) {
                         new Notification(`💬 DOSH: ข้อความใหม่จาก ${m.senderName}`, {
                             body: m.text || "ส่งรูปภาพ 🖼️", icon: usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}`
@@ -190,7 +185,6 @@ function renderMessages() {
         let msgAvatarUrl = usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}&background=5865F2&color=fff&rounded=true&bold=true`;
         
         let contentHTML = m.text ? `<p class="text-[#d1d3d6] mt-0.5 leading-relaxed text-[14px]">${m.text}</p>` : '';
-        // 🔍 ภาพในแชทคลิกเพื่อเปิด Lightbox ได้แล้ว!
         if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" onclick="openLightbox('${m.imageUrl}')" onload="document.getElementById('chat-container').scrollTop = document.getElementById('chat-container').scrollHeight;" class="mt-2 rounded-lg max-w-[80%] md:max-w-sm shadow-sm cursor-zoom-in hover:opacity-80 transition">`;
         
         let reactsHTML = '';
@@ -204,17 +198,31 @@ function renderMessages() {
             reactsHTML += `</div>`;
         }
 
-        const reactBarUI = `<div class="reaction-bar absolute -top-4 right-4 bg-[#151619] border border-[#1e1f22] rounded-lg p-1 shadow-xl flex items-center space-x-1 z-20"><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '👍')">👍</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '❤️')">❤️</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '😂')">😂</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '🔥')">🔥</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '😮')">😮</button><button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '✅')">✅</button></div>`;
-        // 🗑️ ปุ่มลบข้อความเฉพาะ Admin (ซ่อน System Bot)
-        const deleteAdminUI = (currentUserRole === 'Admin' && m.senderName !== "🤖 System Bot") ? `<button onclick="deleteChatMsg('${m.id}')" class="absolute top-2 right-2 text-[#da373c] opacity-0 group-hover:opacity-100 transition p-1 hover:bg-[#da373c]/20 rounded"><i class="ph-fill ph-trash text-[16px]"></i></button>` : '';
+        // 🌟 ซ่อม UI: รวมปุ่ม Reaction และ ถังขยะ Admin ไว้ในกล่องเดียวกัน และเพิ่ม pr-20 ป้องกันข้อความทับปุ่ม
+        const adminDeleteBtn = (currentUserRole === 'Admin' && m.senderName !== "🤖 System Bot") 
+            ? `<div class="w-px h-4 bg-[#35373c] mx-1"></div><button onclick="deleteChatMsg('${m.id}')" class="reaction-btn hover:bg-[#da373c]/20 text-[#da373c] rounded p-1 text-[16px]" title="ลบข้อความ"><i class="ph-fill ph-trash"></i></button>` 
+            : '';
+
+        const actionMenuUI = `<div class="reaction-bar absolute -top-3 right-4 bg-[#151619] border border-[#1e1f22] rounded-lg p-1 shadow-xl flex items-center space-x-1 z-20">
+            <button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '👍')">👍</button>
+            <button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '❤️')">❤️</button>
+            <button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '😂')">😂</button>
+            <button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '🔥')">🔥</button>
+            <button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '😮')">😮</button>
+            <button class="reaction-btn hover:bg-[#2b2d31] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '✅')">✅</button>
+            ${adminDeleteBtn}
+        </div>`;
 
         if (lastSender === m.senderName) {
-            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-1 -mx-2 md:-mx-4 group transition duration-150 relative"><div class="w-8 md:w-10 flex-shrink-0 text-right"><span class="text-[9px] md:text-[10px] text-[#5c6069] opacity-0 group-hover:opacity-100 transition leading-relaxed">${timeString}</span></div><div class="min-w-0 flex-1 pb-1">${contentHTML}${reactsHTML}</div>${reactBarUI}${deleteAdminUI}</div>`);
+            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-1 -mx-2 md:-mx-4 group transition duration-150 relative"><div class="w-8 md:w-10 flex-shrink-0 text-right"><span class="text-[9px] md:text-[10px] text-[#5c6069] opacity-0 group-hover:opacity-100 transition leading-relaxed">${timeString}</span></div><div class="min-w-0 flex-1 pb-1 pr-20">${contentHTML}${reactsHTML}</div>${actionMenuUI}</div>`);
         } else {
-            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-2 mt-4 -mx-2 md:-mx-4 group transition duration-150 relative"><img src="${msgAvatarUrl}" class="w-8 h-8 md:w-10 md:h-10 rounded-full flex-shrink-0 object-cover opacity-95"><div class="min-w-0 flex-1 pb-1"><div class="flex items-baseline space-x-2"><span class="font-medium text-[14px] md:text-[15px] text-[#e4e5e7] tracking-wide">${m.senderName}</span><span class="text-[10px] md:text-[11px] text-[#6d717a]">${timeString}</span></div>${contentHTML}${reactsHTML}</div>${reactBarUI}${deleteAdminUI}</div>`);
+            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#151619]/60 px-2 md:px-4 py-2 mt-4 -mx-2 md:-mx-4 group transition duration-150 relative"><img src="${msgAvatarUrl}" class="w-8 h-8 md:w-10 md:h-10 rounded-full flex-shrink-0 object-cover opacity-95"><div class="min-w-0 flex-1 pb-1 pr-20"><div class="flex items-baseline space-x-2"><span class="font-medium text-[14px] md:text-[15px] text-[#e4e5e7] tracking-wide">${m.senderName}</span><span class="text-[10px] md:text-[11px] text-[#6d717a]">${timeString}</span></div>${contentHTML}${reactsHTML}</div>${actionMenuUI}</div>`);
         }
         lastSender = m.senderName;
     });
+    
+    // ดันข้อความล่างสุดให้มีช่องว่างนิดนึง จะได้ไม่ติดช่องพิมพ์
+    chatContainer.insertAdjacentHTML('beforeend', '<div class="h-4 w-full flex-shrink-0"></div>');
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
