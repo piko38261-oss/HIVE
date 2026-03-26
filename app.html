@@ -78,7 +78,7 @@
         input[type="color"]::-webkit-color-swatch { border: 2px solid #2b2d31; border-radius: 6px; }
     </style>
 </head>
-<body class="bg-[#0e0f11] text-gray-300 h-screen flex overflow-hidden">
+<body class="bg-[#0e0f11] text-gray-300 h-[100dvh] flex overflow-hidden">
 
     <div id="overlay" class="overlay fixed inset-0 z-40 md:hidden"></div>
 
@@ -158,7 +158,7 @@
             
             <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-2 relative scroll-smooth w-full"></div>
             
-            <div class="px-2 md:px-4 pb-4 md:pb-6 pt-2 bg-[#0f1013] w-full">
+            <div class="px-2 md:px-4 pb-6 md:pb-6 pt-2 bg-[#0f1013] w-full">
                 <div class="flex items-center bg-[#1a1b1e] rounded-xl px-3 md:px-4 py-2 md:py-2.5 shadow-sm border border-transparent focus-within:border-[#5865F2]/50 transition duration-200">
                     <input type="file" id="file-input" accept="image/png, image/jpeg, image/gif" class="hidden">
                     <button id="attach-btn" class="text-[#80848e] hover:text-[#d1d3d6] mr-2 md:mr-3 bg-[#232429] hover:bg-[#2b2d33] w-8 h-8 rounded-full flex items-center justify-center font-bold transition flex-shrink-0">
@@ -250,7 +250,7 @@
                 </div>
             </div>
 
-            <div class="p-3 md:p-5 bg-[#050506] border-t border-[#0a0a0c] flex justify-center items-center shadow-[0_-15px_30px_rgba(0,0,0,0.5)] z-20 h-20 md:h-28 relative w-full">
+            <div class="pt-3 pb-6 px-3 md:p-5 bg-[#050506] border-t border-[#0a0a0c] flex justify-center items-center shadow-[0_-15px_30px_rgba(0,0,0,0.5)] z-20 h-24 md:h-28 relative w-full">
                 
                 <button id="join-voice-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-6 py-2.5 md:px-8 md:py-3.5 rounded-full font-bold transition-all duration-200 shadow-lg hover:-translate-y-0.5 flex items-center text-[14px] md:text-[15px] opacity-90 hover:opacity-100">
                     <i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>
@@ -450,7 +450,7 @@
         });
 
         // ==========================================
-        // 🌟 ระบบ AUTO-RECONNECT เมือ Refresh หน้าเว็บ
+        // 🌟 ระบบ AUTO-RECONNECT
         // ==========================================
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -615,7 +615,6 @@
                 myNumericUid = Math.floor(Math.random() * 1000000); 
                 await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid);
                 
-                // 🌟 ระบบไมค์ ตัดเสียงสะท้อน (Echo Cancellation)
                 localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
                     AEC: true,
                     ANS: true,
@@ -660,11 +659,9 @@
                     if (mediaType === "video") {
                         screenShareStage.classList.remove('hidden');
                         
-                        // เคลียร์อันเก่า (ถ้ามี)
                         const existing = document.getElementById(`video-wrapper-${user.uid}`);
                         if(existing) existing.remove();
 
-                        // 🌟 สร้างกล่องวิดีโอแบบเต็มจอ (แก้บั๊กจอดำ)
                         let playerContainer = document.createElement("div");
                         playerContainer.id = `video-wrapper-${user.uid}`;
                         playerContainer.style.width = "100%";
