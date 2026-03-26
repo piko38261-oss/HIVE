@@ -32,19 +32,20 @@ window.openLightbox = (url) => { document.getElementById('lightbox-img').src = u
 lightbox.onclick = () => { lightbox.classList.add('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-100', 'scale-95'); setTimeout(() => lightbox.classList.add('hidden'), 300); };
 
 // ==========================================
-// 🌟 1.5 ระบบ Watch Party (ซ่อมบั๊กโหลด API)
+// 🌟 1.5 ระบบ Watch Party (แก้ไขเรื่องเสียงรั่ว)
 // ==========================================
 let ytPlayer = null;
 let ignoreNextYtEvent = false;
 let lastSyncTime = 0;
 let pendingVideoData = null;
+let amIInVoice = false; // 🌟 ยามเฝ้าประตู: เช็คว่าเราอยู่ในห้องเสียงหรือไม่
+let latestWPData = null; // 🌟 เก็บสถานะคลิปล่าสุดไว้ตลอดเวลา
 
-// ดักจับสัญญาณ YouTube ให้ชัวร์ 100%
 if (window.YT && window.YT.Player) {
-    if (pendingVideoData) { initOrUpdatePlayer(pendingVideoData.vid, pendingVideoData.time, pendingVideoData.state, pendingVideoData.host); pendingVideoData = null; }
+    if (pendingVideoData && amIInVoice) { initOrUpdatePlayer(pendingVideoData.vid, pendingVideoData.time, pendingVideoData.state, pendingVideoData.host); pendingVideoData = null; }
 } else {
     window.onYouTubeIframeAPIReady = function() {
-        if(pendingVideoData) { initOrUpdatePlayer(pendingVideoData.vid, pendingVideoData.time, pendingVideoData.state, pendingVideoData.host); pendingVideoData = null; }
+        if(pendingVideoData && amIInVoice) { initOrUpdatePlayer(pendingVideoData.vid, pendingVideoData.time, pendingVideoData.state, pendingVideoData.host); pendingVideoData = null; }
     };
 }
 
@@ -81,6 +82,9 @@ async function onPlayerStateChange(event) {
 }
 
 function initOrUpdatePlayer(vid, time, state, host) {
+    // 🚨 ป้องกันชั้นสุดยอด: ถ้าไม่ได้อยู่ในห้องเสียง ห้ามโหลดคลิปเด็ดขาด!
+    if (!amIInVoice) return;
+
     if(typeof window.YT === 'undefined' || typeof window.YT.Player === 'undefined') {
         pendingVideoData = { vid, time, state, host };
         return;
@@ -100,9 +104,7 @@ function initOrUpdatePlayer(vid, time, state, host) {
                     if(state === 1) e.target.playVideo(); else e.target.pauseVideo();
                 },
                 'onStateChange': onPlayerStateChange,
-                'onError': (e) => {
-                    showToast("คลิปนี้ถูกบล็อกไม่ให้เล่นนอกเว็บ YouTube", "error");
-                }
+                'onError': (e) => { showToast("คลิปนี้ถูกบล็อกไม่ให้เล่นนอกเว็บ YouTube", "error"); }
             }
         });
     } else {
@@ -124,14 +126,20 @@ function initOrUpdatePlayer(vid, time, state, host) {
 onSnapshot(doc(db, "appData", "watchParty"), (d) => {
     if(d.exists()) {
         const wp = d.data();
+        latestWPData = wp; // 🌟 เก็บข้อมูลล่าสุดเผื่อคนเพิ่งเข้าห้องมาใหม่
+        
         if(wp.videoId) {
-            initOrUpdatePlayer(wp.videoId, wp.time, wp.state, wp.updatedBy);
+            // 🚨 ส่งข้อมูลไปให้ระบบเล่น แต่เครื่องเล่นจะยอมเล่นก็ต่อเมื่อ amIInVoice = true
+            if (amIInVoice) {
+                initOrUpdatePlayer(wp.videoId, wp.time, wp.state, wp.updatedBy);
+            }
         } else {
             document.getElementById('watch-party-stage').classList.add('hidden');
             document.getElementById('watch-party-stage').classList.remove('flex');
             if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; }
             document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; 
             pendingVideoData = null;
+            latestWPData = null;
         }
     }
 });
@@ -397,10 +405,57 @@ window.addEventListener('resize', initCanvasSize); function getMousePos(e) { con
 // 🎙️ 9. ระบบห้องคุยเสียง (Voice & Screen Share)
 // ==========================================
 const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.getElementById('leave-voice-btn'), muteBtn = document.getElementById('mute-btn'), ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
-async function joinVoice() { try { joinBtn.innerHTML = "กำลังเชื่อมต่อ..."; myNumericUid = Math.floor(Math.random() * 1000000); rtcClient.on("user-published", async (u, t) => { await rtcClient.subscribe(u, t); if (t === "audio") u.audioTrack.play(); if (t === "video") { ssStage.classList.remove('hidden'); const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); } }); rtcClient.on("user-unpublished", async (u, t) => { if (t === "video") { const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); } }); rtcClient.enableAudioVolumeIndicator(); rtcClient.on("volume-indicator", vs => { document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); vs.forEach(v => { if (v.level > 10) { let sId = null; if (v.uid === myNumericUid || v.uid === 0) { sId = currentUserId; } else { for (const k in usersData) { if (usersData[k].agoraUid === v.uid) { sId = usersData[k].id; break; } } } if (sId) { const a1 = document.getElementById(`img-avatar-${sId}`), a2 = document.getElementById(`img-sidebar-voice-${sId}`), a3 = document.getElementById(`img-grid-voice-${sId}`); if(a1) a1.classList.add('speaking-ring'); if(a2) a2.classList.add('speaking-ring'); if(a3) a3.classList.add('speaking-ring'); } } }); }); await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid); localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true }); await rtcClient.publish(localTracks.audioTrack); isMuted = false; await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false, isSharingScreen: false }); localStorage.setItem('dosh_active_voice', 'true'); joinBtn.classList.add('hidden'); document.getElementById('active-voice-ui').classList.remove('hidden'); muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]"; } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } }
+async function joinVoice() { 
+    try { 
+        joinBtn.innerHTML = "กำลังเชื่อมต่อ..."; 
+        myNumericUid = Math.floor(Math.random() * 1000000); 
+        rtcClient.on("user-published", async (u, t) => { await rtcClient.subscribe(u, t); if (t === "audio") u.audioTrack.play(); if (t === "video") { ssStage.classList.remove('hidden'); const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); } }); rtcClient.on("user-unpublished", async (u, t) => { if (t === "video") { const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); } }); rtcClient.enableAudioVolumeIndicator(); rtcClient.on("volume-indicator", vs => { document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); vs.forEach(v => { if (v.level > 10) { let sId = null; if (v.uid === myNumericUid || v.uid === 0) { sId = currentUserId; } else { for (const k in usersData) { if (usersData[k].agoraUid === v.uid) { sId = usersData[k].id; break; } } } if (sId) { const a1 = document.getElementById(`img-avatar-${sId}`), a2 = document.getElementById(`img-sidebar-voice-${sId}`), a3 = document.getElementById(`img-grid-voice-${sId}`); if(a1) a1.classList.add('speaking-ring'); if(a2) a2.classList.add('speaking-ring'); if(a3) a3.classList.add('speaking-ring'); } } }); }); 
+        await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid); 
+        localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true }); 
+        await rtcClient.publish(localTracks.audioTrack); 
+        isMuted = false; 
+        await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false, isSharingScreen: false }); 
+        localStorage.setItem('dosh_active_voice', 'true'); 
+        joinBtn.classList.add('hidden'); 
+        document.getElementById('active-voice-ui').classList.remove('hidden'); 
+        muteBtn.classList.add('bg-[#151619]'); 
+        muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); 
+        document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]"; 
+
+        // 🌟 เซ็ตสถานะว่า "อยู่ในห้องเสียงแล้วนะ!" เพื่อรับอนุญาตให้ดูคลิป
+        amIInVoice = true;
+        // ถ้ามีคลิปเล่นค้างอยู่ ให้เอามาฉายขึ้นจอทันที
+        if(latestWPData && latestWPData.videoId) {
+            initOrUpdatePlayer(latestWPData.videoId, latestWPData.time, latestWPData.state, latestWPData.updatedBy);
+        }
+
+    } catch (err) { 
+        console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
+    } 
+}
+
 ssBtn.onclick = async () => { const sIco = document.getElementById('screen-icon'); if (!isSharingScreen) { try { const res = await AgoraRTC.createScreenVideoTrack({ encoderConfig: { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 }, optimizationMode: "motion" }, "auto"); if (Array.isArray(res)) { screenTrack = res[0]; screenAudioTrack = res[1]; await rtcClient.publish([screenTrack, screenAudioTrack]); } else { screenTrack = res; await rtcClient.publish(screenTrack); } isSharingScreen = true; await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: true }); ssBtn.classList.replace('bg-[#151619]', 'bg-[#23a559]'); ssBtn.classList.replace('text-gray-300', 'text-white'); sIco.className = "ph-fill ph-screencast text-[20px] md:text-[24px]"; ssStage.classList.remove('hidden'); let pc = document.createElement("div"); pc.id = `v-wrap-local`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); screenTrack.play(pc, { fit: "contain" }); screenTrack.on("track-ended", stopScreenShare); } catch (err) { console.log(err); } } else { await stopScreenShare(); } };
+
 async function stopScreenShare() { if (screenTrack) { await rtcClient.unpublish(screenTrack); screenTrack.stop(); screenTrack.close(); screenTrack = null; } if (screenAudioTrack) { await rtcClient.unpublish(screenAudioTrack); screenAudioTrack.stop(); screenAudioTrack.close(); screenAudioTrack = null; } isSharingScreen = false; if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: false }); ssBtn.classList.replace('bg-[#23a559]', 'bg-[#151619]'); ssBtn.classList.replace('text-white', 'text-gray-300'); document.getElementById('screen-icon').className = "ph ph-screencast text-[20px] md:text-[24px]"; const pc = document.getElementById(`v-wrap-local`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); }
-async function leaveVoice() { if (isSharingScreen) await stopScreenShare(); if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); } await rtcClient.leave(); if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }); } localStorage.removeItem('dosh_active_voice'); document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; document.getElementById('active-voice-ui').classList.add('hidden'); }
+
+async function leaveVoice() { 
+    if (isSharingScreen) await stopScreenShare(); 
+    if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); } 
+    await rtcClient.leave(); 
+    if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }); } 
+    localStorage.removeItem('dosh_active_voice'); 
+    document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); 
+    joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
+    document.getElementById('active-voice-ui').classList.add('hidden'); 
+
+    // 🌟 ออกจากห้องเสียงแล้ว ห้ามได้ยินเสียงคลิป! (ระเบิดจอทิ้ง)
+    amIInVoice = false;
+    if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; }
+    document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>';
+    document.getElementById('watch-party-stage').classList.add('hidden');
+    document.getElementById('watch-party-stage').classList.remove('flex');
+}
+
 joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
 muteBtn.onclick = async () => { isMuted = !isMuted; localTracks.audioTrack.setEnabled(!isMuted); await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); const muteIcon = document.getElementById('mute-icon'); if (isMuted) { muteBtn.classList.remove('bg-[#151619]'); muteBtn.classList.add('bg-gray-800', 'text-[#da373c]'); muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; } else { muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; } };
 
