@@ -17,16 +17,11 @@ const GEMINI_API_KEY = "AIzaSyCifkioB2z1Ho9LAGSFBYWtV-kM4bgtzhw";
 async function getWordFromAI() {
     try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: "สุ่มคำศัพท์ภาษาไทย 1 คำ สำหรับเกมทายภาพ (Draw & Guess) ขอเป็นคำนามที่คนทั่วไปรู้จัก วาดเป็นรูปได้ ไม่เอาคำนามธรรม ขอแปลกๆ สร้างสรรค์ ไม่ซ้ำเดิม ขอแค่คำศัพท์ 1 คำโดดๆ ห้ามมีเครื่องหมายใดๆ ห้ามมีคำอธิบาย" }] }],
-                generationConfig: { temperature: 1.5 } 
-            })
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ parts: [{ text: "สุ่มคำศัพท์ภาษาไทย 1 คำ สำหรับเกมทายภาพ (Draw & Guess) ขอเป็นคำนามที่คนทั่วไปรู้จัก วาดเป็นรูปได้ ไม่เอาคำนามธรรม ขอแปลกๆ สร้างสรรค์ ไม่ซ้ำเดิม ขอแค่คำศัพท์ 1 คำโดดๆ ห้ามมีเครื่องหมายใดๆ ห้ามมีคำอธิบาย" }] }], generationConfig: { temperature: 1.5 } })
         });
         const data = await res.json();
-        let aiWord = data.candidates[0].content.parts[0].text.replace(/[\r\n.]/g, "").trim();
-        return aiWord;
+        return data.candidates[0].content.parts[0].text.replace(/[\r\n.]/g, "").trim();
     } catch (err) {
         console.log("❌ AI เอ๋อ หรือ API หมดอายุ:", err);
         const backup = ["ไดโนเสาร์", "ชาบู", "ยูทูบเบอร์", "มนุษย์ต่างดาว", "แฮมเบอร์เกอร์", "ชานมไข่มุก"];
@@ -43,7 +38,11 @@ let isMuted = false, isSharingScreen = false, myNumericUid = null, currentUserId
 let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false, unreadCounts = { general: 0, project: 0, game_draw: 0 };
 let replyingTo = null; let messageToDelete = null;
 
+// 🌟 ตัวแปรเก็บ Track เสียงของเพื่อนเพื่อปรับความดังรายคน
+let remoteAudioTracks = {}; 
+
 const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); sfxMsg.volume = 0.5;
+const sfxPing = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); sfxPing.volume = 0.8; // 🌟 เสียงตอนถูกแท็ก
 
 window.showToast = (msg, type = "success") => {
     const toast = document.createElement("div");
@@ -98,6 +97,13 @@ document.getElementById('close-profile-card').onclick = () => document.getElemen
 // ==========================================
 // 🟢 6. โหลดรายชื่อผู้ใช้งาน
 // ==========================================
+// 🌟 ฟังก์ชันปรับลด/เพิ่มเสียงรายคน (ใช้กับสไลเดอร์ในการ์ด Voice)
+window.changeUserVolume = (uid, vol) => {
+    if (remoteAudioTracks[uid]) {
+        remoteAudioTracks[uid].setVolume(parseInt(vol)); // Agora ปรับได้สูงสุดระดับ 1000 (ใส่ 300 คือ 3 เท่า)
+    }
+};
+
 onSnapshot(collection(db, "users"), (snapshot) => {
     const membersList = document.getElementById('members-list'), voiceActiveList = document.getElementById('voice-active-users'), voiceGrid = document.getElementById('voice-grid'), typingIndicator = document.getElementById('typing-indicator');
     membersList.innerHTML = ''; if (voiceActiveList) voiceActiveList.innerHTML = ''; let voiceGridHTML = '', usersInVoiceCount = 0, peopleTyping = []; document.getElementById('member-count').textContent = snapshot.size; usersData = {}; 
@@ -119,7 +125,14 @@ onSnapshot(collection(db, "users"), (snapshot) => {
 
         membersList.insertAdjacentHTML('beforeend', `<div onclick="showUserProfile('${userName}')" class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#2b2d31] transition group ${!isOnline ? 'opacity-50' : ''}"><div class="relative flex-shrink-0"><img id="img-avatar-${id}" src="${userAvatar}" class="w-8 h-8 rounded-full object-cover opacity-90"><div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619]"></div></div><div class="overflow-hidden flex-1"><div class="flex items-center"><p class="text-[14px] font-medium truncate ${nameStyle}">${userName} ${roleDisplay}</p></div>${customStatusText}</div></div>`);
         if (u.inVoice && voiceActiveList) voiceActiveList.insertAdjacentHTML('beforeend', `<div class="flex items-center space-x-2.5 text-[13px] text-[#80848e] py-1 px-2 hover:bg-[#2b2d31] hover:text-[#dbdee1] rounded-md transition cursor-pointer ml-2"><div class="relative flex-shrink-0"><img id="img-sidebar-voice-${id}" src="${userAvatar}" class="w-6 h-6 rounded-full object-cover opacity-90"></div><span class="truncate font-medium flex-1 flex items-center">${userName} ${screenBadgeSmall}</span>${muteIconSmall}</div>`);
-        if (u.inVoice) { usersInVoiceCount++; voiceGridHTML += `<div class="bg-[#111214] rounded-2xl w-[140px] h-[160px] sm:w-[160px] sm:h-[180px] md:w-[190px] md:h-[210px] p-4 flex flex-col items-center justify-center relative shadow-xl border border-[#1e1f22] animate-[fadeIn_0.3s_ease-out] hover:border-[#35373c] transition-colors"><div class="relative mb-3 md:mb-4 flex-shrink-0"><img id="img-grid-voice-${id}" src="${userAvatar}" class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full object-cover bg-gray-900 border-4 border-[#151619] shadow-2xl">${muteIconLarge}</div><p class="font-bold text-[#dbdee1] text-[13px] md:text-[15px] truncate w-full text-center mt-auto">${userName}</p></div>`; }
+        if (u.inVoice) { 
+            usersInVoiceCount++; 
+            const isMe = id === currentUserId;
+            // 🌟 เพิ่มสไลเดอร์ปรับเสียงซ่อนอยู่ด้านล่างของการ์ด
+            const volSlider = (!isMe && u.agoraUid) ? `<div class="w-full mt-1.5 px-3 flex items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()"><i class="ph ph-speaker-high text-[#80848e] text-[12px]"></i><input type="range" min="0" max="300" value="100" class="w-full h-1 accent-[#5865F2] cursor-pointer" oninput="changeUserVolume('${u.agoraUid}', this.value)" title="ปรับเสียง (สูงสุด 300%)"></div>` : `<div class="h-6"></div>`;
+
+            voiceGridHTML += `<div class="bg-[#111214] rounded-2xl w-[140px] h-[160px] sm:w-[160px] sm:h-[180px] md:w-[190px] md:h-[210px] pt-4 pb-2 px-2 flex flex-col items-center justify-center relative shadow-xl border border-[#1e1f22] animate-[fadeIn_0.3s_ease-out] hover:border-[#35373c] transition-colors group"><div class="relative mb-2 md:mb-3 flex-shrink-0"><img id="img-grid-voice-${id}" src="${userAvatar}" class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full object-cover bg-gray-900 border-4 border-[#151619] shadow-2xl">${muteIconLarge}</div><p class="font-bold text-[#dbdee1] text-[13px] md:text-[15px] truncate w-full text-center px-2">${userName}</p>${volSlider}</div>`; 
+        }
     });
 
     if (typingIndicator) { if (peopleTyping.length > 0) { typingIndicator.innerHTML = `<i class="ph-fill ph-chat-teardrop-dots mr-1.5 animate-bounce"></i> ${peopleTyping.join(', ')} กำลังพิมพ์...`; typingIndicator.classList.remove('opacity-0'); } else { typingIndicator.classList.add('opacity-0'); } }
@@ -154,7 +167,7 @@ document.getElementById('logout-btn').addEventListener('click', async () => { if
 window.addEventListener('beforeunload', () => { if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } });
 
 // ==========================================
-// 💬 9. ระบบ Chat & แสดงข้อความ
+// 💬 9. ระบบ Chat & แสดงข้อความ (ระบบแท็ก)
 // ==========================================
 const chatInput = document.getElementById('chat-input');
 const gameChatInput = document.getElementById('game-chat-input');
@@ -166,7 +179,35 @@ window.setReply = (msgId, senderName, rawText) => { replyingTo = { msgId, sender
 let isInitialLoad = true;
 onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => { 
     allMessages = []; snapshot.forEach((docSnap) => { allMessages.push({ id: docSnap.id, ...docSnap.data() }); }); renderMessages(); 
-    if (!isInitialLoad) { snapshot.docChanges().forEach((change) => { if (change.type === "added") { const m = change.doc.data(); if (m.senderName !== currentUsername) { if (m.channel !== activeChannel) { unreadCounts[m.channel] = (unreadCounts[m.channel] || 0) + 1; updateUnreadBadge(m.channel); } else { sfxMsg.play().catch(()=>{}); } if ("Notification" in window && Notification.permission === "granted" && document.hidden) { const roomLabel = m.channel === 'general' ? 'ประกาศทั่วไป' : (m.channel === 'game_draw' ? 'ห้องทายคำ' : 'อัปเดตงานโปรเจกต์'); new Notification(`💬 [${roomLabel}] ${m.senderName}`, { body: m.text || "ส่งรูปภาพ 🖼️", icon: usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}` }); } } } }); }
+    if (!isInitialLoad) { 
+        snapshot.docChanges().forEach((change) => { 
+            if (change.type === "added") { 
+                const m = change.doc.data(); 
+                if (m.senderName !== currentUsername) { 
+                    if (m.channel !== activeChannel) { 
+                        unreadCounts[m.channel] = (unreadCounts[m.channel] || 0) + 1; 
+                        updateUnreadBadge(m.channel); 
+                    }
+                    
+                    // 🌟 ตรวจสอบว่ามีคนแท็กเราไหม?
+                    const isTagged = m.text && m.text.includes(`@${currentUsername}`);
+                    if (isTagged) {
+                        sfxPing.play().catch(()=>{}); // เล่นเสียง Ping แบบพิเศษ
+                        if ("Notification" in window && Notification.permission === "granted") { 
+                            new Notification(`🔔 ${m.senderName} แท็กคุณ!`, { body: m.text, icon: usersData[m.senderName] ? usersData[m.senderName].avatar : '' }); 
+                        }
+                    } else if (m.channel === activeChannel) {
+                        sfxMsg.play().catch(()=>{}); // เสียงข้อความธรรมดา
+                    }
+
+                    if (!isTagged && "Notification" in window && Notification.permission === "granted" && document.hidden) { 
+                        const roomLabel = m.channel === 'general' ? 'ประกาศทั่วไป' : (m.channel === 'game_draw' ? 'ห้องทายคำ' : 'อัปเดตงานโปรเจกต์'); 
+                        new Notification(`💬 [${roomLabel}] ${m.senderName}`, { body: m.text || "ส่งรูปภาพ 🖼️", icon: usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}` }); 
+                    } 
+                } 
+            } 
+        }); 
+    }
     isInitialLoad = false;
 });
 
@@ -185,16 +226,29 @@ function renderMessages() {
         let timeString = m.timestamp ? m.timestamp.toDate().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : "...";
         let formattedText = m.text ? m.text.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-[#e4e5e7]">$1</span>') : '';
 
+        // 🌟 ระบบแปลงตัวอักษรให้กลายเป็นแท็กสีน้ำเงิน (@ชื่อ)
+        let isMentioned = false;
+        formattedText = formattedText.replace(/@([a-zA-Z0-9_ก-๙]+)/g, (match, username) => {
+            if (username === currentUsername) {
+                isMentioned = true; // ถ้าชื่อเราโดนแท็ก
+                return `<span class="bg-[#5865F2]/40 text-[#dbdee1] font-bold px-1.5 py-0.5 rounded-md border border-[#5865F2]/50">@${username}</span>`;
+            } else if (usersData[username]) {
+                return `<span class="text-[#5865F2] font-bold hover:underline cursor-pointer" onclick="showUserProfile('${username}')">@${username}</span>`;
+            }
+            return match;
+        });
+
+        // สีพื้นหลังข้อความ จะเรืองแสงถ้าโดนแท็ก
+        const rowHighlight = isMentioned ? "bg-[#5865F2]/10 border-l-[3px] border-[#5865F2] hover:bg-[#5865F2]/20" : "hover:bg-[#2b2d31]/50 border-l-[3px] border-transparent";
+
         if (m.senderName === "🤖 System Bot") {
             if (formattedText.includes("ยินดีต้อนรับสมาชิกใหม่")) {
                 let cleanName = formattedText.split('**')[1] || "ใครบางคน";
-                chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 hover:bg-[#2b2d31]/50 px-2 md:px-4 py-2.5 mt-2 -mx-2 md:-mx-4 group transition duration-150 items-start"><div class="w-8 md:w-10 flex justify-center mt-1"><i class="ph-bold ph-arrow-right text-[#23a559] text-[18px]"></i></div><div class="min-w-0 flex-1"><p class="text-[#949ba4] text-[14px] leading-relaxed"><span class="text-[#dbdee1] font-bold">${cleanName}</span> เพิ่งสไลด์เข้ามาในเซิร์ฟเวอร์! <span class="text-[10px] text-[#5c6069] ml-2 font-medium">${timeString}</span></p><button onclick="sendWave()" class="mt-2.5 flex items-center space-x-2 bg-[#2b2d31] hover:bg-[#35373c] text-[#dbdee1] px-3 py-1.5 rounded-md text-[13px] font-bold transition shadow-sm"><span class="text-[16px]">👋</span> <span>โบกมือทักทาย!</span></button></div></div>`);
+                chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 hover:bg-[#2b2d31]/50 border-l-[3px] border-transparent px-2 md:px-4 py-2.5 mt-2 -mx-2 md:-mx-4 group transition duration-150 items-start"><div class="w-8 md:w-10 flex justify-center mt-1"><i class="ph-bold ph-arrow-right text-[#23a559] text-[18px]"></i></div><div class="min-w-0 flex-1"><p class="text-[#949ba4] text-[14px] leading-relaxed"><span class="text-[#dbdee1] font-bold">${cleanName}</span> เพิ่งสไลด์เข้ามาในเซิร์ฟเวอร์! <span class="text-[10px] text-[#5c6069] ml-2 font-medium">${timeString}</span></p><button onclick="sendWave()" class="mt-2.5 flex items-center space-x-2 bg-[#2b2d31] hover:bg-[#35373c] text-[#dbdee1] px-3 py-1.5 rounded-md text-[13px] font-bold transition shadow-sm"><span class="text-[16px]">👋</span> <span>โบกมือทักทาย!</span></button></div></div>`);
                 lastSender = "system_bot_join"; return;
             } else if (formattedText.includes("กระโดดเข้ามา") || formattedText.includes("ออกจากห้องนั่งเล่น")) {
-                // 🌟 ระบบเดิมที่เคยแจ้งเตือนเข้าออกห้องเสียง จะไม่ถูกสร้างเพิ่มแล้ว แต่อันเก่าที่ค้างใน db จะยังโชว์อยู่
-                let arrowIcon = formattedText.includes("กระโดดเข้ามา") ? "ph-arrow-right text-[#23a559]" : "ph-arrow-left text-[#da373c]";
-                chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 hover:bg-[#2b2d31]/50 px-2 md:px-4 py-1.5 mt-1 -mx-2 md:-mx-4 group transition duration-150 items-center"><div class="w-8 md:w-10 flex justify-center"><i class="ph-bold ${arrowIcon} text-[16px]"></i></div><div class="min-w-0 flex-1"><p class="text-[#949ba4] text-[13px] md:text-[14px] leading-relaxed">${formattedText} <span class="text-[10px] text-[#5c6069] ml-2 font-medium">${timeString}</span></p></div></div>`);
-                lastSender = "system_bot_voice"; return;
+                // ซ่อนข้อความบอทเข้าออกห้องเสียง
+                return;
             }
             chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#2b2d31]/50 px-2 md:px-4 py-3 mt-4 -mx-2 md:-mx-4 group transition duration-150 relative items-center border-l-[3px] border-transparent hover:border-[#5865F2]"><div class="w-8 md:w-10 h-8 md:h-10 rounded-full bg-[#5865F2] flex items-center justify-center flex-shrink-0 shadow-lg"><i class="ph-fill ph-robot text-white text-[20px]"></i></div><div class="min-w-0 flex-1 pb-1"><div class="flex items-baseline space-x-2"><span class="font-extrabold text-[12px] text-[#5865F2] uppercase tracking-wider">System</span><span class="text-[10px] md:text-[11px] text-[#6d717a] font-medium">${timeString}</span></div><p class="text-[#949ba4] mt-1 text-[13px] md:text-[14px] leading-relaxed">${formattedText}</p></div></div>`);
             lastSender = "system_bot"; return; 
@@ -227,9 +281,9 @@ function renderMessages() {
         const actionMenuUI = `<div class="reaction-bar absolute -top-3 right-4 bg-[#2b2d31] border border-[#1e1f22] rounded-lg p-1 shadow-xl flex items-center space-x-1 z-20"><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '👍')">👍</button><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '❤️')">❤️</button><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '😂')">😂</button><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '🔥')">🔥</button><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '😮')">😮</button><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[16px]" onclick="toggleReaction('${m.id}', '✅')">✅</button>${replyBtn}${adminDeleteBtn}</div>`;
 
         if (lastSender === m.senderName && !isReply) {
-            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#2b2d31]/50 px-2 md:px-4 py-1 -mx-2 md:-mx-4 group transition duration-150 relative"><div class="w-8 md:w-10 flex-shrink-0 text-right"><span class="text-[9px] md:text-[10px] text-[#5c6069] opacity-0 group-hover:opacity-100 transition leading-relaxed font-medium">${timeString}</span></div><div class="min-w-0 flex-1 pb-1 pr-10">${contentHTML}${reactsHTML}</div>${actionMenuUI}</div>`);
+            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 ${rowHighlight} px-2 md:px-4 py-1 -mx-2 md:-mx-4 group transition duration-150 relative"><div class="w-8 md:w-10 flex-shrink-0 text-right"><span class="text-[9px] md:text-[10px] text-[#5c6069] opacity-0 group-hover:opacity-100 transition leading-relaxed font-medium">${timeString}</span></div><div class="min-w-0 flex-1 pb-1 pr-10">${contentHTML}${reactsHTML}</div>${actionMenuUI}</div>`);
         } else {
-            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex flex-col hover:bg-[#2b2d31]/50 px-2 md:px-4 py-2 mt-4 -mx-2 md:-mx-4 group transition duration-150 relative">${replyBlockHTML}<div class="flex space-x-3 md:space-x-4"><img src="${msgAvatarUrl}" onclick="showUserProfile('${m.senderName}')" class="w-8 h-8 md:w-10 md:h-10 rounded-full flex-shrink-0 object-cover opacity-95 cursor-pointer hover:opacity-80 transition"><div class="min-w-0 flex-1 pb-1 pr-10"><div class="flex items-baseline space-x-2"><span onclick="showUserProfile('${m.senderName}')" class="font-medium text-[14px] md:text-[15px] text-[#e4e5e7] tracking-wide hover:underline cursor-pointer">${m.senderName}</span><span class="text-[10px] md:text-[11px] text-[#80848e] font-medium">${timeString}</span></div>${contentHTML}${reactsHTML}</div></div>${actionMenuUI}</div>`);
+            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex flex-col ${rowHighlight} px-2 md:px-4 py-2 mt-4 -mx-2 md:-mx-4 group transition duration-150 relative">${replyBlockHTML}<div class="flex space-x-3 md:space-x-4"><img src="${msgAvatarUrl}" onclick="showUserProfile('${m.senderName}')" class="w-8 h-8 md:w-10 md:h-10 rounded-full flex-shrink-0 object-cover opacity-95 cursor-pointer hover:opacity-80 transition"><div class="min-w-0 flex-1 pb-1 pr-10"><div class="flex items-baseline space-x-2"><span onclick="showUserProfile('${m.senderName}')" class="font-medium text-[14px] md:text-[15px] text-[#e4e5e7] tracking-wide hover:underline cursor-pointer">${m.senderName}</span><span class="text-[10px] md:text-[11px] text-[#80848e] font-medium">${timeString}</span></div>${contentHTML}${reactsHTML}</div></div>${actionMenuUI}</div>`);
         }
         lastSender = m.senderName;
     });
@@ -272,7 +326,6 @@ document.getElementById('start-game-btn').onclick = async () => {
     btn.innerHTML = `<i class="ph-fill ph-spinner animate-spin mr-1.5 text-[16px]"></i> AI กำลังคิดคำ...`;
     btn.disabled = true;
 
-    // 🧠 สั่งให้ AI คิดคำศัพท์! 
     const randomWord = await getWordFromAI(); 
     
     const gameCanvas = document.getElementById('game-whiteboard-canvas'); const gctx = gameCanvas.getContext('2d');
@@ -286,7 +339,6 @@ document.getElementById('start-game-btn').onclick = async () => {
     btn.disabled = false;
 };
 
-// ฟังก์ชันส่งข้อความรวม (ตรวจสอบระบบทายคำ + ดักสปอยล์)
 async function sendAnyMessage(inputEl, channelStr) {
     const txt = inputEl.value.trim(); if (!txt) return; inputEl.value = ''; 
     clearTimeout(typingTimeout); isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); 
@@ -310,7 +362,6 @@ async function sendAnyMessage(inputEl, channelStr) {
         await addDoc(collection(db, "messages"), { text: botReply, senderName: "🤖 System Bot", channel: channelStr, timestamp: serverTimestamp() }); return;
     }
 
-    // 🚨 1. ระบบบอทดักคนสปอยล์
     if (channelStr === 'game_draw' && currentDrawGame.isActive && currentDrawGame.drawerId === currentUserId) {
         const answer = currentDrawGame.word.toLowerCase();
         const msg = txt.toLowerCase();
@@ -321,7 +372,6 @@ async function sendAnyMessage(inputEl, channelStr) {
         }
     }
 
-    // 🌟 2. ระบบตรวจคำตอบสำหรับคนทาย
     let isCorrect = false; let isAlmost = false;
     if (channelStr === 'game_draw' && currentDrawGame.isActive && currentDrawGame.drawerId !== currentUserId) {
         const guess = txt.toLowerCase(); const answer = currentDrawGame.word.toLowerCase();
@@ -349,15 +399,12 @@ document.getElementById('attach-btn').onclick = () => document.getElementById('f
 document.getElementById('file-input').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; chatInput.placeholder = "กำลังอัปโหลดไฟล์..."; chatInput.disabled = true; try { const fd = new FormData(); fd.append("image", f); const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const r = await res.json(); if (r.success) { await addDoc(collection(db, "messages"), { text: "", imageUrl: r.data.url, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp(), reactions: {}, replyTo: replyingTo }); replyingTo = null; document.getElementById('reply-banner').classList.add('hidden'); } } catch (err) { showToast("อัปโหลดพลาด", "error"); } finally { chatInput.placeholder = "ส่งข้อความถึง #ห้องแชท"; chatInput.disabled = false; chatInput.value = ""; chatInput.focus(); } };
 
 // ==========================================
-// 🎨 11. ระบบกระดานวาดรูป (ทั่วไป & เกม) [เวอร์ชันแก้กระตุก]
+// 🎨 11. ระบบกระดานวาดรูป แก้กระตุก (WebP)
 // ==========================================
 const canvas = document.getElementById('whiteboard-canvas'), ctx = canvas.getContext('2d'), canvasContainer = document.getElementById('canvas-container'), wbStatus = document.getElementById('wb-status');
 const gameCanvas = document.getElementById('game-whiteboard-canvas'), gameCtx = gameCanvas.getContext('2d'), gameCanvasContainer = document.getElementById('game-canvas-container');
 let isDrawing = false; let isGameDrawing = false; let isEraserMode = false;
-
-// 🌟 ระบบหน่วงเวลา (Debounce) ป้องกันการเซฟรูปถี่เกินไปจนกระตุก
-let wbSyncTimer = null; 
-let gameWbSyncTimer = null;
+let wbSyncTimer = null; let gameWbSyncTimer = null;
 
 function initCanvasSize() { if(canvas.width !== canvasContainer.clientWidth || canvas.height !== canvasContainer.clientHeight) { const temp = canvas.toDataURL(); canvas.width = canvasContainer.clientWidth; canvas.height = canvasContainer.clientHeight; if(temp !== "data:,") { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0); img.src = temp; } } }
 function initGameCanvasSize() { if(gameCanvas.width !== gameCanvasContainer.clientWidth || gameCanvas.height !== gameCanvasContainer.clientHeight) { const temp = gameCanvas.toDataURL(); gameCanvas.width = gameCanvasContainer.clientWidth; gameCanvas.height = gameCanvasContainer.clientHeight; if(temp !== "data:,") { const img = new Image(); img.onload = () => gameCtx.drawImage(img, 0, 0); img.src = temp; } } }
@@ -365,48 +412,23 @@ function initGameCanvasSize() { if(gameCanvas.width !== gameCanvasContainer.clie
 window.addEventListener('resize', () => { initCanvasSize(); initGameCanvasSize(); }); 
 function getMousePos(e, c) { const r = c.getBoundingClientRect(); const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY; return { x: x - r.left, y: y - r.top }; } 
 
-// --- ส่วนกระดานไอเดียหลัก ---
 function startDrawing(e) { if(e.type === 'touchstart') e.preventDefault(); isDrawing = true; draw(e); } 
 function draw(e) { if (!isDrawing) return; if(e.type === 'touchmove') e.preventDefault(); const p = getMousePos(e, canvas); ctx.lineWidth = document.getElementById('wb-size').value; ctx.lineCap = 'round'; ctx.strokeStyle = document.getElementById('wb-color').value; ctx.lineTo(p.x, p.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x, p.y); } 
-function stopDrawing() { 
-    if (!isDrawing) return; 
-    isDrawing = false; ctx.beginPath(); 
-    // 🌟 หน่วงเวลา 0.4 วินาทีหลังวาดเสร็จ ค่อยส่งขึ้น Server
-    clearTimeout(wbSyncTimer);
-    wbSyncTimer = setTimeout(() => syncWhiteboard(), 400); 
-} 
+function stopDrawing() { if (!isDrawing) return; isDrawing = false; ctx.beginPath(); clearTimeout(wbSyncTimer); wbSyncTimer = setTimeout(() => syncWhiteboard(), 400); } 
 canvas.onmousedown = startDrawing; canvas.onmousemove = draw; canvas.onmouseup = canvas.onmouseout = stopDrawing; canvas.addEventListener('touchstart', startDrawing, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchend', stopDrawing); 
 document.getElementById('wb-clear').onclick = () => { if(confirm("ล้างกระดานทั้งหมด?")) { ctx.clearRect(0, 0, canvas.width, canvas.height); syncWhiteboard(true); showToast("ล้างกระดานแล้ว", "success"); } }; 
-
-async function syncWhiteboard(isC = false) { 
-    if(!currentUserId) return; 
-    // 🌟 บีบอัดเป็น WebP 50% ลดขนาดไฟล์ลง 30 เท่า! เครื่องหายค้างแน่นอน
-    const imgData = isC ? "" : canvas.toDataURL("image/webp", 0.5);
-    await setDoc(doc(db, "appData", "whiteboard"), { image: imgData, updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); 
-} 
-
+async function syncWhiteboard(isC = false) { if(!currentUserId) return; const imgData = isC ? "" : canvas.toDataURL("image/webp", 0.5); await setDoc(doc(db, "appData", "whiteboard"), { image: imgData, updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); } 
 onSnapshot(doc(db, "appData", "whiteboard"), (d) => { if (d.exists() && !isDrawing) { const val = d.data(); if (val.updatedBy && val.updatedBy !== currentUsername && !currentDrawGame.isActive) { wbStatus.innerHTML = `<i class="ph ph-pencil-simple mr-1.5"></i> ${val.updatedBy} เพิ่งอัปเดตกระดาน`; wbStatus.classList.remove('opacity-0'); setTimeout(() => { if(!currentDrawGame.isActive) wbStatus.classList.add('opacity-0'); }, 3000); } if(val.image) { const img = new Image(); img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); }; img.src = val.image; } else { ctx.clearRect(0, 0, canvas.width, canvas.height); } } });
 
-// --- ส่วนกระดานเกมทายภาพ ---
 document.getElementById('game-eraser-btn').onclick = () => { isEraserMode = !isEraserMode; document.getElementById('game-eraser-btn').classList.toggle('text-white'); document.getElementById('game-eraser-btn').classList.toggle('bg-[#35373c]'); };
 function startGameDrawing(e) { if(!currentDrawGame.isActive || currentDrawGame.drawerId !== currentUserId) return; if(e.type === 'touchstart') e.preventDefault(); isGameDrawing = true; drawGame(e); } 
 function drawGame(e) { if (!isGameDrawing) return; if(e.type === 'touchmove') e.preventDefault(); const p = getMousePos(e, gameCanvas); gameCtx.lineWidth = document.getElementById('game-size').value; gameCtx.lineCap = 'round'; gameCtx.globalCompositeOperation = isEraserMode ? 'destination-out' : 'source-over'; gameCtx.strokeStyle = document.getElementById('game-color').value; gameCtx.lineTo(p.x, p.y); gameCtx.stroke(); gameCtx.beginPath(); gameCtx.moveTo(p.x, p.y); } 
-function stopGameDrawing() { 
-    if (!isGameDrawing) return; 
-    isGameDrawing = false; gameCtx.beginPath(); 
-    // 🌟 เกมต้องการความเรียลไทม์สูงกว่า เลยหน่วงแค่ 0.25 วิ
-    clearTimeout(gameWbSyncTimer);
-    gameWbSyncTimer = setTimeout(() => syncGameWhiteboard(), 250); 
-} 
+function stopGameDrawing() { if (!isGameDrawing) return; isGameDrawing = false; gameCtx.beginPath(); clearTimeout(gameWbSyncTimer); gameWbSyncTimer = setTimeout(() => syncGameWhiteboard(), 250); } 
 gameCanvas.onmousedown = startGameDrawing; gameCanvas.onmousemove = drawGame; gameCanvas.onmouseup = gameCanvas.onmouseout = stopGameDrawing; gameCanvas.addEventListener('touchstart', startGameDrawing, {passive: false}); gameCanvas.addEventListener('touchmove', drawGame, {passive: false}); gameCanvas.addEventListener('touchend', stopGameDrawing); 
 document.getElementById('game-clear-btn').onclick = () => { gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); syncGameWhiteboard(true); }; 
-
-async function syncGameWhiteboard(isC = false) { 
-    const imgData = isC ? "" : gameCanvas.toDataURL("image/webp", 0.5);
-    await setDoc(doc(db, "appData", "gameWhiteboard"), { image: imgData, updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); 
-} 
-
+async function syncGameWhiteboard(isC = false) { const imgData = isC ? "" : gameCanvas.toDataURL("image/webp", 0.5); await setDoc(doc(db, "appData", "gameWhiteboard"), { image: imgData, updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); } 
 onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => { if (d.exists() && !isGameDrawing) { const val = d.data(); if(val.image) { const img = new Image(); img.onload = () => { gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); gameCtx.drawImage(img, 0, 0); }; img.src = val.image; } else { gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); } } });
+
 // ==========================================
 // 🎙️ 12. ระบบเสียง & แชร์จอ (Agora)
 // ==========================================
@@ -415,7 +437,19 @@ async function joinVoice() {
     try { 
         joinBtn.innerHTML = "กำลังเชื่อมต่อ..."; 
         myNumericUid = Math.floor(Math.random() * 1000000); 
-        rtcClient.on("user-published", async (u, t) => { await rtcClient.subscribe(u, t); if (t === "audio") u.audioTrack.play(); if (t === "video") { ssStage.classList.remove('hidden'); const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); } }); rtcClient.on("user-unpublished", async (u, t) => { if (t === "video") { const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); } }); rtcClient.enableAudioVolumeIndicator(); rtcClient.on("volume-indicator", vs => { document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); vs.forEach(v => { if (v.level > 10) { let sId = null; if (v.uid === myNumericUid || v.uid === 0) { sId = currentUserId; } else { for (const k in usersData) { if (usersData[k].agoraUid === v.uid) { sId = usersData[k].id; break; } } } if (sId) { const a1 = document.getElementById(`img-avatar-${sId}`), a2 = document.getElementById(`img-sidebar-voice-${sId}`), a3 = document.getElementById(`img-grid-voice-${sId}`); if(a1) a1.classList.add('speaking-ring'); if(a2) a2.classList.add('speaking-ring'); if(a3) a3.classList.add('speaking-ring'); } } }); }); 
+        rtcClient.on("user-published", async (u, t) => { 
+            await rtcClient.subscribe(u, t); 
+            if (t === "audio") {
+                u.audioTrack.play(); 
+                remoteAudioTracks[u.uid] = u.audioTrack; // 🌟 เก็บ Track ไว้ปรับความดัง
+            }
+            if (t === "video") { ssStage.classList.remove('hidden'); const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); } 
+        }); 
+        rtcClient.on("user-unpublished", async (u, t) => { 
+            if (t === "audio") { delete remoteAudioTracks[u.uid]; } // ลบ Track ออกตอนเพื่อนออกห้อง
+            if (t === "video") { const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); } 
+        }); 
+        rtcClient.enableAudioVolumeIndicator(); rtcClient.on("volume-indicator", vs => { document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); vs.forEach(v => { if (v.level > 10) { let sId = null; if (v.uid === myNumericUid || v.uid === 0) { sId = currentUserId; } else { for (const k in usersData) { if (usersData[k].agoraUid === v.uid) { sId = usersData[k].id; break; } } } if (sId) { const a1 = document.getElementById(`img-avatar-${sId}`), a2 = document.getElementById(`img-sidebar-voice-${sId}`), a3 = document.getElementById(`img-grid-voice-${sId}`); if(a1) a1.classList.add('speaking-ring'); if(a2) a2.classList.add('speaking-ring'); if(a3) a3.classList.add('speaking-ring'); } } }); }); 
         await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid); 
         localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true }); 
         await rtcClient.publish(localTracks.audioTrack); 
@@ -427,7 +461,6 @@ async function joinVoice() {
         startBackgroundAudioMode(); amIInVoice = true;
         if(latestWPData && latestWPData.videoId) { initOrUpdatePlayer(latestWPData.videoId, latestWPData.time, latestWPData.state, latestWPData.updatedBy); }
 
-        // ปิดประกาศบอทเข้าห้องเสียงเพื่อความสะอาดของแชท!
     } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } 
 }
 ssBtn.onclick = async () => { const sIco = document.getElementById('screen-icon'); if (!isSharingScreen) { try { const res = await AgoraRTC.createScreenVideoTrack({ encoderConfig: { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 }, optimizationMode: "motion" }, "auto"); if (Array.isArray(res)) { screenTrack = res[0]; screenAudioTrack = res[1]; await rtcClient.publish([screenTrack, screenAudioTrack]); } else { screenTrack = res; await rtcClient.publish(screenTrack); } isSharingScreen = true; await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: true }); ssBtn.classList.replace('bg-[#2b2d31]', 'bg-[#23a559]'); ssBtn.classList.replace('text-[#dbdee1]', 'text-white'); sIco.className = "ph-fill ph-screencast text-[20px] md:text-[24px]"; ssStage.classList.remove('hidden'); let pc = document.createElement("div"); pc.id = `v-wrap-local`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); screenTrack.play(pc, { fit: "contain" }); screenTrack.on("track-ended", stopScreenShare); } catch (err) { console.log(err); } } else { await stopScreenShare(); } };
@@ -440,8 +473,6 @@ async function leaveVoice() {
     document.getElementById('active-voice-ui').classList.add('hidden'); 
     if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; } amIInVoice = false;
     if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; } document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; document.getElementById('watch-party-stage').classList.add('hidden'); document.getElementById('watch-party-stage').classList.remove('flex');
-    
-    // ปิดประกาศบอทออกจากห้องเสียงเพื่อความสะอาดของแชท!
 }
 joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
 muteBtn.onclick = async () => { isMuted = !isMuted; localTracks.audioTrack.setEnabled(!isMuted); await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); const muteIcon = document.getElementById('mute-icon'); if (isMuted) { muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; } else { muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; } };
@@ -454,7 +485,7 @@ onSnapshot(collection(db, "tasks"), (snapshot) => { Object.values(zones).forEach
 Object.keys(zones).forEach(s => { const z = zones[s]; z.addEventListener('dragover', (e) => { e.preventDefault(); z.classList.add('drop-zone-active'); }); z.addEventListener('dragleave', () => z.classList.remove('drop-zone-active')); z.addEventListener('drop', async (e) => { e.preventDefault(); z.classList.remove('drop-zone-active'); const tId = e.dataTransfer.getData('text/plain'); if (tId) await updateDoc(doc(db, "tasks", tId), { status: s }); }); });
 
 const taskModal = document.getElementById('task-modal');
-document.getElementById('add-task-btn').addEventListener('click', () => { document.getElementById('task-title-input').value = ''; taskModal.classList.remove('hidden'); }); document.getElementById('close-task-modal').addEventListener('click', () => taskModal.classList.add('hidden'));  document.getElementById('confirm-task-btn').addEventListener('click', async () => { const title = document.getElementById('task-title-input').value.trim(); const tag = document.getElementById('task-tag-input').value; if (!title) { showToast("กรุณากรอกชื่องานก่อนครับ!", "error"); return; } await addDoc(collection(db, "tasks"), { title: title, tag: tag, status: 'todo', timestamp: serverTimestamp() }); taskModal.classList.add('hidden'); showToast("เพิ่มงานใหม่ลงในกระดานแล้ว!", "success"); });
+document.getElementById('add-task-btn').addEventListener('click', () => { document.getElementById('task-title-input').value = ''; taskModal.classList.remove('hidden'); }); document.getElementById('close-task-modal').addEventListener('click', () => { taskModal.classList.add('hidden'); }); document.getElementById('confirm-task-btn').addEventListener('click', async () => { const title = document.getElementById('task-title-input').value.trim(); const tag = document.getElementById('task-tag-input').value; if (!title) { showToast("กรุณากรอกชื่องานก่อนครับ!", "error"); return; } await addDoc(collection(db, "tasks"), { title: title, tag: tag, status: 'todo', timestamp: serverTimestamp() }); taskModal.classList.add('hidden'); showToast("เพิ่มงานใหม่ลงในกระดานแล้ว!", "success"); });
 
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(r => console.log('✅ DOSH SW Active')).catch(e => console.log('❌ SW Fail:', e)); }); }
 const tourOverlay = document.getElementById('tour-overlay'); const tourTooltip = document.getElementById('tour-tooltip'); const tourTitle = document.getElementById('tour-title'); const tourDesc = document.getElementById('tour-desc'); const tourStepCount = document.getElementById('tour-step-count'); const tourNextBtn = document.getElementById('tour-next-btn'); const tourSkipBtn = document.getElementById('tour-skip-btn');
