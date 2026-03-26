@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; overscroll-behavior-y: none; /* ป้องกันการดึงจอรีเฟรชบนมือถือ */ }
+        body { font-family: 'Inter', sans-serif; overscroll-behavior-y: none; }
         
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -67,7 +67,6 @@
         }
         .tooltip:hover .tooltip-text { visibility: visible; opacity: 1; transform: translateX(-50%) scale(1); }
         
-        /* สไตล์สำหรับซ่อนเครื่องมือที่ไม่ควรโชว์บนมือถือ */
         @media (max-width: 768px) {
             .tooltip .tooltip-text { display: none !important; }
         }
@@ -397,7 +396,6 @@
                 const nameStyle = user.role === 'Banned' ? 'line-through text-[#da373c]' : (isOnline ? 'text-[#d1d3d6]' : 'text-[#6d717a]');
 
                 const muteIconSmall = user.isMuted ? '<i class="ph-fill ph-microphone-slash text-[#da373c] ml-auto text-[14px]"></i>' : '';
-                // 🌟 ปรับขนาดไอคอนปิดไมค์ให้พอดีไม่ล้น
                 const muteIconLarge = user.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#151619] rounded-full p-1.5 border-2 border-[#0e0f11] shadow-sm flex items-center justify-center"><i class="ph-fill ph-microphone-slash text-[#da373c] text-[14px]"></i></div>' : '';
 
                 membersList.insertAdjacentHTML('beforeend', `
@@ -425,7 +423,6 @@
 
                 if (user.inVoice) {
                     usersInVoiceCount++;
-                    // 🌟 แก้ไขตรงนี้: เปลี่ยน h-36 เป็น h-auto min-h-[xxx] และใส่ flex-shrink-0 ให้กรอบรูปภาพ
                     voiceGridHTML += `
                         <div class="bg-[#151619] rounded-xl p-4 md:p-6 flex flex-col items-center justify-center relative shadow-lg border border-[#1e1f22] hover:border-[#3f4147] transition duration-300 h-auto min-h-[130px] md:min-h-[160px] group animate-[fadeIn_0.3s_ease-out]">
                             <div class="relative mb-2 md:mb-4 flex-shrink-0">
@@ -576,9 +573,8 @@
             }
         });
 
-
         // ==========================================
-        // 🎙️ 5. ระบบห้องคุยเสียง (Voice & 🚀 Screen Share 30FPS)
+        // 🎙️ 5. ระบบห้องคุยเสียง (Voice & Screen Share)
         // ==========================================
         const joinBtn = document.getElementById('join-voice-btn');
         const leaveBtn = document.getElementById('leave-voice-btn');
