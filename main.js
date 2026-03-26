@@ -21,7 +21,7 @@ const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-
 window.showToast = (msg, type = "success") => {
     const toast = document.createElement("div");
     const icon = type === "success" ? `<i class="ph-fill ph-check-circle text-[#23a559] text-[20px]"></i>` : (type === "error" ? `<i class="ph-fill ph-warning-circle text-[#da373c] text-[20px]"></i>` : `<i class="ph-fill ph-info text-[#5865F2] text-[20px]"></i>`);
-    toast.className = `flex items-center gap-3 bg-[#1e1f22] border border-[#2b2d31] text-[#dbdee1] px-4 py-3 rounded-lg shadow-xl animate-[slideUpFade_0.3s_ease-out]`;
+    toast.className = `flex items-center gap-3 bg-[#1e1f22] border border-[#2b2d31] text-[#dbdee1] px-4 py-3 rounded-lg shadow-xl animate-[slideUpFade_0.3s_ease-out] z-[200]`;
     toast.innerHTML = `${icon} <span class="text-[13px] font-medium">${msg}</span>`;
     document.getElementById("toast-container").appendChild(toast);
     setTimeout(() => { toast.classList.add("opacity-0", "translate-y-4", "transition-all", "duration-300"); setTimeout(() => toast.remove(), 300); }, 3000);
@@ -32,22 +32,21 @@ window.openLightbox = (url) => { document.getElementById('lightbox-img').src = u
 lightbox.onclick = () => { lightbox.classList.add('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-100', 'scale-95'); setTimeout(() => lightbox.classList.add('hidden'), 300); };
 
 // ==========================================
-// 🌟 1.5 ระบบ Watch Party (แก้บั๊กวิ่งแข่ง / จอดำ)
+// 🌟 1.5 ระบบ Watch Party (ซ่อมบั๊กโหลด API)
 // ==========================================
 let ytPlayer = null;
 let ignoreNextYtEvent = false;
 let lastSyncTime = 0;
-let isYtApiReady = false;
-let pendingVideoData = null; // เก็บข้อมูลรอโหลดเผื่อ API ยังไม่เสร็จ
+let pendingVideoData = null;
 
-window.onYouTubeIframeAPIReady = function() {
-    isYtApiReady = true;
-    // ถ้า API พร้อมแล้ว และมีคนรอเปิดคลิปอยู่ ให้โหลดคลิปเลย
-    if(pendingVideoData) {
-        initOrUpdatePlayer(pendingVideoData.vid, pendingVideoData.time, pendingVideoData.state, pendingVideoData.host);
-        pendingVideoData = null;
-    }
-};
+// ดักจับสัญญาณ YouTube ให้ชัวร์ 100%
+if (window.YT && window.YT.Player) {
+    if (pendingVideoData) { initOrUpdatePlayer(pendingVideoData.vid, pendingVideoData.time, pendingVideoData.state, pendingVideoData.host); pendingVideoData = null; }
+} else {
+    window.onYouTubeIframeAPIReady = function() {
+        if(pendingVideoData) { initOrUpdatePlayer(pendingVideoData.vid, pendingVideoData.time, pendingVideoData.state, pendingVideoData.host); pendingVideoData = null; }
+    };
+}
 
 function extractVideoID(url) {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -81,20 +80,18 @@ async function onPlayerStateChange(event) {
     }
 }
 
-// ฟังก์ชันสร้างหรืออัปเดตเครื่องเล่น
 function initOrUpdatePlayer(vid, time, state, host) {
-    if(!isYtApiReady) {
-        pendingVideoData = { vid, time, state, host }; // ฝากข้อมูลไว้ก่อนถ้า API ยังไม่พร้อม
+    if(typeof window.YT === 'undefined' || typeof window.YT.Player === 'undefined') {
+        pendingVideoData = { vid, time, state, host };
         return;
     }
 
     document.getElementById('watch-party-stage').classList.remove('hidden');
     document.getElementById('watch-party-stage').classList.add('flex');
     if(host) document.getElementById('wp-host').textContent = host;
-    
+
     if(!ytPlayer) {
-        // สร้างหน้าจอขึ้นมาครั้งแรก
-        ytPlayer = new YT.Player('yt-player-container', {
+        ytPlayer = new window.YT.Player('yt-player-container', {
             height: '100%', width: '100%', videoId: vid,
             playerVars: { 'autoplay': 1, 'controls': 1, 'rel': 0, 'modestbranding': 1, 'origin': window.location.origin },
             events: {
@@ -102,11 +99,13 @@ function initOrUpdatePlayer(vid, time, state, host) {
                     e.target.seekTo(time, true); 
                     if(state === 1) e.target.playVideo(); else e.target.pauseVideo();
                 },
-                'onStateChange': onPlayerStateChange
+                'onStateChange': onPlayerStateChange,
+                'onError': (e) => {
+                    showToast("คลิปนี้ถูกบล็อกไม่ให้เล่นนอกเว็บ YouTube", "error");
+                }
             }
         });
     } else {
-        // ถ้าจอมีอยู่แล้ว แค่อัปเดตเวลาและคลิป
         if (typeof ytPlayer.getVideoData !== 'function') return; 
         const currentVid = ytPlayer.getVideoData().video_id;
         if(currentVid !== vid) {
@@ -128,7 +127,6 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
         if(wp.videoId) {
             initOrUpdatePlayer(wp.videoId, wp.time, wp.state, wp.updatedBy);
         } else {
-            // สั่งปิดคลิป
             document.getElementById('watch-party-stage').classList.add('hidden');
             document.getElementById('watch-party-stage').classList.remove('flex');
             if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; }
@@ -375,7 +373,6 @@ async function sendMessage() {
         } else {
             showToast("ไม่รู้จักคำสั่งนี้", "error"); return;
         }
-        // ให้ System Bot เป็นคนส่ง
         await addDoc(collection(db, "messages"), { text: botReply, senderName: "🤖 System Bot", channel: activeChannel, timestamp: serverTimestamp() });
         return;
     }
