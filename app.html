@@ -450,7 +450,7 @@
         });
 
         // ==========================================
-        // 🌟 ระบบ AUTO-RECONNECT เมือ Refresh หน้าเว็บ 🌟
+        // 🌟 ระบบ AUTO-RECONNECT เมือ Refresh หน้าเว็บ
         // ==========================================
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -462,15 +462,12 @@
                     if (userDoc.exists() && userDoc.data().role === 'Admin') { document.getElementById('admin-menu-btn').classList.remove('hidden'); }
                 } catch (err) {}
 
-                // เช็คว่าก่อนหน้านี้อยู่ในห้องเสียงหรือไม่
                 const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
 
                 if (wasInVoice) {
                     await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e));
-                    // หน่วงเวลาให้ทุกอย่างโหลดเสร็จ แล้วเชื่อมต่อกลับอัตโนมัติ
                     setTimeout(() => {
                         joinVoice();
-                        // สลับหน้าจอมาที่ห้องเสียงให้ด้วย
                         document.querySelectorAll('.nav-btn').forEach(b => {
                             b.classList.remove('channel-active', 'text-[#e4e5e7]'); 
                             b.classList.add('channel-inactive', 'text-[#80848e]');
@@ -492,7 +489,7 @@
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
             if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false }); } catch (e) {} }
-            localStorage.removeItem('dosh_active_voice'); // เคลียร์สถานะตอนออก
+            localStorage.removeItem('dosh_active_voice');
             if (localTracks.audioTrack) { await leaveVoice(); } signOut(auth);
         });
 
@@ -618,13 +615,17 @@
                 myNumericUid = Math.floor(Math.random() * 1000000); 
                 await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid);
                 
-                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                // 🌟 ระบบไมค์ ตัดเสียงสะท้อน (Echo Cancellation)
+                localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+                    AEC: true,
+                    ANS: true,
+                    AGC: true
+                });
+                
                 await rtcClient.publish(localTracks.audioTrack);
                 
                 isMuted = false;
                 await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false });
-
-                // 🌟 บันทึกสถานะว่าเข้าห้องเสียงแล้ว
                 localStorage.setItem('dosh_active_voice', 'true');
 
                 joinBtn.classList.add('hidden');
@@ -658,11 +659,20 @@
                     if (mediaType === "audio") { user.audioTrack.play(); }
                     if (mediaType === "video") {
                         screenShareStage.classList.remove('hidden');
+                        
+                        // เคลียร์อันเก่า (ถ้ามี)
+                        const existing = document.getElementById(`video-wrapper-${user.uid}`);
+                        if(existing) existing.remove();
+
+                        // 🌟 สร้างกล่องวิดีโอแบบเต็มจอ (แก้บั๊กจอดำ)
                         let playerContainer = document.createElement("div");
                         playerContainer.id = `video-wrapper-${user.uid}`;
-                        playerContainer.className = "w-full h-full rounded-lg";
+                        playerContainer.style.width = "100%";
+                        playerContainer.style.height = "100%";
+                        playerContainer.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center";
                         screenShareStage.appendChild(playerContainer);
-                        user.videoTrack.play(playerContainer);
+                        
+                        user.videoTrack.play(playerContainer, { fit: "contain" });
                     }
                 });
 
@@ -676,7 +686,7 @@
 
             } catch (err) { 
                 console.error(err);
-                localStorage.removeItem('dosh_active_voice'); // ถ้าต่อไม่ติดให้เคลียร์สถานะทิ้ง
+                localStorage.removeItem('dosh_active_voice');
                 alert("เชื่อมต่อไมค์ไม่สำเร็จ กรุณากดอนุญาตการใช้ไมโครโฟน"); 
                 joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
             }
@@ -707,15 +717,19 @@
                     screenIcon.className = "ph-fill ph-screencast text-[20px] md:text-[24px]";
                     
                     screenShareStage.classList.remove('hidden');
+                    
                     let playerContainer = document.createElement("div");
                     playerContainer.id = `video-wrapper-local`;
-                    playerContainer.className = "w-full h-full rounded-lg";
+                    playerContainer.style.width = "100%";
+                    playerContainer.style.height = "100%";
+                    playerContainer.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center";
                     screenShareStage.appendChild(playerContainer);
-                    screenTrack.play(playerContainer);
+                    
+                    screenTrack.play(playerContainer, { fit: "contain" });
 
                     screenTrack.on("track-ended", stopScreenShare);
 
-                } catch (err) { console.log("ยกเลิกแชร์หน้าจอ"); }
+                } catch (err) { console.log("ยกเลิกแชร์หน้าจอ", err); }
             } else { await stopScreenShare(); }
         };
 
@@ -739,7 +753,6 @@
             await rtcClient.leave();
             if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); }
             
-            // 🌟 ยกเลิก Auto-Reconnect เมื่อกดปุ่มวางสายเอง
             localStorage.removeItem('dosh_active_voice');
 
             document.querySelectorAll('.speaking-ring').forEach(img => img.classList.remove('speaking-ring'));
@@ -761,7 +774,6 @@
             }
         };
         window.addEventListener('beforeunload', () => { 
-            // ไม่เซ็ต false ตรงนี้แล้ว เพราะเราจะ Reconnect ยกเว้นแต่ปิดจอมือถือ/แท็บทิ้งไปนานๆ
             if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { 
                 updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); 
             } 
@@ -875,7 +887,7 @@
         Object.keys(zones).forEach(status => {
             const zone = zones[status];
             zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('drop-zone-active'); });
-            zone.addEventListener('dragleave', () => zone.classList.remove('drop-zone-active'));
+            zone.addEventListener('dragleave', () => zone.classList.remove('drop-zone-active');
             zone.addEventListener('drop', async (e) => {
                 e.preventDefault(); zone.classList.remove('drop-zone-active');
                 const taskId = e.dataTransfer.getData('text/plain');
