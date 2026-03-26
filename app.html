@@ -6,7 +6,10 @@
     <title>DOSH - Workspace & Lounge</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.20.0.js"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
     <style>
         body { font-family: 'Inter', sans-serif; }
         
@@ -92,8 +95,8 @@
             <div>
                 <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">ช่องข้อความ</h2>
                 <ul class="space-y-0.5" id="channel-list">
-                    <li><a href="#" data-view="chat" data-channel="general" data-name="ประกาศทั่วไป" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-active font-medium text-[15px]"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">#</span>ประกาศทั่วไป</a></li>
-                    <li><a href="#" data-view="chat" data-channel="project" data-name="อัปเดตงานโปรเจกต์" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px]"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">#</span>อัปเดตงานโปรเจกต์</a></li>
+                    <li><a href="#" data-view="chat" data-channel="general" data-name="ประกาศทั่วไป" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-active font-medium text-[15px] group flex items-center"><i class="ph ph-hash text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i>ประกาศทั่วไป</a></li>
+                    <li><a href="#" data-view="chat" data-channel="project" data-name="อัปเดตงานโปรเจกต์" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] group flex items-center"><i class="ph ph-hash text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i>อัปเดตงานโปรเจกต์</a></li>
                 </ul>
             </div>
 
@@ -101,8 +104,8 @@
                 <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">ช่องสำหรับพูด</h2>
                 <ul class="space-y-0.5">
                     <li>
-                        <a href="#" data-view="voice" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center">
-                            <span class="text-[#5c6069] mr-1.5 text-lg leading-none">🔊</span> ห้องนั่งเล่นคุยงาน
+                        <a href="#" data-view="voice" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center group">
+                            <i class="ph ph-speaker-high text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> ห้องนั่งเล่นคุยงาน
                         </a>
                         <div id="voice-active-users" class="pl-8 pt-1 pb-1 space-y-0.5"></div>
                     </li>
@@ -112,10 +115,10 @@
             <div>
                 <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-wider mb-1.5 px-2">เครื่องมือ</h2>
                 <ul class="space-y-0.5">
-                    <li><a href="#" data-view="board" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">📋</span> Task Board</a></li>
-                    <li><a href="#" data-view="whiteboard" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">🎨</span> กระดานไอเดีย</a></li>
-                    <li><a href="settings.html" class="block px-3 py-1.5 rounded-md text-[#80848e] hover:bg-[#1c1d21] hover:text-[#dbdee1] font-medium text-[15px] transition flex items-center"><span class="text-[#5c6069] mr-1.5 text-lg leading-none">⚙️</span> Settings</a></li>
-                    <li><a href="admin.html" id="admin-menu-btn" class="hidden block px-3 py-1.5 rounded-md text-[#da373c] hover:bg-[#da373c]/10 font-medium text-[15px] transition mt-2 flex items-center"><span class="mr-1.5 text-lg leading-none">🛡️</span> Admin Panel</a></li>
+                    <li><a href="#" data-view="board" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center group"><i class="ph ph-kanban text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> Task Board</a></li>
+                    <li><a href="#" data-view="whiteboard" class="nav-btn nav-item block px-3 py-1.5 rounded-md channel-inactive font-medium text-[15px] flex items-center group"><i class="ph ph-palette text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> กระดานไอเดีย</a></li>
+                    <li><a href="settings.html" class="block px-3 py-1.5 rounded-md text-[#80848e] hover:bg-[#1c1d21] hover:text-[#dbdee1] font-medium text-[15px] transition flex items-center group"><i class="ph ph-gear text-[20px] mr-2 text-[#5c6069] group-hover:text-[#dbdee1] transition"></i> Settings</a></li>
+                    <li><a href="admin.html" id="admin-menu-btn" class="hidden block px-3 py-1.5 rounded-md text-[#da373c] hover:bg-[#da373c]/10 font-medium text-[15px] transition mt-2 flex items-center group"><i class="ph ph-shield-warning text-[20px] mr-2 transition"></i> Admin Panel</a></li>
                 </ul>
             </div>
         </nav>
@@ -134,7 +137,7 @@
             <div class="flex items-center space-x-1 pl-1 pr-1">
                 <button id="logout-btn" class="text-[#80848e] hover:text-[#da373c] p-1.5 hover:bg-[#1a1b1e] rounded-md transition tooltip relative" title="ออกจากระบบ">
                     <span class="tooltip-text">ออกจากระบบ</span>
-                    <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    <i class="ph ph-sign-out text-[20px]"></i>
                 </button>
             </div>
         </div>
@@ -145,10 +148,10 @@
         <div id="view-chat" class="flex-1 flex flex-col h-full">
             <header class="p-3.5 border-b border-[#151619] flex justify-between items-center shadow-sm bg-[#0f1013] z-10">
                 <div class="flex items-center space-x-3">
-                    <button class="open-menu md:hidden text-gray-500 hover:text-gray-300 text-2xl transition">☰</button>
-                    <h2 class="text-base font-bold text-[#e4e5e7] flex items-center"><span class="text-[#5c6069] text-2xl mr-2 font-light">#</span><span id="chat-header-title">ประกาศทั่วไป</span></h2>
+                    <button class="open-menu md:hidden text-gray-500 hover:text-gray-300 transition"><i class="ph ph-list text-[24px]"></i></button>
+                    <h2 class="text-base font-bold text-[#e4e5e7] flex items-center"><i class="ph ph-hash text-[22px] mr-2 text-[#5c6069]"></i><span id="chat-header-title">ประกาศทั่วไป</span></h2>
                 </div>
-                <button id="open-members" class="md:hidden text-[#80848e] hover:text-gray-300 text-xl transition">👥</button>
+                <button id="open-members" class="md:hidden text-[#80848e] hover:text-gray-300 transition"><i class="ph ph-users text-[22px]"></i></button>
             </header>
             
             <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-2 relative scroll-smooth"></div>
@@ -156,11 +159,13 @@
             <div class="px-4 pb-6 pt-2 bg-[#0f1013]">
                 <div class="flex items-center bg-[#1a1b1e] rounded-xl px-4 py-2.5 shadow-sm border border-transparent focus-within:border-[#5865F2]/50 transition duration-200">
                     <input type="file" id="file-input" accept="image/png, image/jpeg, image/gif" class="hidden">
-                    <button id="attach-btn" class="text-[#80848e] hover:text-[#d1d3d6] mr-3 bg-[#232429] hover:bg-[#2b2d33] w-7 h-7 rounded-full flex items-center justify-center font-bold text-lg transition tooltip relative">
-                        <span class="tooltip-text">แนบไฟล์รูปภาพ</span>+
+                    <button id="attach-btn" class="text-[#80848e] hover:text-[#d1d3d6] mr-3 bg-[#232429] hover:bg-[#2b2d33] w-8 h-8 rounded-full flex items-center justify-center font-bold transition tooltip relative">
+                        <span class="tooltip-text">แนบไฟล์รูปภาพ</span><i class="ph ph-plus-circle text-[22px]"></i>
                     </button>
                     <input id="chat-input" type="text" placeholder="ส่งข้อความถึง #ห้องแชท" class="flex-1 bg-transparent border-none focus:outline-none text-[15px] text-[#dbdee1] placeholder-[#5c6069]">
-                    <button id="send-btn" class="ml-2 bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-1.5 rounded text-[14px] font-bold transition shadow-sm hidden md:block opacity-90 hover:opacity-100">ส่ง</button>
+                    <button id="send-btn" class="ml-2 text-[#80848e] hover:text-[#5865F2] transition hidden md:flex items-center justify-center tooltip relative">
+                        <span class="tooltip-text">ส่งข้อความ</span><i class="ph-fill ph-paper-plane-right text-[24px]"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -168,22 +173,24 @@
         <div id="view-board" class="hidden flex-1 flex flex-col h-full">
             <header class="p-4 border-b border-[#151619] flex justify-between items-center shadow-sm bg-[#0f1013]">
                 <div class="flex items-center">
-                    <button class="open-menu md:hidden mr-3 text-gray-500 text-2xl">☰</button>
-                    <h2 class="text-lg font-bold text-[#e4e5e7] flex items-center">📋 Task Board</h2>
+                    <button class="open-menu md:hidden mr-3 text-gray-500 transition"><i class="ph ph-list text-[24px]"></i></button>
+                    <h2 class="text-lg font-bold text-[#e4e5e7] flex items-center"><i class="ph ph-kanban text-[24px] mr-2 text-[#5c6069]"></i> Task Board</h2>
                 </div>
-                <button id="add-task-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-4 py-1.5 rounded-md text-sm font-bold transition shadow-sm opacity-90 hover:opacity-100">+ สร้างงานใหม่</button>
+                <button id="add-task-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-4 py-1.5 rounded-md text-sm font-bold transition shadow-sm opacity-90 hover:opacity-100 flex items-center">
+                    <i class="ph ph-plus-circle text-[18px] mr-1.5"></i> สร้างงานใหม่
+                </button>
             </header>
             <div class="flex-1 overflow-x-auto p-6 flex space-x-5 items-start bg-[#0f1013]">
                 <div class="w-80 flex-shrink-0 flex flex-col bg-[#151619] rounded-xl p-3 max-h-full shadow-lg border border-[#1e1f22]">
-                    <h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex justify-between items-center"><span>📌 ต้องทำ (TO DO)</span></h3>
+                    <h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex items-center"><i class="ph-fill ph-push-pin text-[14px] mr-1.5"></i> ต้องทำ (TO DO)</h3>
                     <div id="todo" class="drop-zone space-y-2 overflow-y-auto min-h-[150px] p-1 scroll-smooth"></div>
                 </div>
                 <div class="w-80 flex-shrink-0 flex flex-col bg-[#151619] rounded-xl p-3 max-h-full shadow-lg border border-[#1e1f22]">
-                    <h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex justify-between items-center"><span>⚡ กำลังทำ (IN PROGRESS)</span></h3>
+                    <h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex items-center"><i class="ph-fill ph-lightning text-[14px] mr-1.5 text-yellow-500"></i> กำลังทำ (IN PROGRESS)</h3>
                     <div id="in_progress" class="drop-zone space-y-2 overflow-y-auto min-h-[150px] p-1 scroll-smooth"></div>
                 </div>
                 <div class="w-80 flex-shrink-0 flex flex-col bg-[#151619] rounded-xl p-3 max-h-full shadow-lg border border-[#1e1f22]">
-                    <h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex justify-between items-center"><span>✅ เสร็จสิ้น (DONE)</span></h3>
+                    <h3 class="font-bold text-[#80848e] text-xs uppercase mb-3 px-2 flex items-center"><i class="ph-fill ph-check-circle text-[14px] mr-1.5 text-[#23a559]"></i> เสร็จสิ้น (DONE)</h3>
                     <div id="done" class="drop-zone space-y-2 overflow-y-auto min-h-[150px] p-1 scroll-smooth"></div>
                 </div>
             </div>
@@ -192,8 +199,8 @@
         <div id="view-whiteboard" class="hidden flex-1 flex flex-col h-full bg-[#151619]">
             <header class="p-3 border-b border-[#1e1f22] flex justify-between items-center shadow-sm bg-[#0f1013] z-10 overflow-x-auto">
                 <div class="flex items-center flex-shrink-0">
-                    <button class="open-menu md:hidden mr-3 text-gray-500 text-2xl">☰</button>
-                    <h2 class="text-md font-bold text-[#e4e5e7] flex items-center"><span class="mr-2 text-xl">🎨</span> กระดานไอเดีย</h2>
+                    <button class="open-menu md:hidden mr-3 text-gray-500 transition"><i class="ph ph-list text-[24px]"></i></button>
+                    <h2 class="text-md font-bold text-[#e4e5e7] flex items-center"><i class="ph ph-palette text-[22px] mr-2 text-[#5c6069]"></i> กระดานไอเดีย</h2>
                 </div>
                 <div class="flex items-center space-x-4 bg-[#1a1b1e] p-1.5 px-3 rounded-lg border border-[#2b2d31] ml-4 flex-shrink-0">
                     <div class="flex items-center space-x-2 tooltip" title="เปลี่ยนสี">
@@ -203,17 +210,18 @@
                     <div class="h-6 w-px bg-[#35373c]"></div>
                     <div class="flex items-center space-x-2 tooltip" title="ขนาดเส้น">
                         <span class="tooltip-text">ปรับขนาดเส้น</span>
+                        <i class="ph ph-paint-brush-broad text-[#80848e]"></i>
                         <input type="range" id="wb-size" min="1" max="30" value="3" class="w-20 md:w-28 cursor-pointer accent-[#5865F2]">
                     </div>
                     <div class="h-6 w-px bg-[#35373c]"></div>
-                    <button id="wb-clear" class="bg-[#da373c]/10 text-[#da373c] hover:bg-[#da373c] hover:text-white px-3 py-1 rounded-md text-[13px] font-bold transition flex items-center">
-                        <span class="mr-1">🗑️</span> ล้างกระดาน
+                    <button id="wb-clear" class="bg-[#da373c]/10 text-[#da373c] hover:bg-[#da373c] hover:text-white px-3 py-1.5 rounded-md text-[13px] font-bold transition flex items-center">
+                        <i class="ph ph-trash text-[16px] mr-1.5"></i> ล้างกระดาน
                     </button>
                 </div>
             </header>
             
             <div class="flex-1 relative overflow-hidden bg-[#e4e5e7] cursor-crosshair shadow-inner" id="canvas-container" style="background-image: radial-gradient(#b5bac1 1.5px, transparent 1.5px); background-size: 25px 25px;">
-                <div id="wb-status" class="absolute top-4 left-4 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full font-bold backdrop-blur-sm z-20 transition-opacity duration-300 opacity-0"></div>
+                <div id="wb-status" class="absolute top-4 left-4 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full font-medium backdrop-blur-sm z-20 transition-opacity duration-300 opacity-0 flex items-center"></div>
                 <canvas id="whiteboard-canvas" class="absolute top-0 left-0 w-full h-full z-10"></canvas>
             </div>
         </div>
@@ -221,12 +229,12 @@
         <div id="view-voice" class="hidden flex-1 flex flex-col h-full bg-[#0e0f11] relative">
             <header class="p-4 flex justify-between items-center shadow-md bg-[#0f1013] z-20 border-b border-[#151619]">
                 <div class="flex items-center">
-                    <button class="open-menu md:hidden mr-3 text-[#80848e] text-2xl">☰</button>
-                    <h2 class="text-md font-bold text-[#e4e5e7] flex items-center"><span class="mr-2 text-xl opacity-80">🔊</span> ห้องนั่งเล่นคุยงาน</h2>
+                    <button class="open-menu md:hidden mr-3 text-[#80848e] transition"><i class="ph ph-list text-[24px]"></i></button>
+                    <h2 class="text-md font-bold text-[#e4e5e7] flex items-center"><i class="ph ph-speaker-high text-[22px] mr-2 text-[#5c6069]"></i> ห้องนั่งเล่นคุยงาน</h2>
                 </div>
                 <div class="flex items-center">
-                    <span class="text-[11px] text-[#23a559] font-bold bg-[#23a559]/10 px-2 py-1 rounded border border-[#23a559]/20 mr-3 uppercase tracking-wide">Voice Connected</span>
-                    <button id="open-members-voice" class="md:hidden text-[#80848e] hover:text-gray-300 text-xl transition">👥</button>
+                    <span class="text-[11px] text-[#23a559] font-bold bg-[#23a559]/10 px-2 py-1 rounded border border-[#23a559]/20 mr-3 uppercase tracking-wide flex items-center"><i class="ph-fill ph-circle text-[8px] mr-1.5 animate-pulse"></i>Voice Connected</span>
+                    <button id="open-members-voice" class="md:hidden text-[#80848e] hover:text-gray-300 transition"><i class="ph ph-users text-[22px]"></i></button>
                 </div>
             </header>
 
@@ -234,7 +242,7 @@
 
             <div id="voice-grid" class="flex-1 overflow-y-auto p-4 md:p-8 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 auto-rows-max content-start z-10 bg-[#0e0f11] transition-all">
                 <div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]">
-                    <div class="w-24 h-24 bg-[#151619] rounded-full flex items-center justify-center mb-5 shadow-inner border border-[#1e1f22]"><span class="text-5xl opacity-50">😴</span></div>
+                    <div class="w-24 h-24 bg-[#151619] rounded-full flex items-center justify-center mb-5 shadow-inner border border-[#1e1f22]"><i class="ph ph-users-three text-[48px] opacity-40"></i></div>
                     <p class="font-bold text-lg text-[#949ba4]">ไม่มีใครอยู่ในห้องเสียง</p>
                     <p class="text-sm mt-1">กดเชื่อมต่อด้านล่างเพื่อปลุกห้องนี้ให้ตื่น!</p>
                 </div>
@@ -243,24 +251,28 @@
             <div class="p-5 bg-[#050506] border-t border-[#0a0a0c] flex justify-center items-center shadow-[0_-15px_30px_rgba(0,0,0,0.5)] z-20 h-28 relative">
                 
                 <button id="join-voice-btn" class="bg-[#23a559] hover:bg-[#1e8a49] text-white px-8 py-3.5 rounded-full font-bold transition-all duration-200 shadow-lg hover:-translate-y-0.5 flex items-center text-[15px] opacity-90 hover:opacity-100">
-                    <span class="text-xl mr-2">📞</span> เข้าร่วมการแชทด้วยเสียง
+                    <i class="ph-fill ph-phone-call text-[22px] mr-2"></i> เข้าร่วมการแชทด้วยเสียง
                 </button>
                 
-                <div id="active-voice-ui" class="hidden flex items-center space-x-5">
+                <div id="active-voice-ui" class="hidden flex items-center space-x-6">
                     <div class="flex flex-col items-center group tooltip">
                         <span class="tooltip-text">เปิด/ปิดไมค์</span>
-                        <button id="mute-btn" class="w-14 h-14 bg-[#151619] text-gray-300 rounded-full text-2xl flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]">🎤</button>
+                        <button id="mute-btn" class="w-14 h-14 bg-[#151619] text-gray-300 rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]">
+                            <i id="mute-icon" class="ph ph-microphone text-[24px]"></i>
+                        </button>
                     </div>
 
                     <div class="flex flex-col items-center group tooltip">
                         <span class="tooltip-text">แชร์หน้าจอ (30FPS)</span>
-                        <button id="screen-share-btn" class="w-14 h-14 bg-[#151619] text-gray-300 rounded-full text-2xl flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]">🖥️</button>
+                        <button id="screen-share-btn" class="w-14 h-14 bg-[#151619] text-gray-300 rounded-full flex items-center justify-center hover:bg-[#1c1d21] transition-all duration-200 shadow-md border border-[#1e1f22]">
+                            <i id="screen-icon" class="ph ph-screencast text-[24px]"></i>
+                        </button>
                     </div>
                     
                     <div class="flex flex-col items-center group tooltip">
                         <span class="tooltip-text">ตัดการเชื่อมต่อ</span>
-                        <button id="leave-voice-btn" class="w-14 h-14 bg-[#da373c] text-white rounded-full text-2xl flex items-center justify-center hover:bg-[#c92f33] transition-all duration-200 shadow-lg shadow-[#da373c]/20 hover:-translate-y-0.5 opacity-90 hover:opacity-100">
-                            <svg class="w-6 h-6 transform rotate-[135deg]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                        <button id="leave-voice-btn" class="w-14 h-14 bg-[#da373c] text-white rounded-full flex items-center justify-center hover:bg-[#c92f33] transition-all duration-200 shadow-lg shadow-[#da373c]/20 hover:-translate-y-0.5 opacity-90 hover:opacity-100">
+                            <i class="ph-fill ph-phone-disconnect text-[26px]"></i>
                         </button>
                     </div>
                 </div>
@@ -271,7 +283,7 @@
     <aside id="members-sidebar" class="fixed inset-y-0 right-0 z-50 w-64 bg-[#151619] border-l border-[#0a0a0c] transform translate-x-full md:relative md:translate-x-0 transition-transform duration-300 flex flex-col shadow-[-2px_0_8px_rgba(0,0,0,0.2)]">
         <div class="p-4 border-b border-[#0a0a0c] flex justify-between items-center bg-[#151619]">
             <h2 class="text-[11px] font-bold text-[#6d717a] uppercase tracking-widest">ออนไลน์ — <span id="member-count">0</span></h2>
-            <button id="close-members" class="md:hidden text-[#80848e] hover:text-gray-300">✕</button>
+            <button id="close-members" class="md:hidden text-[#80848e] hover:text-gray-300"><i class="ph ph-x text-[18px]"></i></button>
         </div>
         <div id="members-list" class="flex-1 p-2 space-y-0.5 overflow-y-auto"></div>
     </aside>
@@ -303,7 +315,10 @@
         let localTracks = { audioTrack: null };
         let isMuted = false;
         let myNumericUid = null;
+        
+        // 🌟 ตัวแปรแชร์หน้าจอ (แก้บั๊กรับเสียงด้วย)
         let screenTrack = null;
+        let screenAudioTrack = null;
         let isSharingScreen = false;
 
         // ==========================================
@@ -380,8 +395,8 @@
                 const roleDisplay = user.role === 'Admin' ? `<span class="text-[#da373c] font-extrabold ml-1.5 text-[10px] bg-[#da373c]/10 px-1.5 py-0.5 rounded uppercase">Admin</span>` : '';
                 const nameStyle = user.role === 'Banned' ? 'line-through text-[#da373c]' : (isOnline ? 'text-[#d1d3d6]' : 'text-[#6d717a]');
 
-                const muteIconSmall = user.isMuted ? '<span class="text-[#da373c] ml-auto text-[11px] font-bold">🔇</span>' : '';
-                const muteIconLarge = user.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#151619] rounded-full p-1 border-2 border-[#0e0f11] shadow-sm"><span class="text-[#da373c] text-xs">🔇</span></div>' : '';
+                const muteIconSmall = user.isMuted ? '<i class="ph-fill ph-microphone-slash text-[#da373c] ml-auto text-[14px]"></i>' : '';
+                const muteIconLarge = user.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#151619] rounded-full p-1.5 border-2 border-[#0e0f11] shadow-sm flex items-center justify-center"><i class="ph-fill ph-microphone-slash text-[#da373c] text-[14px]"></i></div>' : '';
 
                 membersList.insertAdjacentHTML('beforeend', `
                 <div class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#1c1d21] hover:text-[#e4e5e7] transition group ${!isOnline ? 'opacity-50' : ''}">
@@ -397,7 +412,7 @@
                 if (user.inVoice && voiceActiveList) {
                     voiceActiveList.insertAdjacentHTML('beforeend', `
                         <div class="flex items-center space-x-2.5 text-[13px] text-[#80848e] py-1 px-2 hover:bg-[#1c1d21] hover:text-[#dbdee1] rounded-md transition group cursor-pointer ml-2">
-                            <div class="relative">
+                            <div class="relative flex-shrink-0">
                                 <img id="img-sidebar-voice-${docSnap.id}" src="${userAvatar}" class="w-6 h-6 rounded-full object-cover transition-all duration-200 opacity-90">
                             </div>
                             <span class="truncate font-medium flex-1">${userName}</span>
@@ -425,7 +440,7 @@
                 else {
                     voiceGrid.innerHTML = `
                         <div id="voice-empty-state" class="col-span-full flex flex-col items-center justify-center mt-32 text-[#6d717a] animate-[fadeIn_0.5s_ease-out]">
-                            <div class="w-24 h-24 bg-[#151619] rounded-full flex items-center justify-center mb-5 shadow-inner border border-[#1e1f22]"><span class="text-5xl opacity-50">😴</span></div>
+                            <div class="w-24 h-24 bg-[#151619] rounded-full flex items-center justify-center mb-5 shadow-inner border border-[#1e1f22]"><i class="ph ph-users-three text-[48px] opacity-40"></i></div>
                             <p class="font-bold text-lg text-[#949ba4]">ไม่มีใครอยู่ในห้องเสียง</p>
                             <p class="text-sm mt-1">กดเชื่อมต่อด้านล่างเพื่อปลุกห้องนี้ให้ตื่น!</p>
                         </div>`;
@@ -543,7 +558,7 @@
             if (docSnap.exists() && !isDrawing) {
                 const data = docSnap.data();
                 if (data.updatedBy && data.updatedBy !== currentUsername) {
-                    wbStatus.textContent = `✏️ ${data.updatedBy} เพิ่งอัปเดตกระดาน`;
+                    wbStatus.innerHTML = `<i class="ph ph-pencil-simple text-[14px] mr-1.5"></i> ${data.updatedBy} เพิ่งอัปเดตกระดาน`;
                     wbStatus.classList.remove('opacity-0');
                     setTimeout(() => wbStatus.classList.add('opacity-0'), 3000);
                 }
@@ -560,7 +575,7 @@
 
 
         // ==========================================
-        // 🎙️ 5. ระบบห้องคุยเสียง (Voice & 🚀 Screen Share 30FPS)
+        // 🎙️ 5. ระบบห้องคุยเสียง (Voice & 🚀 Screen Share แก้บั๊ก)
         // ==========================================
         const joinBtn = document.getElementById('join-voice-btn');
         const leaveBtn = document.getElementById('leave-voice-btn');
@@ -584,7 +599,7 @@
                 joinBtn.classList.add('hidden');
                 activeVoiceUI.classList.remove('hidden');
                 muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]');
-                muteBtn.innerHTML = "🎤";
+                document.getElementById('mute-icon').className = "ph ph-microphone text-[24px]";
 
                 rtcClient.enableAudioVolumeIndicator();
                 rtcClient.on("volume-indicator", volumes => {
@@ -628,28 +643,33 @@
                     }
                 });
 
-            } catch (err) { alert("เกิดข้อผิดพลาดในการเชื่อมต่อไมค์"); joinBtn.innerHTML = '<span class="text-xl mr-2">📞</span> เข้าร่วมการแชทด้วยเสียง'; }
+            } catch (err) { alert("เกิดข้อผิดพลาดในการเชื่อมต่อไมค์"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[22px] mr-2"></i> เข้าร่วมการแชทด้วยเสียง'; }
         }
 
-        // 🚀 อัปเกรดแชร์หน้าจอให้ลื่นไหล 30 FPS ด้วย Motion Mode
+        // 🌟 อัปเกรดแชร์หน้าจอ (แยกภาพและเสียง ป้องกันจอดำ)
         screenShareBtn.onclick = async () => {
+            const screenIcon = document.getElementById('screen-icon');
             if (!isSharingScreen) {
                 try {
-                    screenTrack = await AgoraRTC.createScreenVideoTrack({ 
-                        encoderConfig: {
-                            width: 1920,
-                            height: 1080,
-                            frameRate: 30,       // เฟรมเรต 30FPS
-                            bitrateMax: 3000     // บิตเรตสูงสุด
-                        }, 
-                        optimizationMode: "motion" // เน้นความลื่นไหล
+                    const screenResult = await AgoraRTC.createScreenVideoTrack({ 
+                        encoderConfig: { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 }, 
+                        optimizationMode: "motion" 
                     }, "auto");
                     
-                    await rtcClient.publish(screenTrack);
+                    if (Array.isArray(screenResult)) {
+                        screenTrack = screenResult[0];
+                        screenAudioTrack = screenResult[1];
+                        await rtcClient.publish([screenTrack, screenAudioTrack]);
+                    } else {
+                        screenTrack = screenResult;
+                        await rtcClient.publish(screenTrack);
+                    }
+                    
                     isSharingScreen = true;
                     
                     screenShareBtn.classList.replace('bg-[#151619]', 'bg-[#23a559]');
                     screenShareBtn.classList.replace('text-gray-300', 'text-white');
+                    screenIcon.className = "ph-fill ph-screencast text-[24px]";
                     
                     screenShareStage.classList.remove('hidden');
                     let playerContainer = document.createElement("div");
@@ -664,11 +684,16 @@
             } else { await stopScreenShare(); }
         };
 
+        // 🌟 แก้ไขระบบหยุดแชร์จอ ให้เคลียร์ทั้งภาพและเสียงให้หมด
         async function stopScreenShare() {
             if (screenTrack) { await rtcClient.unpublish(screenTrack); screenTrack.stop(); screenTrack.close(); screenTrack = null; }
+            if (screenAudioTrack) { await rtcClient.unpublish(screenAudioTrack); screenAudioTrack.stop(); screenAudioTrack.close(); screenAudioTrack = null; }
             isSharingScreen = false;
+            
             screenShareBtn.classList.replace('bg-[#23a559]', 'bg-[#151619]');
             screenShareBtn.classList.replace('text-white', 'text-gray-300');
+            document.getElementById('screen-icon').className = "ph ph-screencast text-[24px]";
+            
             const localPlayer = document.getElementById(`video-wrapper-local`);
             if (localPlayer) localPlayer.remove();
             if (screenShareStage.children.length === 0) { screenShareStage.classList.add('hidden'); }
@@ -680,7 +705,7 @@
             await rtcClient.leave();
             if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); }
             document.querySelectorAll('.speaking-ring').forEach(img => img.classList.remove('speaking-ring'));
-            joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<span class="text-xl mr-2">📞</span> เข้าร่วมการแชทด้วยเสียง';
+            joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[22px] mr-2"></i> เข้าร่วมการแชทด้วยเสียง';
             activeVoiceUI.classList.add('hidden');
         }
 
@@ -688,10 +713,14 @@
         muteBtn.onclick = async () => {
             isMuted = !isMuted; localTracks.audioTrack.setEnabled(!isMuted); 
             await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted });
+            const muteIcon = document.getElementById('mute-icon');
             if (isMuted) {
                 muteBtn.classList.remove('bg-[#151619]'); muteBtn.classList.add('bg-gray-800', 'text-[#da373c]');
-                muteBtn.innerHTML = `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd"></path></svg>`;
-            } else { muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); muteBtn.innerHTML = "🎤"; }
+                muteIcon.className = "ph-fill ph-microphone-slash text-[24px]";
+            } else { 
+                muteBtn.classList.add('bg-[#151619]'); muteBtn.classList.remove('bg-gray-800', 'text-[#da373c]'); 
+                muteIcon.className = "ph ph-microphone text-[24px]"; 
+            }
         };
         window.addEventListener('beforeunload', () => { 
             if (currentUserId) { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false }); } 
@@ -712,7 +741,7 @@
             
             if(filteredMessages.length === 0) return chatContainer.innerHTML = `
                 <div class="flex flex-col items-center justify-center h-full text-[#6d717a] animate-[fadeIn_0.4s_ease-out]">
-                    <div class="w-16 h-16 bg-[#151619] rounded-full flex items-center justify-center mb-4 border border-[#1e1f22]"><span class="text-3xl opacity-70">💬</span></div>
+                    <div class="w-16 h-16 bg-[#151619] rounded-full flex items-center justify-center mb-4 border border-[#1e1f22]"><i class="ph ph-chat-teardrop-dots text-[36px] opacity-70"></i></div>
                     <p class="font-bold text-lg text-[#949ba4]">ยินดีต้อนรับสู่ #${activeChannel === 'general' ? 'ประกาศทั่วไป' : 'อัปเดตงานโปรเจกต์'}</p>
                     <p class="text-sm mt-1 text-center">นี่คือจุดเริ่มต้นของช่องนี้ เขียนทักทายทีมของคุณได้เลย</p>
                 </div>`;
@@ -790,7 +819,7 @@
 
                 const cardHTML = `
                     <div draggable="true" data-id="${id}" class="task-card bg-[#1c1d21] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${status === 'done' ? 'border-[#3f4147] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]">
-                        <div class="flex space-x-2 mb-2.5"><span class="${tagColor} text-[10px] font-bold px-2 py-0.5 rounded-sm">${data.tag}</span></div>
+                        <div class="flex space-x-2 mb-2.5"><span class="${tagColor} text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center"><i class="ph-fill ph-tag text-[10px] mr-1"></i>${data.tag}</span></div>
                         <p class="text-[14px] font-medium text-[#d1d3d6] ${status === 'done' ? 'line-through text-[#6d717a]' : ''} leading-snug">${data.title}</p>
                     </div>`;
                 if (zones[status]) zones[status].insertAdjacentHTML('beforeend', cardHTML);
