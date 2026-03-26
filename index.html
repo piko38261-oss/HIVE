@@ -72,7 +72,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        
+        // 🌟 ดึงฟังก์ชันเพิ่มข้อความลงแชทมาใช้ในหน้า Login ด้วย
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I",
@@ -92,16 +94,29 @@
         async function saveUserToDB(user, isNew = false) {
             const userRef = doc(db, "users", user.uid);
             const userSnap = await getDoc(userRef);
-            if (!userSnap.exists() || isNew) {
+            
+            // 🌟 เช็คว่าถ้าเป็นผู้ใช้ใหม่จริงๆ (ข้อมูลยังไม่มีใน Database) ให้สั่งบอททำงาน
+            if (!userSnap.exists()) {
+                const defaultName = user.displayName || user.email.split('@')[0];
+                
                 await setDoc(userRef, {
-                    username: user.displayName || user.email.split('@')[0],
+                    username: defaultName,
                     email: user.email,
                     photoURL: user.photoURL || "",
                     role: "Member",
                     status: "online",
                     createdAt: new Date()
-                }, { merge: true });
+                });
+
+                // 📢 บอทประกาศต้อนรับเด็กใหม่
+                await addDoc(collection(db, "messages"), {
+                    text: `🎉 ยินดีต้อนรับสมาชิกใหม่ **${defaultName}** เข้าสู่ DOSH Server! แวะมาทักทายเพื่อนๆ กันหน่อยเร็ว~`,
+                    senderName: "🤖 System Bot",
+                    channel: "general",
+                    timestamp: serverTimestamp()
+                });
             }
+            
             window.location.href = "app.html";
         }
 
