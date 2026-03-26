@@ -5,8 +5,7 @@
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0e0f11",
-  "theme_color": "#5865F2",
-  "orientation": "portrait",
+  "theme_color": "#1e1f22",
   "icons": [
     {
       "src": "https://ui-avatars.com/api/?name=D&background=5865F2&color=fff&size=192",

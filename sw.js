@@ -1,25 +1,27 @@
-const CACHE_NAME = 'dosh-pwa-cache-v6'; // 🌟 เปลี่ยนตรงนี้เป็น v2 เพื่อบังคับล้างแคชเก่า!
+const CACHE_NAME = 'dosh-pwa-cache-v7';
+
+// 📦 รายชื่อไฟล์ที่ต้องการให้แอปจดจำไว้ในเครื่อง (โหลดไวขึ้น)
 const urlsToCache = [
   './',
   './index.html',
   './app.html',
-  './admin.html',
   './style.css',
-  './main.js'
+  './main.js',
+  './manifest.json'
 ];
 
-// โหลดไฟล์ทั้งหมดเก็บไว้ในเครื่องผู้ใช้ตอนเข้าแอปครั้งแรก
+// ⚙️ ติดตั้ง Service Worker
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('DOSH Caching files (v2)...');
+        console.log('เปิดใช้งาน Cache สำเร็จ');
         return cache.addAll(urlsToCache);
       })
   );
 });
 
-// เวลาใช้งานแอป ให้ดึงข้อมูลจากเครื่องก่อนเน็ต
+// 🔄 ระบบดึงข้อมูล: ถ้าไม่มีเน็ต ให้ดึงจาก Cache มาแสดงแทน
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
@@ -30,15 +32,13 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// เคลียร์แคชเก่าทิ้งเวลาแอปมีการอัปเดตเวอร์ชันใหม่
+// 🧹 ล้าง Cache เก่าทิ้งเวลาอัปเดตเวอร์ชัน (v2, v3...)
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            console.log('🗑️ ลบแคชเวอร์ชันเก่าทิ้ง:', cacheName);
+          if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
         })
