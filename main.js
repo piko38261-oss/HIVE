@@ -38,11 +38,12 @@ let isMuted = false, isSharingScreen = false, myNumericUid = null, currentUserId
 let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false, unreadCounts = { general: 0, project: 0, game_draw: 0 };
 let replyingTo = null; let messageToDelete = null;
 
-// 🌟 ตัวแปรเก็บ Track เสียงของเพื่อนเพื่อปรับความดังรายคน
+// 🌟 ตัวแปรเก็บ Track เสียง และ ค่าระดับเสียงรายคนที่เซฟไว้ในเครื่อง
 let remoteAudioTracks = {}; 
+let userVolumes = JSON.parse(localStorage.getItem('dosh_volumes')) || {};
 
 const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); sfxMsg.volume = 0.5;
-const sfxPing = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); sfxPing.volume = 0.8; // 🌟 เสียงตอนถูกแท็ก
+const sfxPing = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); sfxPing.volume = 0.8;
 
 window.showToast = (msg, type = "success") => {
     const toast = document.createElement("div");
@@ -95,13 +96,15 @@ window.showUserProfile = (userName) => { const u = usersData[userName]; if(!u) r
 document.getElementById('close-profile-card').onclick = () => document.getElementById('profile-card-modal').classList.add('hidden'); document.getElementById('profile-card-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('profile-card-modal')) document.getElementById('profile-card-modal').classList.add('hidden'); });
 
 // ==========================================
-// 🟢 6. โหลดรายชื่อผู้ใช้งาน
+// 🟢 6. โหลดรายชื่อผู้ใช้งาน (และระบบเร่งเสียง)
 // ==========================================
-// 🌟 ฟังก์ชันปรับลด/เพิ่มเสียงรายคน (ใช้กับสไลเดอร์ในการ์ด Voice)
-window.changeUserVolume = (uid, vol) => {
+// 🌟 ฟังก์ชันเปลี่ยนเสียง และเซฟลงเครื่อง!
+window.changeUserVolume = (uid, userId, vol) => {
     if (remoteAudioTracks[uid]) {
-        remoteAudioTracks[uid].setVolume(parseInt(vol)); // Agora ปรับได้สูงสุดระดับ 1000 (ใส่ 300 คือ 3 เท่า)
+        remoteAudioTracks[uid].setVolume(parseInt(vol)); // Agora ปรับความดังได้ถึง 1000! (ค่าปกติคือ 100)
     }
+    userVolumes[userId] = vol; // บันทึกระดับเสียงของคนนี้ไว้
+    localStorage.setItem('dosh_volumes', JSON.stringify(userVolumes)); // เซฟลงในเครื่อง
 };
 
 onSnapshot(collection(db, "users"), (snapshot) => {
@@ -128,8 +131,9 @@ onSnapshot(collection(db, "users"), (snapshot) => {
         if (u.inVoice) { 
             usersInVoiceCount++; 
             const isMe = id === currentUserId;
-            // 🌟 เพิ่มสไลเดอร์ปรับเสียงซ่อนอยู่ด้านล่างของการ์ด
-            const volSlider = (!isMe && u.agoraUid) ? `<div class="w-full mt-1.5 px-3 flex items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()"><i class="ph ph-speaker-high text-[#80848e] text-[12px]"></i><input type="range" min="0" max="300" value="100" class="w-full h-1 accent-[#5865F2] cursor-pointer" oninput="changeUserVolume('${u.agoraUid}', this.value)" title="ปรับเสียง (สูงสุด 300%)"></div>` : `<div class="h-6"></div>`;
+            // 🌟 ดึงค่าระดับเสียงจาก LocalStorage (ถ้าไม่มีให้ตั้ง 100)
+            const savedVol = userVolumes[id] !== undefined ? userVolumes[id] : 100;
+            const volSlider = (!isMe && u.agoraUid) ? `<div class="w-full mt-1.5 px-3 flex items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()"><i class="ph ph-speaker-high text-[#80848e] text-[12px]"></i><input type="range" min="0" max="300" value="${savedVol}" class="w-full h-1 accent-[#5865F2] cursor-pointer" oninput="changeUserVolume('${u.agoraUid}', '${id}', this.value)" title="ปรับเสียง (สูงสุด 300%)"></div>` : `<div class="h-6"></div>`;
 
             voiceGridHTML += `<div class="bg-[#111214] rounded-2xl w-[140px] h-[160px] sm:w-[160px] sm:h-[180px] md:w-[190px] md:h-[210px] pt-4 pb-2 px-2 flex flex-col items-center justify-center relative shadow-xl border border-[#1e1f22] animate-[fadeIn_0.3s_ease-out] hover:border-[#35373c] transition-colors group"><div class="relative mb-2 md:mb-3 flex-shrink-0"><img id="img-grid-voice-${id}" src="${userAvatar}" class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full object-cover bg-gray-900 border-4 border-[#151619] shadow-2xl">${muteIconLarge}</div><p class="font-bold text-[#dbdee1] text-[13px] md:text-[15px] truncate w-full text-center px-2">${userName}</p>${volSlider}</div>`; 
         }
@@ -167,10 +171,88 @@ document.getElementById('logout-btn').addEventListener('click', async () => { if
 window.addEventListener('beforeunload', () => { if (currentUserId && localStorage.getItem('dosh_active_voice') !== 'true') { updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } });
 
 // ==========================================
-// 💬 9. ระบบ Chat & แสดงข้อความ (ระบบแท็ก)
+// 💬 9. ระบบ Chat & แสดงข้อความ (พร้อมระบบแท็กใหม่)
 // ==========================================
 const chatInput = document.getElementById('chat-input');
 const gameChatInput = document.getElementById('game-chat-input');
+
+// 🌟 สร้างหน้าต่างป๊อปอัปสำหรับเลือกรายชื่อตอนพิมพ์ @
+const mentionPopup = document.createElement('div');
+mentionPopup.id = 'mention-popup';
+mentionPopup.className = 'hidden absolute bg-[#2b2d31] border border-[#1e1f22] rounded-lg shadow-2xl z-[100] w-48 max-h-40 overflow-y-auto py-1 animate-[slideUpFade_0.1s_ease-out]';
+document.body.appendChild(mentionPopup);
+
+let currentActiveInput = null;
+let mentionQuery = '';
+
+// ฟังก์ชันตรวจจับเวลาคนพิมพ์ @
+function handleMentionInput(e) {
+    const input = e.target;
+    currentActiveInput = input;
+    const val = input.value;
+    const cursorPos = input.selectionStart;
+    const textBeforeCursor = val.substring(0, cursorPos);
+    
+    // ค้นหาว่าคำสุดท้ายก่อนเคอร์เซอร์ขึ้นต้นด้วย @ หรือเปล่า
+    const match = textBeforeCursor.match(/@([a-zA-Z0-9_ก-๙]*)$/);
+    
+    if (match) {
+        mentionQuery = match[1].toLowerCase();
+        showMentionPopup(input, match[0]);
+    } else {
+        mentionPopup.classList.add('hidden');
+    }
+}
+
+// ฟังก์ชันแสดงรายชื่อเพื่อนให้จิ้มเลือก
+function showMentionPopup(inputEl, fullMatch) {
+    mentionPopup.innerHTML = '';
+    const rect = inputEl.getBoundingClientRect();
+    mentionPopup.style.left = `${rect.left}px`;
+    mentionPopup.style.top = `${rect.top - 160}px`; // ให้ป๊อปอัปเด้งอยู่เหนือช่องพิมพ์
+
+    // กรองหารายชื่อเพื่อนที่ตรงกับที่พิมพ์
+    const matchedUsers = Object.keys(usersData).filter(name => name.toLowerCase().includes(mentionQuery));
+    
+    if (matchedUsers.length === 0) {
+        mentionPopup.classList.add('hidden');
+        return;
+    }
+    mentionPopup.classList.remove('hidden');
+
+    // สร้างรายชื่อให้กด
+    matchedUsers.forEach(name => {
+        const u = usersData[name];
+        const item = document.createElement('div');
+        item.className = 'flex items-center px-3 py-2 hover:bg-[#35373c] cursor-pointer transition';
+        item.innerHTML = `<img src="${u.avatar}" class="w-6 h-6 rounded-full mr-2 object-cover opacity-90"><span class="text-[13px] font-bold text-[#dbdee1]">${name}</span>`;
+        item.onclick = () => {
+            const val = inputEl.value;
+            const cursorPos = inputEl.selectionStart;
+            const textBeforeCursor = val.substring(0, cursorPos);
+            const textAfterCursor = val.substring(cursorPos);
+            
+            // แทนที่ @ เดิม ด้วยชื่อเต็มๆ พร้อมเคาะเว้นวรรคให้ 1 ที
+            const newTextBefore = textBeforeCursor.replace(/@([a-zA-Z0-9_ก-๙]*)$/, `@${name} `);
+            inputEl.value = newTextBefore + textAfterCursor;
+            inputEl.focus();
+            
+            inputEl.selectionStart = inputEl.selectionEnd = newTextBefore.length; // เลื่อนเคอร์เซอร์ไปต่อท้าย
+            mentionPopup.classList.add('hidden');
+        };
+        mentionPopup.appendChild(item);
+    });
+}
+
+chatInput.addEventListener('input', handleMentionInput);
+gameChatInput.addEventListener('input', handleMentionInput);
+
+// กดที่อื่นให้ป๊อปอัปแท็กหายไป
+document.addEventListener('click', (e) => {
+    if (!mentionPopup.contains(e.target) && e.target !== chatInput && e.target !== gameChatInput) {
+        mentionPopup.classList.add('hidden');
+    }
+});
 
 chatInput.addEventListener('input', () => { if (!currentUserId) return; if (!isTyping) { isTyping = true; updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel }); } clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }, 2000); });
 const deleteModal = document.getElementById('delete-confirm-modal'); window.deleteChatMsg = (msgId) => { messageToDelete = msgId; deleteModal.classList.remove('hidden'); }; document.getElementById('cancel-delete-btn').onclick = () => { messageToDelete = null; deleteModal.classList.add('hidden'); }; document.getElementById('confirm-delete-btn').onclick = async () => { if (messageToDelete) { try { await deleteDoc(doc(db, "messages", messageToDelete)); showToast("ลบข้อความสำเร็จ", "success"); } catch (err) { showToast("เกิดข้อผิดพลาดในการลบ", "error"); } messageToDelete = null; deleteModal.classList.add('hidden'); } };
@@ -247,7 +329,6 @@ function renderMessages() {
                 chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 hover:bg-[#2b2d31]/50 border-l-[3px] border-transparent px-2 md:px-4 py-2.5 mt-2 -mx-2 md:-mx-4 group transition duration-150 items-start"><div class="w-8 md:w-10 flex justify-center mt-1"><i class="ph-bold ph-arrow-right text-[#23a559] text-[18px]"></i></div><div class="min-w-0 flex-1"><p class="text-[#949ba4] text-[14px] leading-relaxed"><span class="text-[#dbdee1] font-bold">${cleanName}</span> เพิ่งสไลด์เข้ามาในเซิร์ฟเวอร์! <span class="text-[10px] text-[#5c6069] ml-2 font-medium">${timeString}</span></p><button onclick="sendWave()" class="mt-2.5 flex items-center space-x-2 bg-[#2b2d31] hover:bg-[#35373c] text-[#dbdee1] px-3 py-1.5 rounded-md text-[13px] font-bold transition shadow-sm"><span class="text-[16px]">👋</span> <span>โบกมือทักทาย!</span></button></div></div>`);
                 lastSender = "system_bot_join"; return;
             } else if (formattedText.includes("กระโดดเข้ามา") || formattedText.includes("ออกจากห้องนั่งเล่น")) {
-                // ซ่อนข้อความบอทเข้าออกห้องเสียง
                 return;
             }
             chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#2b2d31]/50 px-2 md:px-4 py-3 mt-4 -mx-2 md:-mx-4 group transition duration-150 relative items-center border-l-[3px] border-transparent hover:border-[#5865F2]"><div class="w-8 md:w-10 h-8 md:h-10 rounded-full bg-[#5865F2] flex items-center justify-center flex-shrink-0 shadow-lg"><i class="ph-fill ph-robot text-white text-[20px]"></i></div><div class="min-w-0 flex-1 pb-1"><div class="flex items-baseline space-x-2"><span class="font-extrabold text-[12px] text-[#5865F2] uppercase tracking-wider">System</span><span class="text-[10px] md:text-[11px] text-[#6d717a] font-medium">${timeString}</span></div><p class="text-[#949ba4] mt-1 text-[13px] md:text-[14px] leading-relaxed">${formattedText}</p></div></div>`);
@@ -343,6 +424,7 @@ async function sendAnyMessage(inputEl, channelStr) {
     const txt = inputEl.value.trim(); if (!txt) return; inputEl.value = ''; 
     clearTimeout(typingTimeout); isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); 
     cmdMenu.classList.add('hidden');
+    mentionPopup.classList.add('hidden');
     
     if(txt.startsWith('/') && channelStr !== 'game_draw') {
         let botReply = "";
@@ -441,12 +523,19 @@ async function joinVoice() {
             await rtcClient.subscribe(u, t); 
             if (t === "audio") {
                 u.audioTrack.play(); 
-                remoteAudioTracks[u.uid] = u.audioTrack; // 🌟 เก็บ Track ไว้ปรับความดัง
+                remoteAudioTracks[u.uid] = u.audioTrack; 
+                
+                // 🌟 เล็งโหลดค่าระดับเสียงเดิมที่เคยเซฟไว้
+                let matchedUserId = null;
+                for(let k in usersData) { if(usersData[k].agoraUid === u.uid) { matchedUserId = usersData[k].id; break; } }
+                if(matchedUserId && userVolumes[matchedUserId] !== undefined) {
+                    u.audioTrack.setVolume(parseInt(userVolumes[matchedUserId]));
+                }
             }
             if (t === "video") { ssStage.classList.remove('hidden'); const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); } 
         }); 
         rtcClient.on("user-unpublished", async (u, t) => { 
-            if (t === "audio") { delete remoteAudioTracks[u.uid]; } // ลบ Track ออกตอนเพื่อนออกห้อง
+            if (t === "audio") { delete remoteAudioTracks[u.uid]; } 
             if (t === "video") { const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); } 
         }); 
         rtcClient.enableAudioVolumeIndicator(); rtcClient.on("volume-indicator", vs => { document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); vs.forEach(v => { if (v.level > 10) { let sId = null; if (v.uid === myNumericUid || v.uid === 0) { sId = currentUserId; } else { for (const k in usersData) { if (usersData[k].agoraUid === v.uid) { sId = usersData[k].id; break; } } } if (sId) { const a1 = document.getElementById(`img-avatar-${sId}`), a2 = document.getElementById(`img-sidebar-voice-${sId}`), a3 = document.getElementById(`img-grid-voice-${sId}`); if(a1) a1.classList.add('speaking-ring'); if(a2) a2.classList.add('speaking-ring'); if(a3) a3.classList.add('speaking-ring'); } } }); }); 
