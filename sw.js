@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hive-pwa-cache-v8';
+const CACHE_NAME = 'hive-pwa-cache-v9';
 
 const urlsToCache = [
   './',
@@ -10,11 +10,18 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+        console.log('เปิดใช้งาน Cache HIVE V9 สำเร็จ');
+        return cache.addAll(urlsToCache);
+    })
+  );
 });
 
 self.addEventListener('fetch', event => {
-  event.respondWith(caches.match(event.request).then(response => response || fetch(event.request)));
+  event.respondWith(
+    caches.match(event.request).then(response => response || fetch(event.request))
+  );
 });
 
 self.addEventListener('activate', event => {
@@ -22,31 +29,36 @@ self.addEventListener('activate', event => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) return caches.delete(cacheName); // ลบแคช V7 ทิ้ง
+          if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
         })
       );
     })
   );
 });
 
-// 🌟 ระบบใหม่! ดักจับเวลากดแจ้งเตือน (Notification Click)
+// 🌟 ดักจับการกดแจ้งเตือนบนมือถือ (ปุ่มวางสาย / ปุ่มเข้าแอป)
 self.addEventListener('notificationclick', event => {
-  event.notification.close(); // ปิดแจ้งเตือนบนหน้าจอ
+  event.notification.close(); // ปิดแจ้งเตือน
   
-  // สั่งให้เด้งกลับมาที่หน้าเว็บแอป HIVE
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-      // 1. ถ้าแอปเปิดแช่อยู่เบื้องหลัง ให้ดึงขึ้นมาด้านหน้า (Focus)
-      for (let i = 0; i < windowClients.length; i++) {
-        const client = windowClients[i];
-        if (client.url && 'focus' in client) {
-          return client.focus();
+  if (event.action === 'leave_call') {
+    // ถ้ากดปุ่ม "วางสาย" ส่งคำสั่งไปที่หน้าเว็บ
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+        windowClients.forEach(client => {
+          client.postMessage({ command: 'leave_voice' });
+        });
+      })
+    );
+  } else {
+    // ถ้ากดที่ตัวแจ้งเตือนเฉยๆ หรือกด "เปิดแอป" ให้เด้งกลับเข้าแอป
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+        for (let i = 0; i < windowClients.length; i++) {
+          const client = windowClients[i];
+          if (client.url && 'focus' in client) return client.focus();
         }
-      }
-      // 2. ถ้าแอปถูกปิดไปแล้ว ให้เปิดหน้าแอปขึ้นมาใหม่
-      if (clients.openWindow) {
-        return clients.openWindow('/'); 
-      }
-    })
-  );
+        if (clients.openWindow) return clients.openWindow('/'); 
+      })
+    );
+  }
 });

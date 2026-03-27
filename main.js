@@ -288,7 +288,6 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('current-user-avatar').src = user.photoURL || `https://ui-avatars.com/api/?name=${currentUsername}&background=5865F2&color=fff&rounded=true&bold=true`;
         try { const userDoc = await getDoc(doc(db, "users", currentUserId)); if (userDoc.exists()) { currentUserRole = userDoc.data().role; if (currentUserRole === 'Admin') document.getElementById('admin-menu-btn').classList.remove('hidden'); } } catch (err) {}
         
-        // ขออนุญาตแจ้งเตือนบนมือถือ/PC
         if ("Notification" in window && Notification.permission === "default") { Notification.requestPermission(); }
         
         const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
@@ -632,7 +631,7 @@ const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.g
 const camBtn = document.getElementById('camera-btn');
 const camIcon = document.getElementById('camera-icon');
 
-// 🌟 ฟังก์ชันสร้างการแจ้งเตือนสายโทร (Ongoing Call Notification)
+// 🌟 ฟังก์ชันสร้างการแจ้งเตือนสายโทร
 async function showCallNotification() {
     if ("Notification" in window && navigator.serviceWorker) {
         if (Notification.permission === "granted") {
@@ -640,12 +639,14 @@ async function showCallNotification() {
             reg.showNotification("HIVE Voice Lounge", {
                 body: "เชื่อมต่อเสียงแล้ว — แตะเพื่อกลับสู่การโทร",
                 icon: "https://ui-avatars.com/api/?name=H&background=23a559&color=fff&size=192",
-                tag: "hive-voice-call", // Tag สำคัญมาก! ใช้สำหรับเรียกปิด
-                requireInteraction: true, // ทำให้แจ้งเตือนไม่หายไปเอง (เหมือนการโทร)
-                vibrate: [200, 100, 200]
+                tag: "hive-voice-call", 
+                requireInteraction: true, 
+                vibrate: [200, 100, 200],
+                actions: [
+                    { action: 'open', title: 'เปิดแอป 📱' },
+                    { action: 'leave_call', title: 'วางสาย 📞' }
+                ]
             });
-        } else if (Notification.permission !== "denied") {
-            Notification.requestPermission();
         }
     }
 }
@@ -655,7 +656,7 @@ async function hideCallNotification() {
     if ("Notification" in window && navigator.serviceWorker) {
         const reg = await navigator.serviceWorker.ready;
         const notifications = await reg.getNotifications({ tag: "hive-voice-call" });
-        notifications.forEach(n => n.close()); // ปิดทุกแจ้งเตือนที่มี Tag นี้
+        notifications.forEach(n => n.close()); 
     }
 }
 
@@ -736,7 +737,7 @@ async function joinVoice() {
         startBackgroundAudioMode(); amIInVoice = true;
         if(latestWPData && latestWPData.videoId) { initOrUpdatePlayer(latestWPData.videoId, latestWPData.time, latestWPData.state, latestWPData.updatedBy); }
 
-        // 🌟 ยิงแจ้งเตือนค้างไว้ตอนเข้าห้องเสียง
+        // 🌟 เรียกแจ้งเตือนเมื่อเข้าห้องสำเร็จ
         showCallNotification();
 
     } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } 
@@ -879,9 +880,11 @@ async function leaveVoice() {
     if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; } amIInVoice = false;
     if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; } document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; document.getElementById('watch-party-stage').classList.add('hidden'); document.getElementById('watch-party-stage').classList.remove('flex');
     
-    // 🌟 ลบแจ้งเตือนค้างตอนออกจากห้องเสียง
+    // 🌟 ลบการแจ้งเตือนตอนออก
     hideCallNotification();
 }
+
+window.leaveVoice = leaveVoice; // สำคัญมาก เพื่อให้ SW เรียกใช้ได้!
 joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
 muteBtn.onclick = async () => { isMuted = !isMuted; localTracks.audioTrack.setEnabled(!isMuted); await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); const muteIcon = document.getElementById('mute-icon'); if (isMuted) { muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; } else { muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; } };
 
@@ -895,7 +898,18 @@ Object.keys(zones).forEach(s => { const z = zones[s]; z.addEventListener('dragov
 const taskModal = document.getElementById('task-modal');
 document.getElementById('add-task-btn').addEventListener('click', () => { document.getElementById('task-title-input').value = ''; taskModal.classList.remove('hidden'); }); document.getElementById('close-task-modal').addEventListener('click', () => { taskModal.classList.add('hidden'); }); document.getElementById('confirm-task-btn').addEventListener('click', async () => { const title = document.getElementById('task-title-input').value.trim(); const tag = document.getElementById('task-tag-input').value; if (!title) { showToast("กรุณากรอกชื่องานก่อนครับ!", "error"); return; } await addDoc(collection(db, "tasks"), { title: title, tag: tag, status: 'todo', timestamp: serverTimestamp() }); taskModal.classList.add('hidden'); showToast("เพิ่มงานใหม่ลงในกระดานแล้ว!", "success"); });
 
-if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(r => console.log('✅ HIVE SW Active')).catch(e => console.log('❌ SW Fail:', e)); }); }
+if ('serviceWorker' in navigator) { 
+    window.addEventListener('load', () => { 
+        navigator.serviceWorker.register('sw.js').then(r => console.log('✅ HIVE SW Active')).catch(e => console.log('❌ SW Fail:', e)); 
+        
+        // 🌟 รอรับคำสั่งจาก SW (เมื่อผู้ใช้กดปุ่มวางสายบนมือถือ)
+        navigator.serviceWorker.addEventListener('message', event => {
+            if (event.data && event.data.command === 'leave_voice') {
+                leaveVoice();
+            }
+        });
+    }); 
+}
 
 // 🌟 ระบบ Tour และเปลี่ยนชื่อเป็น HIVE
 const tourOverlay = document.getElementById('tour-overlay'); const tourTooltip = document.getElementById('tour-tooltip'); const tourTitle = document.getElementById('tour-title'); const tourDesc = document.getElementById('tour-desc'); const tourStepCount = document.getElementById('tour-step-count'); const tourNextBtn = document.getElementById('tour-next-btn'); const tourSkipBtn = document.getElementById('tour-skip-btn');
