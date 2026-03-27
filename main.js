@@ -674,3 +674,20 @@ tourNextBtn.onclick = () => { currentTourStep++; if (currentTourStep >= tourStep
 tourSkipBtn.onclick = endTour;
 
 setTimeout(() => { if (!localStorage.getItem('dosh_tour_completed') && currentUserId) { startTour(); } }, 2000);
+
+// ==========================================
+// 🎬 14. ระบบ Splash Screen (แอนิเมชันเปิดแอป)
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+    const splashScreen = document.getElementById('splash-screen');
+    if (splashScreen) {
+        // หน่วงเวลาให้แอนิเมชันเล่นความเท่สัก 2.5 วินาที แล้วค่อยเฟดออก
+        setTimeout(() => {
+            if (document.body.contains(splashScreen)) {
+                splashScreen.classList.add('opacity-0');
+                // รอให้ CSS transition (opacity 500ms) เฟดเสร็จก่อนค่อยลบ div ทิ้ง
+                setTimeout(() => splashScreen.remove(), 500);
+            }
+        }, 2500); 
+    }
+});
