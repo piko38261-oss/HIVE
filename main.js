@@ -10,9 +10,10 @@ const app = initializeApp(firebaseConfig); const auth = getAuth(app); const db =
 const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a"; const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
 
 // ==========================================
-// 🧠 2. ระบบ AI
+// 🧠 2. ระบบ AI คิดคำศัพท์ (Gemini API)
 // ==========================================
 const GEMINI_API_KEY = "AIzaSyCifkioB2z1Ho9LAGSFBYWtV-kM4bgtzhw"; 
+
 async function getWordFromAI() {
     try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
@@ -22,13 +23,14 @@ async function getWordFromAI() {
         const data = await res.json();
         return data.candidates[0].content.parts[0].text.replace(/[\r\n.]/g, "").trim();
     } catch (err) {
+        console.log("❌ AI เอ๋อ หรือ API หมดอายุ:", err);
         const backup = ["ไดโนเสาร์", "ชาบู", "ยูทูบเบอร์", "มนุษย์ต่างดาว", "แฮมเบอร์เกอร์", "ชานมไข่มุก"];
         return backup[Math.floor(Math.random() * backup.length)];
     }
 }
 
 // ==========================================
-// ⚙️ 3. ตัวแปรและฟังก์ชันช่วยเหลือ
+// ⚙️ 3. ตัวแปรและฟังก์ชันช่วยเหลือ (Globals)
 // ==========================================
 const rtcClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 let localTracks = { audioTrack: null, videoTrack: null }, screenTrack = null, screenAudioTrack = null;
@@ -37,7 +39,7 @@ let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false, un
 let replyingTo = null; let messageToDelete = null;
 
 let remoteAudioTracks = {}; 
-let remoteVideoTracks = {}; // เก็บ Track วิดีโอของเพื่อนๆ ไว้
+let remoteVideoTracks = {}; 
 let userVolumes = JSON.parse(localStorage.getItem('dosh_volumes')) || {};
 
 const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); sfxMsg.volume = 0.5;
@@ -62,7 +64,7 @@ function startBackgroundAudioMode() {
         navigator.mediaSession.metadata = new MediaMetadata({ title: 'HIVE Voice Lounge', artist: 'Active Call', album: currentUsername, artwork: [{ src: 'https://ui-avatars.com/api/?name=H&background=5865F2&size=512', sizes: '512x512', type: 'image/png' }] });
         const silentAudio = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3'); silentAudio.volume = 0.01; silentAudio.loop = true;
         navigator.mediaSession.setActionHandler('play', () => silentAudio.play()); navigator.mediaSession.setActionHandler('pause', () => silentAudio.pause());
-        silentAudio.play().catch(e => {});
+        silentAudio.play().catch(e => console.log("Background Audio Triggered"));
     }
 }
 
@@ -134,7 +136,6 @@ onSnapshot(collection(db, "users"), (snapshot) => {
             currentVoiceCardIds.push(`voice-card-${id}`);
             let card = document.getElementById(`voice-card-${id}`);
             
-            // 🌟 สร้างการ์ดใหม่เฉพาะคนที่ยังไม่มีในจอ เพื่อไม่ให้วิดีโอกระพริบ
             if (!card) {
                 voiceGrid.insertAdjacentHTML('beforeend', `
                     <div id="voice-card-${id}" class="bg-[#111214] rounded-2xl w-[140px] h-[160px] sm:w-[160px] sm:h-[180px] md:w-[190px] md:h-[210px] pt-4 pb-2 px-2 flex flex-col items-center justify-center relative shadow-xl border border-[#1e1f22] animate-[fadeIn_0.3s_ease-out] hover:border-[#35373c] transition-colors group overflow-hidden">
@@ -148,12 +149,10 @@ onSnapshot(collection(db, "users"), (snapshot) => {
                     </div>
                 `);
                 
-                // ดึงภาพจากกล้องเพื่อนมาใส่ให้ทันทีถ้าเค้าเปิดกล้องอยู่แล้ว
                 if (u.isVideoOn && remoteVideoTracks[u.agoraUid]) {
                     setTimeout(() => { remoteVideoTracks[u.agoraUid].play(`cam-container-${id}`, { fit: "cover" }); }, 100);
                 }
             } else {
-                // อัปเดตข้อมูลให้คนเดิมโดยไม่เตะกล่องวิดีโอทิ้ง
                 const camCont = document.getElementById(`cam-container-${id}`);
                 const avCont = document.getElementById(`avatar-container-${id}`);
                 const muteBadge = document.getElementById(`mute-badge-${id}`);
@@ -163,7 +162,6 @@ onSnapshot(collection(db, "users"), (snapshot) => {
                 if (u.isVideoOn) {
                     camCont.classList.remove('hidden');
                     avCont.classList.add('hidden');
-                    // ถ้าในกล่องยังไม่มีวิดีโอ ให้เอามาใส่
                     if (camCont.innerHTML === '' && remoteVideoTracks[u.agoraUid]) {
                         remoteVideoTracks[u.agoraUid].play(camCont, { fit: "cover" });
                     }
@@ -176,14 +174,12 @@ onSnapshot(collection(db, "users"), (snapshot) => {
         }
     });
 
-    // ลบการ์ดคนที่ออกห้องไปแล้ว
     Array.from(voiceGrid.children).forEach(child => {
         if (child.id.startsWith('voice-card-') && !currentVoiceCardIds.includes(child.id)) {
             child.remove();
         }
     });
 
-    // หน้าจอว่างเปล่าตอนไม่มีคน
     if (usersInVoiceCount === 0) {
         if (!document.getElementById('empty-voice')) {
             voiceGrid.innerHTML = `<div id="empty-voice" class="w-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a]"><div class="w-20 h-20 md:w-24 md:h-24 bg-[#111214] rounded-full flex items-center justify-center mb-4 border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] opacity-40"></i></div><p class="font-bold text-base text-[#949ba4]">ไม่มีใครอยู่ในห้องเสียง</p></div>`;
@@ -554,7 +550,6 @@ onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => {
 // ==========================================
 const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.getElementById('leave-voice-btn'), muteBtn = document.getElementById('mute-btn'), ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
 
-// 🌟 เพิ่มปุ่มเปิดกล้อง
 const camBtn = document.getElementById('camera-btn');
 const camIcon = document.getElementById('camera-icon');
 
@@ -577,20 +572,17 @@ async function joinVoice() {
             if (t === "video") { 
                 remoteVideoTracks[u.uid] = u.videoTrack;
                 
-                // 🌟 ตรวจสอบว่าเพื่อนกำลังแชร์หน้าจอ หรือ เปิดกล้อง
                 let matchedUserId = null;
                 for(let k in usersData) { if(usersData[k].agoraUid === u.uid) { matchedUserId = usersData[k].id; break; } }
                 
                 if (matchedUserId) {
                     const uData = usersData[Object.keys(usersData).find(k => usersData[k].id === matchedUserId)];
                     if (uData && uData.isSharingScreen) {
-                        // 🖥️ แชร์หน้าจอ -> เอาไปไว้ตรงเวทีกลาง
                         ssStage.classList.remove('hidden'); 
                         const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); 
                         let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; 
                         ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); 
                     } else {
-                        // 📹 เปิดกล้อง -> เอาไปใส่ในกรอบโปรไฟล์กลมๆ
                         const camCont = document.getElementById(`cam-container-${matchedUserId}`);
                         if (camCont) {
                             camCont.classList.remove('hidden');
@@ -626,7 +618,6 @@ async function joinVoice() {
     } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } 
 }
 
-// 🌟 ระบบเปิดกล้อง
 camBtn.onclick = async () => {
     if (isSharingScreen) { showToast("กรุณาปิดแชร์หน้าจอก่อนเปิดกล้องครับ", "error"); return; }
     
@@ -641,7 +632,6 @@ camBtn.onclick = async () => {
             camBtn.classList.remove('bg-[#2b2d31]'); camBtn.classList.add('bg-[#23a559]', 'text-white');
             camIcon.className = "ph-fill ph-video-camera text-[20px] md:text-[24px]";
             
-            // แสดงวิดีโอตัวเองทันที
             const myCamCont = document.getElementById(`cam-container-${currentUserId}`);
             const myAvCont = document.getElementById(`avatar-container-${currentUserId}`);
             if(myCamCont && myAvCont) {
@@ -672,7 +662,6 @@ async function stopCamera() {
     camBtn.classList.add('bg-[#2b2d31]'); camBtn.classList.remove('bg-[#23a559]', 'text-white');
     camIcon.className = "ph ph-video-camera text-[20px] md:text-[24px]";
     
-    // คืนค่าโปรไฟล์รูปกลับมา
     const myCamCont = document.getElementById(`cam-container-${currentUserId}`);
     const myAvCont = document.getElementById(`avatar-container-${currentUserId}`);
     if(myCamCont && myAvCont) {
@@ -751,7 +740,7 @@ async function stopScreenShare() {
 
 async function leaveVoice() { 
     if (isSharingScreen) await stopScreenShare(); 
-    if (isVideoOn) await stopCamera(); // เพิ่มการเคลียร์กล้องตอนออกห้อง
+    if (isVideoOn) await stopCamera(); 
     
     if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); } 
     await rtcClient.leave(); if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false }); } 
@@ -773,3 +762,76 @@ Object.keys(zones).forEach(s => { const z = zones[s]; z.addEventListener('dragov
 
 const taskModal = document.getElementById('task-modal');
 document.getElementById('add-task-btn').addEventListener('click', () => { document.getElementById('task-title-input').value = ''; taskModal.classList.remove('hidden'); }); document.getElementById('close-task-modal').addEventListener('click', () => { taskModal.classList.add('hidden'); }); document.getElementById('confirm-task-btn').addEventListener('click', async () => { const title = document.getElementById('task-title-input').value.trim(); const tag = document.getElementById('task-tag-input').value; if (!title) { showToast("กรุณากรอกชื่องานก่อนครับ!", "error"); return; } await addDoc(collection(db, "tasks"), { title: title, tag: tag, status: 'todo', timestamp: serverTimestamp() }); taskModal.classList.add('hidden'); showToast("เพิ่มงานใหม่ลงในกระดานแล้ว!", "success"); });
+
+if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(r => console.log('✅ HIVE SW Active')).catch(e => console.log('❌ SW Fail:', e)); }); }
+
+// 🌟 ระบบ Tour และเปลี่ยนชื่อเป็น HIVE
+const tourOverlay = document.getElementById('tour-overlay'); const tourTooltip = document.getElementById('tour-tooltip'); const tourTitle = document.getElementById('tour-title'); const tourDesc = document.getElementById('tour-desc'); const tourStepCount = document.getElementById('tour-step-count'); const tourNextBtn = document.getElementById('tour-next-btn'); const tourSkipBtn = document.getElementById('tour-skip-btn');
+const tourSteps = [ { target: null, title: "ยินดีต้อนรับสู่ HIVE! 🎉", desc: "Super App สำหรับทีมครีเอทีฟและมัลติมีเดีย จบครบทุกงานในเว็บเดียว! เดี๋ยวเราจะพาไปดูว่ามีเครื่องมืออะไรให้ใช้บ้าง", pos: "center" }, { target: ".nav-btn[data-view='chat']", title: "1. ห้องแชทอัจฉริยะ 💬", desc: "คุยงาน ส่งไฟล์ ซูมรูปภาพ พิมพ์คำสั่ง / บอท หรือแม้แต่ 'ตอบกลับข้อความ' ก็ทำได้ครบจบที่นี่!", pos: "right" }, { target: ".nav-btn[data-view='voice']", title: "2. ห้องนั่งเล่น (Voice Lounge) 🎙️", desc: "เปิดไมค์คุยงาน แชร์หน้าจอ (Screen Share) หรือจะเปิดคลิป YouTube รัน Watch Party ดูพร้อมกันทั้งแก๊งก็ยังได้!", pos: "right" }, { target: ".nav-btn[data-view='board']", title: "3. ระบบกระดานงาน (Task Board) 📋", desc: "สร้างงาน จัดหมวดหมู่ แล้วลากแปะ (Drag & Drop) เพื่ออัปเดตสถานะงานให้เพื่อนๆ ในทีมรู้ความคืบหน้าแบบ Real-time", pos: "right" }, { target: "#mini-profile-btn", title: "4. ปรับแต่งโปรไฟล์ 🪪", desc: "กดตรงนี้เพื่อตั้งค่า 'รูปภาพปก (Banner)' เปลี่ยนสีชื่อ และตั้งสถานะ (Custom Status) โชว์ความเท่ให้เพื่อนในทีมเห็น!", pos: "top" } ];
+let currentTourStep = 0; let activeHighlightTarget = null;
+
+function highlightElement(selector, pos) { 
+    if (activeHighlightTarget) activeHighlightTarget.classList.remove('relative', 'z-[102]', 'ring-4', 'ring-[#5865F2]', 'ring-offset-4', 'ring-offset-[#0e0f11]', 'rounded-lg', 'bg-[#1a1b1e]'); 
+    if (!selector) return; 
+    const el = document.querySelector(selector); 
+    if (el) { 
+        if(window.innerWidth < 768) { sidebar.classList.add('open'); overlay.classList.add('active'); } 
+        el.classList.add('relative', 'z-[102]', 'ring-4', 'ring-[#5865F2]', 'ring-offset-4', 'ring-offset-[#0e0f11]', 'rounded-lg', 'bg-[#1a1b1e]'); 
+        activeHighlightTarget = el; 
+        
+        setTimeout(() => {
+            const rect = el.getBoundingClientRect(); 
+            let tTop, tLeft;
+            
+            if (pos === "top") {
+                tTop = rect.top - tourTooltip.offsetHeight - 20;
+                tLeft = rect.left;
+            } else {
+                tTop = rect.top + (rect.height / 2) - (tourTooltip.offsetHeight / 2); 
+                tLeft = rect.right + 20; 
+                if(window.innerWidth < 768 || tLeft + 340 > window.innerWidth) { 
+                    tTop = rect.bottom + 20; 
+                    tLeft = 20; 
+                } 
+            }
+            
+            if (tTop + tourTooltip.offsetHeight > window.innerHeight) { tTop = window.innerHeight - tourTooltip.offsetHeight - 20; }
+            if (tTop < 20) tTop = 20; 
+            
+            tourTooltip.style.top = `${tTop}px`; 
+            tourTooltip.style.left = `${tLeft}px`; 
+        }, 10);
+    } 
+}
+
+function showTourStep(index) { 
+    const step = tourSteps[index]; tourTitle.innerHTML = step.title; tourDesc.innerHTML = step.desc; tourStepCount.textContent = `${index + 1}/${tourSteps.length}`; 
+    if (index === tourSteps.length - 1) { tourNextBtn.innerHTML = `เริ่มใช้งาน HIVE! <i class="ph-fill ph-rocket-launch ml-1.5"></i>`; tourNextBtn.classList.replace('bg-[#5865F2]', 'bg-[#23a559]'); tourNextBtn.classList.replace('hover:bg-[#4752C4]', 'hover:bg-[#1e8a49]'); } 
+    else { tourNextBtn.innerHTML = `ต่อไป <i class="ph-fill ph-caret-right ml-1.5"></i>`; } 
+    
+    if (step.pos === "center") { tourTooltip.style.top = "50%"; tourTooltip.style.left = "50%"; tourTooltip.style.transform = "translate(-50%, -50%)"; highlightElement(null); } 
+    else { tourTooltip.style.transform = "none"; highlightElement(step.target, step.pos); } 
+}
+
+function startTour() { currentTourStep = 0; tourOverlay.classList.remove('hidden'); tourTooltip.classList.remove('hidden'); showTourStep(currentTourStep); } 
+function endTour() { tourOverlay.classList.add('hidden'); tourTooltip.classList.add('hidden'); highlightElement(null); localStorage.setItem('dosh_tour_completed', 'true'); showToast("🎉 จบทัวร์แล้ว! ลุยงานกันเลย!", "success"); if(window.innerWidth < 768) { sidebar.classList.remove('open'); overlay.classList.remove('active'); } }
+
+tourNextBtn.onclick = () => { currentTourStep++; if (currentTourStep >= tourSteps.length) { endTour(); } else { showTourStep(currentTourStep); } }; 
+tourSkipBtn.onclick = endTour;
+
+setTimeout(() => { if (!localStorage.getItem('dosh_tour_completed') && currentUserId) { startTour(); } }, 2000);
+
+// ==========================================
+// 🎬 14. ระบบ Splash Screen (แอนิเมชันเปิดแอป)
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+    const splashScreen = document.getElementById('splash-screen');
+    if (splashScreen) {
+        setTimeout(() => {
+            if (document.body.contains(splashScreen)) {
+                splashScreen.classList.add('opacity-0');
+                setTimeout(() => splashScreen.remove(), 500);
+            }
+        }, 2500); 
+    }
+});
