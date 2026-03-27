@@ -91,11 +91,14 @@ document.querySelectorAll('.nav-btn').forEach(btn => { btn.onclick = (e) => { e.
 if (view === 'game-draw') { activeChannel = 'game_draw'; unreadCounts[activeChannel] = 0; updateUnreadBadge(activeChannel); renderMessages(); setTimeout(initGameCanvasSize, 100); }
 if (view === 'whiteboard') setTimeout(initCanvasSize, 100); sidebar.classList.remove('open'); overlay.classList.remove('active'); }; });
 
-window.showUserProfile = (userName) => { const u = usersData[userName]; if(!u) return; document.getElementById('profile-card-name').textContent = userName; document.getElementById('profile-card-avatar').src = u.avatar; const bannerImg = document.getElementById('profile-card-banner'); if (u.banner) { bannerImg.src = u.banner; bannerImg.classList.remove('hidden'); } else { bannerImg.classList.add('hidden'); } document.getElementById('profile-card-status').textContent = u.customStatus || 'ไม่ได้ตั้งสถานะ'; let badges = ''; if(u.role === 'Admin') badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#da373c] mr-2 shadow-[0_0_8px_#da373c]"></div> Admin</span>'; else badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#5865F2] mr-2 shadow-[0_0_8px_#5865F2]"></div> Member</span>'; document.getElementById('profile-card-badges').innerHTML = badges; document.getElementById('profile-card-modal').classList.remove('hidden'); }
+window.showUserProfile = (userName) => { const u = usersData[userName]; if(!u) return; document.getElementById('profile-card-name').textContent = userName; document.getElementById('profile-card-avatar').src = u.avatar; const bannerImg = document.getElementById('profile-card-banner'); if (u.banner) { bannerImg.src = u.banner; bannerImg.classList.remove('hidden'); } else { bannerImg.classList.add('hidden'); } document.getElementById('profile-card-status').textContent = u.customStatus || 'ไม่ได้ตั้งสถานะ'; let badges = ''; if(u.role === 'Admin') badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#da373c] mr-2 shadow-[0_0_8px_#da373c]"></div> Admin</span>'; else badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#5865F2] mr-2 shadow-[0_0_8px_#5865F2]"></div> Member</span>'; 
+// 🌟 โชว์ป้าย GIF VIP ถ้ารูปเป็น .gif
+if (u.avatar.toLowerCase().includes('.gif') || u.banner.toLowerCase().includes('.gif')) { badges += '<span class="inline-flex items-center bg-gradient-to-r from-pink-500 to-purple-500 border border-white/20 px-3 py-1.5 rounded-lg text-[12px] text-white font-bold shadow-[0_0_15px_rgba(236,72,153,0.5)] animate-pulse"><i class="ph-fill ph-sparkle mr-1.5"></i> VIP</span>'; }
+document.getElementById('profile-card-badges').innerHTML = badges; document.getElementById('profile-card-modal').classList.remove('hidden'); }
 document.getElementById('close-profile-card').onclick = () => document.getElementById('profile-card-modal').classList.add('hidden'); document.getElementById('profile-card-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('profile-card-modal')) document.getElementById('profile-card-modal').classList.add('hidden'); });
 
 // ==========================================
-// 🟢 6. โหลดรายชื่อผู้ใช้งาน (ระบบ Grid อัจฉริยะ)
+// 🟢 6. โหลดรายชื่อผู้ใช้งาน
 // ==========================================
 window.changeUserVolume = (uid, userId, vol) => {
     if (remoteAudioTracks[uid]) { remoteAudioTracks[uid].setVolume(parseInt(vol)); }
@@ -173,12 +176,117 @@ onSnapshot(collection(db, "users"), (snapshot) => {
 });
 
 // ==========================================
-// 🎨 7. โปรไฟล์ Settings
+// 🎨 7. โปรไฟล์ Settings & ✂️ ระบบ Cropper + GIF Support
 // ==========================================
 const settingsModal = document.getElementById('settings-modal'), avatarInput = document.getElementById('settings-avatar-input'), bannerInput = document.getElementById('settings-banner-input');
-document.getElementById('open-settings-btn').onclick = document.getElementById('mini-profile-btn').onclick = (e) => { e.preventDefault(); document.getElementById('settings-avatar-preview').src = document.getElementById('current-user-avatar').src; settingsModal.classList.remove('hidden'); sidebar.classList.remove('open'); overlay.classList.remove('active'); }; document.getElementById('close-settings-btn').onclick = () => { settingsModal.classList.add('hidden'); }; document.getElementById('settings-avatar-wrapper').onclick = () => avatarInput.click(); document.getElementById('settings-banner-wrapper').onclick = () => bannerInput.click();
-async function uploadImage(file, type) { showToast(`กำลังอัปโหลด${type === 'avatar' ? 'โปรไฟล์' : 'ภาพปก'}... ⏳`, "info"); document.getElementById(`settings-${type}-wrapper`).classList.add('opacity-50', 'pointer-events-none'); try { const fd = new FormData(); fd.append("image", file); const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const r = await res.json(); if (r.success) { if(type === 'avatar') { await updateProfile(auth.currentUser, { photoURL: r.data.url }); await updateDoc(doc(db, "users", currentUserId), { photoURL: r.data.url }); document.getElementById('settings-avatar-preview').src = r.data.url; document.getElementById('current-user-avatar').src = r.data.url; } else { await updateDoc(doc(db, "users", currentUserId), { bannerURL: r.data.url }); document.getElementById('settings-banner-preview').src = r.data.url; document.getElementById('settings-banner-preview').classList.remove('hidden'); } showToast("อัปโหลดสำเร็จ!", "success"); } } catch(err) { showToast("เกิดข้อผิดพลาดในการอัปโหลด", "error"); } finally { document.getElementById(`settings-${type}-wrapper`).classList.remove('opacity-50', 'pointer-events-none'); } }
-avatarInput.onchange = (e) => { if(e.target.files[0]) uploadImage(e.target.files[0], 'avatar'); avatarInput.value = ""; }; bannerInput.onchange = (e) => { if(e.target.files[0]) uploadImage(e.target.files[0], 'banner'); bannerInput.value = ""; };
+let cropper = null;
+let currentCropType = ''; // 'avatar' หรือ 'banner'
+
+document.getElementById('open-settings-btn').onclick = document.getElementById('mini-profile-btn').onclick = (e) => { 
+    e.preventDefault(); 
+    document.getElementById('settings-avatar-preview').src = document.getElementById('current-user-avatar').src; 
+    settingsModal.classList.remove('hidden'); sidebar.classList.remove('open'); overlay.classList.remove('active'); 
+}; 
+document.getElementById('close-settings-btn').onclick = () => { settingsModal.classList.add('hidden'); }; 
+
+// กดแล้วเปิดหน้าต่างเลือกไฟล์
+document.getElementById('settings-avatar-wrapper').onclick = () => avatarInput.click(); 
+document.getElementById('settings-banner-wrapper').onclick = () => bannerInput.click();
+
+// 🌟 ฟังก์ชันจัดการไฟล์เมื่อเลือกรูปเสร็จ
+function handleImageSelect(e, type) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // 🔥 AI สมองกล: ถ้ารูปเป็น GIF ให้ข้ามการตัดรูปไปเลย เพื่อรักษาอนิเมชั่นไว้!
+    if (file.type === 'image/gif') {
+        showToast("ว้าว! ตรวจพบรูปเคลื่อนไหว (GIF) กำลังอัปโหลดแบบ VIP!", "info");
+        uploadImage(file, type);
+        e.target.value = "";
+        return;
+    }
+
+    // ถ้ารูปเป็น JPG/PNG ปกติ ให้เด้งหน้าต่างตัดรูป (Cropper)
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        document.getElementById('crop-image-target').src = event.target.result;
+        document.getElementById('crop-modal').classList.remove('hidden');
+        currentCropType = type;
+
+        if (cropper) { cropper.destroy(); }
+        
+        // กำหนดสัดส่วน (โปรไฟล์สี่เหลี่ยมจัตุรัส 1:1, หน้าปกแนวยาว ~3:1)
+        const aspectRatio = type === 'avatar' ? 1 / 1 : 16 / 5; 
+
+        cropper = new Cropper(document.getElementById('crop-image-target'), {
+            aspectRatio: aspectRatio,
+            viewMode: 2,
+            dragMode: 'move',
+            background: false,
+        });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ""; // รีเซ็ต input หลังจากอ่านไฟล์เสร็จ
+}
+
+avatarInput.onchange = (e) => handleImageSelect(e, 'avatar');
+bannerInput.onchange = (e) => handleImageSelect(e, 'banner');
+
+// 🌟 ฟังก์ชันยืนยันการตัดรูป
+document.getElementById('confirm-crop-btn').onclick = () => {
+    if (!cropper) return;
+    
+    // ดึงภาพที่ตัดเสร็จแล้ว
+    const canvas = cropper.getCroppedCanvas({
+        width: currentCropType === 'avatar' ? 400 : 1200,
+        height: currentCropType === 'avatar' ? 400 : 375,
+        fillColor: '#1e1f22' // สีพื้นหลังถ้าเกิดรูปโปร่งใส
+    });
+
+    // แปลงเป็นไฟล์ภาพ แล้วส่งเข้าฟังก์ชันอัปโหลด
+    canvas.toBlob((blob) => {
+        const croppedFile = new File([blob], `hive_${currentCropType}_${Date.now()}.png`, { type: 'image/png' });
+        closeCropModal();
+        uploadImage(croppedFile, currentCropType);
+    }, 'image/png');
+};
+
+const closeCropModal = () => {
+    document.getElementById('crop-modal').classList.add('hidden');
+    if (cropper) { cropper.destroy(); cropper = null; }
+};
+document.getElementById('close-crop-btn').onclick = closeCropModal;
+document.getElementById('cancel-crop-btn').onclick = closeCropModal;
+
+
+// 🚀 ฟังก์ชันส่งรูปไป ImgBB
+async function uploadImage(file, type) { 
+    showToast(`กำลังอัปโหลด${type === 'avatar' ? 'โปรไฟล์' : 'ภาพปก'}... ⏳`, "info"); 
+    document.getElementById(`settings-${type}-wrapper`).classList.add('opacity-50', 'pointer-events-none'); 
+    try { 
+        const fd = new FormData(); fd.append("image", file); 
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); 
+        const r = await res.json(); 
+        if (r.success) { 
+            if(type === 'avatar') { 
+                await updateProfile(auth.currentUser, { photoURL: r.data.url }); 
+                await updateDoc(doc(db, "users", currentUserId), { photoURL: r.data.url }); 
+                document.getElementById('settings-avatar-preview').src = r.data.url; 
+                document.getElementById('current-user-avatar').src = r.data.url; 
+            } else { 
+                await updateDoc(doc(db, "users", currentUserId), { bannerURL: r.data.url }); 
+                document.getElementById('settings-banner-preview').src = r.data.url; 
+                document.getElementById('settings-banner-preview').classList.remove('hidden'); 
+            } 
+            showToast("อัปโหลดสำเร็จ!", "success"); 
+        } 
+    } catch(err) { 
+        showToast("เกิดข้อผิดพลาดในการอัปโหลด", "error"); 
+    } finally { 
+        document.getElementById(`settings-${type}-wrapper`).classList.remove('opacity-50', 'pointer-events-none'); 
+    } 
+}
+
 document.getElementById('save-settings-btn').onclick = async () => { const newName = document.getElementById('settings-username-input').value.trim() || currentUsername; const newStatus = document.getElementById('settings-custom-status').value.trim(); try { await updateProfile(auth.currentUser, { displayName: newName }); await updateDoc(doc(db, "users", currentUserId), { username: newName, customStatus: newStatus }); currentUsername = newName; document.getElementById('current-user-name').textContent = currentUsername; showToast("บันทึกการตั้งค่าโปรไฟล์สำเร็จ!", "success"); settingsModal.classList.add('hidden'); } catch(e) { showToast("เกิดข้อผิดพลาดในการบันทึก", "error"); } };
 
 // ==========================================
@@ -558,13 +666,11 @@ async function joinVoice() {
                 if (matchedUserId) {
                     const uData = usersData[matchedUserName];
                     if (uData && uData.isSharingScreen) {
-                        // 🖥️ แชร์หน้าจอ -> เอาไปไว้เวทีกลาง
                         ssStage.classList.remove('hidden'); 
                         const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); 
                         let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; 
                         ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); 
                     } else {
-                        // 📹 เปิดกล้อง -> เด้งไปที่ Camera Stage (จอแยก)
                         const camStage = document.getElementById('camera-stage');
                         camStage.classList.remove('hidden');
                         camStage.classList.add('flex');
@@ -587,12 +693,10 @@ async function joinVoice() {
             if (t === "video") { 
                 delete remoteVideoTracks[u.uid];
                 
-                // ซ่อนหน้าจอแชร์ (ถ้ามี)
                 const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); 
                 const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
                 if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
                 
-                // ซ่อนหน้ากล้อง (ถ้ามี)
                 const camCard = document.getElementById(`camera-wrap-${u.uid}`); if (camCard) camCard.remove();
                 const camStage = document.getElementById('camera-stage');
                 if (camStage.children.length === 0) {
@@ -616,7 +720,6 @@ async function joinVoice() {
     } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } 
 }
 
-// 🌟 ระบบเปิดกล้อง (แบบแยกเวที)
 camBtn.onclick = async () => {
     if (isSharingScreen) { showToast("กรุณาปิดแชร์หน้าจอก่อนเปิดกล้องครับ", "error"); return; }
     
@@ -631,7 +734,6 @@ camBtn.onclick = async () => {
             camBtn.classList.remove('bg-[#2b2d31]'); camBtn.classList.add('bg-[#23a559]', 'text-white');
             camIcon.className = "ph-fill ph-video-camera text-[20px] md:text-[24px]";
             
-            // 🌟 นำกล้องตัวเองไปโชว์ที่ Camera Stage
             const camStage = document.getElementById('camera-stage');
             camStage.classList.remove('hidden');
             camStage.classList.add('flex');
@@ -667,7 +769,6 @@ async function stopCamera() {
     camBtn.classList.add('bg-[#2b2d31]'); camBtn.classList.remove('bg-[#23a559]', 'text-white');
     camIcon.className = "ph ph-video-camera text-[20px] md:text-[24px]";
     
-    // 🌟 เอากล้องตัวเองออกจาก Camera Stage
     const camCard = document.getElementById(`camera-wrap-local`); if (camCard) camCard.remove();
     const camStage = document.getElementById('camera-stage');
     if (camStage && camStage.children.length === 0) {
