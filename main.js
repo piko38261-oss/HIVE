@@ -288,9 +288,6 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('current-user-avatar').src = user.photoURL || `https://ui-avatars.com/api/?name=${currentUsername}&background=5865F2&color=fff&rounded=true&bold=true`;
         try { const userDoc = await getDoc(doc(db, "users", currentUserId)); if (userDoc.exists()) { currentUserRole = userDoc.data().role; if (currentUserRole === 'Admin') document.getElementById('admin-menu-btn').classList.remove('hidden'); } } catch (err) {}
         
-        if ("Notification" in window && Notification.permission === "default") { Notification.requestPermission(); }
-        
-        const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
         if (wasInVoice) { await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e)); setTimeout(() => { joinVoice(); document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#dbdee1]'); b.classList.add('channel-inactive', 'text-[#80848e]'); if (b.getAttribute('data-view') === 'voice') { b.classList.remove('channel-inactive', 'text-[#80848e]'); b.classList.add('channel-active', 'text-[#dbdee1]'); } }); Object.values(views).forEach(v => v.classList.add('hidden')); views['voice'].classList.remove('hidden'); membersSidebar.classList.remove('hidden', 'md:hidden'); }, 1500); } else { await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false, isTyping: false }).catch(e=>console.log(e)); }
     } else { window.location.href = "index.html"; }
 });
@@ -624,7 +621,7 @@ onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => {
 });
 
 // ==========================================
-// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) พร้อมปรับความชัด
+// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) 🌟 อัปเกรด 60 FPS 🌟
 // ==========================================
 const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.getElementById('leave-voice-btn'), muteBtn = document.getElementById('mute-btn'), ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
 
@@ -634,6 +631,9 @@ const camIcon = document.getElementById('camera-icon');
 // 🌟 ฟังก์ชันสร้างการแจ้งเตือนสายโทร
 async function showCallNotification() {
     if ("Notification" in window && navigator.serviceWorker) {
+        if (Notification.permission === "default") {
+            await Notification.requestPermission();
+        }
         if (Notification.permission === "granted") {
             const reg = await navigator.serviceWorker.ready;
             reg.showNotification("HIVE Voice Lounge", {
@@ -641,12 +641,15 @@ async function showCallNotification() {
                 icon: "https://ui-avatars.com/api/?name=H&background=23a559&color=fff&size=192",
                 tag: "hive-voice-call", 
                 requireInteraction: true, 
+                silent: true,
                 vibrate: [200, 100, 200],
                 actions: [
-                    { action: 'open', title: 'เปิดแอป 📱' },
-                    { action: 'leave_call', title: 'วางสาย 📞' }
+                    { action: 'open', title: '📱 เปิดแอป' },
+                    { action: 'leave_call', title: '📞 วางสาย' }
                 ]
             });
+        } else {
+            showToast("อย่าลืมเปิดอนุญาตแจ้งเตือนในตั้งค่ามือถือนะครับ!", "info");
         }
     }
 }
@@ -737,7 +740,7 @@ async function joinVoice() {
         startBackgroundAudioMode(); amIInVoice = true;
         if(latestWPData && latestWPData.videoId) { initOrUpdatePlayer(latestWPData.videoId, latestWPData.time, latestWPData.state, latestWPData.updatedBy); }
 
-        // 🌟 เรียกแจ้งเตือนเมื่อเข้าห้องสำเร็จ
+        // 🌟 เรียกแจ้งเตือนค้างตอนเข้าห้อง
         showCallNotification();
 
     } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } 
@@ -809,17 +812,16 @@ ssBtn.onclick = async () => {
     
     if (!isSharingScreen) { 
         try { 
-            // ดึงค่าจาก Dropdown ว่าผู้ใช้เลือกความชัดเท่าไหร่
             const selectedVal = qualitySelect ? qualitySelect.value : "1080p";
             
-            // 🌟 ตั้งค่าความละเอียด และดัน FPS ตามที่ผู้ใช้เลือก
+            // 🌟 ตั้งค่าความชัดและบังคับเฟรมเรต 30/60 FPS แบบลื่นๆ
             let encoderConfig = { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 };
             if (selectedVal.includes("720")) encoderConfig = { width: 1280, height: 720, frameRate: 30, bitrateMax: 2000 };
             else if (selectedVal.includes("480")) encoderConfig = { width: 853, height: 480, frameRate: 30, bitrateMax: 1000 };
             else if (selectedVal.includes("360")) encoderConfig = { width: 640, height: 360, frameRate: 30, bitrateMax: 800 };
             else if (selectedVal === "1080p_60") encoderConfig = { width: 1920, height: 1080, frameRate: 60, bitrateMax: 4500 }; 
             
-            // 🌟 เปลี่ยน optimizationMode เป็น "motion" เพื่อเน้นความลื่นไหล (ไม่ให้เฟรมดรอป)
+            // 🌟 ตั้ง optimizationMode: "motion" ป้องกันภาพกระตุก
             const res = await AgoraRTC.createScreenVideoTrack({ 
                 encoderConfig: encoderConfig, 
                 optimizationMode: "motion" 
@@ -893,11 +895,11 @@ async function leaveVoice() {
     if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; } amIInVoice = false;
     if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; } document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; document.getElementById('watch-party-stage').classList.add('hidden'); document.getElementById('watch-party-stage').classList.remove('flex');
     
-    // 🌟 ลบการแจ้งเตือนตอนออก
+    // 🌟 ลบแจ้งเตือนเมื่อออก
     hideCallNotification();
 }
 
-window.leaveVoice = leaveVoice; // สำคัญมาก เพื่อให้ SW เรียกใช้ได้!
+window.leaveVoice = leaveVoice; // ให้ SW เรียกใช้ได้!
 joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
 muteBtn.onclick = async () => { isMuted = !isMuted; localTracks.audioTrack.setEnabled(!isMuted); await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); const muteIcon = document.getElementById('mute-icon'); if (isMuted) { muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; } else { muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; } };
 
@@ -915,7 +917,7 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => { 
         navigator.serviceWorker.register('sw.js').then(r => console.log('✅ HIVE SW Active')).catch(e => console.log('❌ SW Fail:', e)); 
         
-        // 🌟 รอรับคำสั่งจาก SW (เมื่อผู้ใช้กดปุ่มวางสายบนมือถือ)
+        // 🌟 รอรับคำสั่งจาก SW (เมื่อกดปุ่มวางสายบนมือถือ)
         navigator.serviceWorker.addEventListener('message', event => {
             if (event.data && event.data.command === 'leave_voice') {
                 leaveVoice();
