@@ -475,14 +475,14 @@ gameCanvas.onmousedown = startGameDrawing; gameCanvas.onmousemove = drawGame; ga
 document.getElementById('game-clear-btn').onclick = () => { gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); syncGameWhiteboard(true); }; 
 async function syncGameWhiteboard(isC = false) { const imgData = isC ? "" : gameCanvas.toDataURL("image/webp", 0.5); await setDoc(doc(db, "appData", "gameWhiteboard"), { image: imgData, updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); } 
 
-// 🌟 พระเอกอยู่ตรงบรรทัดนี้ครับ! แก้บั๊กยางลบลบแล้วภาพหายทั้งกระดาน 
+// 🌟 แก้บั๊กยางลบลบแล้วภาพหายทั้งกระดาน 
 onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => { 
     if (d.exists() && !isGameDrawing) { 
         const val = d.data(); 
         if(val.image) { 
             const img = new Image(); 
             img.onload = () => { 
-                gameCtx.globalCompositeOperation = 'source-over'; // <--- คืนค่าโหมดวาดปกติก่อนวาดรูปทับเสมอ
+                gameCtx.globalCompositeOperation = 'source-over'; 
                 gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); 
                 gameCtx.drawImage(img, 0, 0); 
             }; 
@@ -618,11 +618,62 @@ const taskModal = document.getElementById('task-modal');
 document.getElementById('add-task-btn').addEventListener('click', () => { document.getElementById('task-title-input').value = ''; taskModal.classList.remove('hidden'); }); document.getElementById('close-task-modal').addEventListener('click', () => { taskModal.classList.add('hidden'); }); document.getElementById('confirm-task-btn').addEventListener('click', async () => { const title = document.getElementById('task-title-input').value.trim(); const tag = document.getElementById('task-tag-input').value; if (!title) { showToast("กรุณากรอกชื่องานก่อนครับ!", "error"); return; } await addDoc(collection(db, "tasks"), { title: title, tag: tag, status: 'todo', timestamp: serverTimestamp() }); taskModal.classList.add('hidden'); showToast("เพิ่มงานใหม่ลงในกระดานแล้ว!", "success"); });
 
 if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(r => console.log('✅ DOSH SW Active')).catch(e => console.log('❌ SW Fail:', e)); }); }
+
+// 🌟 ระบบ Tour และแก้บั๊กปุ่มตกขอบล่าง
 const tourOverlay = document.getElementById('tour-overlay'); const tourTooltip = document.getElementById('tour-tooltip'); const tourTitle = document.getElementById('tour-title'); const tourDesc = document.getElementById('tour-desc'); const tourStepCount = document.getElementById('tour-step-count'); const tourNextBtn = document.getElementById('tour-next-btn'); const tourSkipBtn = document.getElementById('tour-skip-btn');
 const tourSteps = [ { target: null, title: "ยินดีต้อนรับสู่ DOSH! 🎉", desc: "Super App สำหรับทีมครีเอทีฟและมัลติมีเดีย จบครบทุกงานในเว็บเดียว! เดี๋ยวเราจะพาไปดูว่ามีเครื่องมืออะไรให้ใช้บ้าง", pos: "center" }, { target: ".nav-btn[data-view='chat']", title: "1. ห้องแชทอัจฉริยะ 💬", desc: "คุยงาน ส่งไฟล์ ซูมรูปภาพ พิมพ์คำสั่ง / บอท หรือแม้แต่ 'ตอบกลับข้อความ' ก็ทำได้ครบจบที่นี่!", pos: "right" }, { target: ".nav-btn[data-view='voice']", title: "2. ห้องนั่งเล่น (Voice Lounge) 🎙️", desc: "เปิดไมค์คุยงาน แชร์หน้าจอ (Screen Share) หรือจะเปิดคลิป YouTube รัน Watch Party ดูพร้อมกันทั้งแก๊งก็ยังได้!", pos: "right" }, { target: ".nav-btn[data-view='board']", title: "3. ระบบกระดานงาน (Task Board) 📋", desc: "สร้างงาน จัดหมวดหมู่ แล้วลากแปะ (Drag & Drop) เพื่ออัปเดตสถานะงานให้เพื่อนๆ ในทีมรู้ความคืบหน้าแบบ Real-time", pos: "right" }, { target: "#mini-profile-btn", title: "4. ปรับแต่งโปรไฟล์ 🪪", desc: "กดตรงนี้เพื่อตั้งค่า 'รูปภาพปก (Banner)' เปลี่ยนสีชื่อ และตั้งสถานะ (Custom Status) โชว์ความเท่ให้เพื่อนในทีมเห็น!", pos: "top" } ];
 let currentTourStep = 0; let activeHighlightTarget = null;
-function highlightElement(selector) { if (activeHighlightTarget) activeHighlightTarget.classList.remove('relative', 'z-[102]', 'ring-4', 'ring-[#5865F2]', 'ring-offset-4', 'ring-offset-[#0e0f11]', 'rounded-lg', 'bg-[#1a1b1e]'); if (!selector) return; const el = document.querySelector(selector); if (el) { if(window.innerWidth < 768) { sidebar.classList.add('open'); overlay.classList.add('active'); } el.classList.add('relative', 'z-[102]', 'ring-4', 'ring-[#5865F2]', 'ring-offset-4', 'ring-offset-[#0e0f11]', 'rounded-lg', 'bg-[#1a1b1e]'); activeHighlightTarget = el; const rect = el.getBoundingClientRect(); tourTooltip.style.top = `${rect.top + (rect.height / 2) - (tourTooltip.offsetHeight / 2)}px`; tourTooltip.style.left = `${rect.right + 20}px`; if(window.innerWidth < 768 || rect.right + 340 > window.innerWidth) { tourTooltip.style.top = `${rect.bottom + 20}px`; tourTooltip.style.left = `20px`; } } }
-function showTourStep(index) { const step = tourSteps[index]; tourTitle.innerHTML = step.title; tourDesc.innerHTML = step.desc; tourStepCount.textContent = `${index + 1}/${tourSteps.length}`; if (index === tourSteps.length - 1) { tourNextBtn.innerHTML = `เริ่มใช้งาน DOSH! <i class="ph-fill ph-rocket-launch ml-1.5"></i>`; tourNextBtn.classList.replace('bg-[#5865F2]', 'bg-[#23a559]'); tourNextBtn.classList.replace('hover:bg-[#4752C4]', 'hover:bg-[#1e8a49]'); } else { tourNextBtn.innerHTML = `ต่อไป <i class="ph-fill ph-caret-right ml-1.5"></i>`; } if (step.pos === "center") { tourTooltip.style.top = "50%"; tourTooltip.style.left = "50%"; tourTooltip.style.transform = "translate(-50%, -50%)"; highlightElement(null); } else { tourTooltip.style.transform = "none"; highlightElement(step.target); } }
-function startTour() { currentTourStep = 0; tourOverlay.classList.remove('hidden'); tourTooltip.classList.remove('hidden'); showTourStep(currentTourStep); } function endTour() { tourOverlay.classList.add('hidden'); tourTooltip.classList.add('hidden'); highlightElement(null); localStorage.setItem('dosh_tour_completed', 'true'); showToast("🎉 จบทัวร์แล้ว! ลุยงานกันเลย!", "success"); if(window.innerWidth < 768) { sidebar.classList.remove('open'); overlay.classList.remove('active'); } }
-tourNextBtn.onclick = () => { currentTourStep++; if (currentTourStep >= tourSteps.length) { endTour(); } else { showTourStep(currentTourStep); } }; tourSkipBtn.onclick = endTour;
+
+function highlightElement(selector, pos) { 
+    if (activeHighlightTarget) activeHighlightTarget.classList.remove('relative', 'z-[102]', 'ring-4', 'ring-[#5865F2]', 'ring-offset-4', 'ring-offset-[#0e0f11]', 'rounded-lg', 'bg-[#1a1b1e]'); 
+    if (!selector) return; 
+    const el = document.querySelector(selector); 
+    if (el) { 
+        if(window.innerWidth < 768) { sidebar.classList.add('open'); overlay.classList.add('active'); } 
+        el.classList.add('relative', 'z-[102]', 'ring-4', 'ring-[#5865F2]', 'ring-offset-4', 'ring-offset-[#0e0f11]', 'rounded-lg', 'bg-[#1a1b1e]'); 
+        activeHighlightTarget = el; 
+        
+        setTimeout(() => {
+            const rect = el.getBoundingClientRect(); 
+            let tTop, tLeft;
+            
+            if (pos === "top") {
+                tTop = rect.top - tourTooltip.offsetHeight - 20;
+                tLeft = rect.left;
+            } else {
+                tTop = rect.top + (rect.height / 2) - (tourTooltip.offsetHeight / 2); 
+                tLeft = rect.right + 20; 
+                if(window.innerWidth < 768 || tLeft + 340 > window.innerWidth) { 
+                    tTop = rect.bottom + 20; 
+                    tLeft = 20; 
+                } 
+            }
+            
+            // 🚨 ป้องกันปุ่มทะลุขอบจอ!
+            if (tTop + tourTooltip.offsetHeight > window.innerHeight) {
+                tTop = window.innerHeight - tourTooltip.offsetHeight - 20; 
+            }
+            if (tTop < 20) tTop = 20; 
+            
+            tourTooltip.style.top = `${tTop}px`; 
+            tourTooltip.style.left = `${tLeft}px`; 
+        }, 10);
+    } 
+}
+
+function showTourStep(index) { 
+    const step = tourSteps[index]; tourTitle.innerHTML = step.title; tourDesc.innerHTML = step.desc; tourStepCount.textContent = `${index + 1}/${tourSteps.length}`; 
+    if (index === tourSteps.length - 1) { tourNextBtn.innerHTML = `เริ่มใช้งาน DOSH! <i class="ph-fill ph-rocket-launch ml-1.5"></i>`; tourNextBtn.classList.replace('bg-[#5865F2]', 'bg-[#23a559]'); tourNextBtn.classList.replace('hover:bg-[#4752C4]', 'hover:bg-[#1e8a49]'); } 
+    else { tourNextBtn.innerHTML = `ต่อไป <i class="ph-fill ph-caret-right ml-1.5"></i>`; } 
+    
+    if (step.pos === "center") { tourTooltip.style.top = "50%"; tourTooltip.style.left = "50%"; tourTooltip.style.transform = "translate(-50%, -50%)"; highlightElement(null); } 
+    else { tourTooltip.style.transform = "none"; highlightElement(step.target, step.pos); } 
+}
+
+function startTour() { currentTourStep = 0; tourOverlay.classList.remove('hidden'); tourTooltip.classList.remove('hidden'); showTourStep(currentTourStep); } 
+function endTour() { tourOverlay.classList.add('hidden'); tourTooltip.classList.add('hidden'); highlightElement(null); localStorage.setItem('dosh_tour_completed', 'true'); showToast("🎉 จบทัวร์แล้ว! ลุยงานกันเลย!", "success"); if(window.innerWidth < 768) { sidebar.classList.remove('open'); overlay.classList.remove('active'); } }
+
+tourNextBtn.onclick = () => { currentTourStep++; if (currentTourStep >= tourSteps.length) { endTour(); } else { showTourStep(currentTourStep); } }; 
+tourSkipBtn.onclick = endTour;
+
 setTimeout(() => { if (!localStorage.getItem('dosh_tour_completed') && currentUserId) { startTour(); } }, 2000);
