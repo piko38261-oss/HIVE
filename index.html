@@ -3,19 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DOSH Workspace - Login</title>
+    <title>HIVE Workspace - Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json?v=2">
     <meta name="theme-color" content="#0e0f11">
-    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=D&background=5865F2&color=fff&size=192">
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=H&background=5865F2&color=fff&size=192">
 
     <style>
         body { 
             font-family: 'Inter', sans-serif; 
             background-color: #0e0f11; 
-            /* ลายจุดพื้นหลังแบบในรูป */
             background-image: radial-gradient(#2b2d31 1.5px, transparent 1.5px); 
             background-size: 25px 25px; 
         }
@@ -26,9 +25,9 @@
     <div class="bg-[#1e1f22] p-8 rounded-2xl shadow-2xl w-full max-w-[400px] border border-[#2b2d31] relative animate-[slideUpFade_0.3s_ease-out]">
         
         <div class="text-center mb-8">
-            <div class="w-16 h-16 bg-[#5865F2] rounded-2xl mx-auto flex items-center justify-center text-3xl font-extrabold text-white mb-5 shadow-lg">D</div>
+            <div class="w-16 h-16 bg-[#5865F2] rounded-2xl mx-auto flex items-center justify-center text-3xl font-extrabold text-white mb-5 shadow-lg">H</div>
             <h1 class="text-2xl font-bold text-white">ยินดีต้อนรับกลับมา!</h1>
-            <p class="text-[#949ba4] text-[13px] mt-1.5">เข้าสู่ระบบเพื่อทำงานกับทีมของคุณใน DOSH</p>
+            <p class="text-[#949ba4] text-[13px] mt-1.5">เข้าสู่ระบบเพื่อทำงานกับทีมของคุณใน HIVE</p>
         </div>
 
         <div class="space-y-4">
@@ -61,55 +60,29 @@
         import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // ตั้งค่า Firebase ให้ตรงกับ main.js
-        const firebaseConfig = { 
-            apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I", 
-            authDomain: "apoko-hq.firebaseapp.com", 
-            projectId: "apoko-hq", 
-            storageBucket: "apoko-hq.firebasestorage.app", 
-            messagingSenderId: "122632343459", 
-            appId: "1:122632343459:web:c225aaff8464f1b0c35416" 
-        };
+        const firebaseConfig = { apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I", authDomain: "apoko-hq.firebaseapp.com", projectId: "apoko-hq", storageBucket: "apoko-hq.firebasestorage.app", messagingSenderId: "122632343459", appId: "1:122632343459:web:c225aaff8464f1b0c35416" };
         
         const app = initializeApp(firebaseConfig); 
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // ==========================================
-        // 🚨 พระเอกของเรา! ยามเฝ้าประตู (Auto-Login)
-        // ==========================================
         onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // ถ้าตรวจเจอว่าเคยล็อกอินไว้ ให้ทะลุไปหน้า app.html ทันที!
-                window.location.replace("app.html");
-            }
+            if (user) { window.location.replace("app.html"); }
         });
 
-        // ==========================================
-        // ⚙️ ระบบปุ่มล็อกอินต่างๆ
-        // ==========================================
         const loginBtn = document.getElementById('login-btn');
         const googleBtn = document.getElementById('google-login-btn');
         const emailInput = document.getElementById('login-email');
         const passwordInput = document.getElementById('login-password');
 
-        // 1. ล็อกอินด้วย Email
         loginBtn.addEventListener('click', async () => {
             const email = emailInput.value.trim();
             const password = passwordInput.value;
-            
-            if(!email || !password) {
-                alert("กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วนครับ!");
-                return;
-            }
-
+            if(!email || !password) { alert("กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วนครับ!"); return; }
             try {
                 loginBtn.innerHTML = `<span class="flex items-center justify-center"><svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> กำลังเข้าสู่ระบบ...</span>`;
                 loginBtn.disabled = true;
-                
                 await signInWithEmailAndPassword(auth, email, password);
-                // 💡 ไม่ต้องสั่งเปลี่ยนหน้าตรงนี้ เพราะ onAuthStateChanged ด้านบนจะทำหน้าที่เตะเข้าแอปให้เอง
-                
             } catch (error) {
                 alert("เข้าสู่ระบบไม่สำเร็จ: " + error.message);
                 loginBtn.innerHTML = "เข้าสู่ระบบ";
@@ -117,19 +90,15 @@
             }
         });
 
-        // ให้กด Enter ในช่องรหัสผ่านแล้วล็อกอินได้เลย
         passwordInput.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') loginBtn.click();
         });
 
-        // 2. ล็อกอินด้วย Google
         googleBtn.addEventListener('click', async () => {
             const provider = new GoogleAuthProvider();
             try {
                 const result = await signInWithPopup(auth, provider);
                 const user = result.user;
-                
-                // ตรวจสอบว่ามีข้อมูลใน Database หรือยัง ถ้ายังให้สร้างใหม่
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (!userDoc.exists()) {
                     await setDoc(doc(db, "users", user.uid), {
@@ -140,18 +109,12 @@
                         status: "online"
                     });
                 }
-            } catch (error) {
-                alert("เข้าสู่ระบบด้วย Google ไม่สำเร็จ: " + error.message);
-            }
+            } catch (error) { alert("เข้าสู่ระบบด้วย Google ไม่สำเร็จ: " + error.message); }
         });
 
-        // 3. ปุ่มสมัครสมาชิก (โยงไปหน้า Register)
         document.getElementById('register-btn').addEventListener('click', () => {
-            // ถ้าท่านประธานมีหน้าสมัครแยก ให้ใส่ชื่อไฟล์ตรงนี้ได้เลยครับ (เช่น register.html)
-            // window.location.href = "register.html";
             alert("สามารถเชื่อมโยงปุ่มนี้ไปที่หน้า สมัครสมาชิก (register.html) ได้เลยครับ!");
         });
-
     </script>
 </body>
 </html>
