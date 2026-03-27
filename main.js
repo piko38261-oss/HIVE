@@ -92,7 +92,6 @@ if (view === 'game-draw') { activeChannel = 'game_draw'; unreadCounts[activeChan
 if (view === 'whiteboard') setTimeout(initCanvasSize, 100); sidebar.classList.remove('open'); overlay.classList.remove('active'); }; });
 
 window.showUserProfile = (userName) => { const u = usersData[userName]; if(!u) return; document.getElementById('profile-card-name').textContent = userName; document.getElementById('profile-card-avatar').src = u.avatar; const bannerImg = document.getElementById('profile-card-banner'); if (u.banner) { bannerImg.src = u.banner; bannerImg.classList.remove('hidden'); } else { bannerImg.classList.add('hidden'); } document.getElementById('profile-card-status').textContent = u.customStatus || 'ไม่ได้ตั้งสถานะ'; let badges = ''; if(u.role === 'Admin') badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#da373c] mr-2 shadow-[0_0_8px_#da373c]"></div> Admin</span>'; else badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#5865F2] mr-2 shadow-[0_0_8px_#5865F2]"></div> Member</span>'; 
-// 🌟 โชว์ป้าย GIF VIP ถ้ารูปเป็น .gif
 if (u.avatar.toLowerCase().includes('.gif') || u.banner.toLowerCase().includes('.gif')) { badges += '<span class="inline-flex items-center bg-gradient-to-r from-pink-500 to-purple-500 border border-white/20 px-3 py-1.5 rounded-lg text-[12px] text-white font-bold shadow-[0_0_15px_rgba(236,72,153,0.5)] animate-pulse"><i class="ph-fill ph-sparkle mr-1.5"></i> VIP</span>'; }
 document.getElementById('profile-card-badges').innerHTML = badges; document.getElementById('profile-card-modal').classList.remove('hidden'); }
 document.getElementById('close-profile-card').onclick = () => document.getElementById('profile-card-modal').classList.add('hidden'); document.getElementById('profile-card-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('profile-card-modal')) document.getElementById('profile-card-modal').classList.add('hidden'); });
@@ -180,7 +179,7 @@ onSnapshot(collection(db, "users"), (snapshot) => {
 // ==========================================
 const settingsModal = document.getElementById('settings-modal'), avatarInput = document.getElementById('settings-avatar-input'), bannerInput = document.getElementById('settings-banner-input');
 let cropper = null;
-let currentCropType = ''; // 'avatar' หรือ 'banner'
+let currentCropType = ''; 
 
 document.getElementById('open-settings-btn').onclick = document.getElementById('mini-profile-btn').onclick = (e) => { 
     e.preventDefault(); 
@@ -189,16 +188,13 @@ document.getElementById('open-settings-btn').onclick = document.getElementById('
 }; 
 document.getElementById('close-settings-btn').onclick = () => { settingsModal.classList.add('hidden'); }; 
 
-// กดแล้วเปิดหน้าต่างเลือกไฟล์
 document.getElementById('settings-avatar-wrapper').onclick = () => avatarInput.click(); 
 document.getElementById('settings-banner-wrapper').onclick = () => bannerInput.click();
 
-// 🌟 ฟังก์ชันจัดการไฟล์เมื่อเลือกรูปเสร็จ
 function handleImageSelect(e, type) {
     const file = e.target.files[0];
     if (!file) return;
 
-    // 🔥 AI สมองกล: ถ้ารูปเป็น GIF ให้ข้ามการตัดรูปไปเลย เพื่อรักษาอนิเมชั่นไว้!
     if (file.type === 'image/gif') {
         showToast("ว้าว! ตรวจพบรูปเคลื่อนไหว (GIF) กำลังอัปโหลดแบบ VIP!", "info");
         uploadImage(file, type);
@@ -206,7 +202,6 @@ function handleImageSelect(e, type) {
         return;
     }
 
-    // ถ้ารูปเป็น JPG/PNG ปกติ ให้เด้งหน้าต่างตัดรูป (Cropper)
     const reader = new FileReader();
     reader.onload = (event) => {
         document.getElementById('crop-image-target').src = event.target.result;
@@ -215,7 +210,6 @@ function handleImageSelect(e, type) {
 
         if (cropper) { cropper.destroy(); }
         
-        // กำหนดสัดส่วน (โปรไฟล์สี่เหลี่ยมจัตุรัส 1:1, หน้าปกแนวยาว ~3:1)
         const aspectRatio = type === 'avatar' ? 1 / 1 : 16 / 5; 
 
         cropper = new Cropper(document.getElementById('crop-image-target'), {
@@ -226,24 +220,21 @@ function handleImageSelect(e, type) {
         });
     };
     reader.readAsDataURL(file);
-    e.target.value = ""; // รีเซ็ต input หลังจากอ่านไฟล์เสร็จ
+    e.target.value = ""; 
 }
 
 avatarInput.onchange = (e) => handleImageSelect(e, 'avatar');
 bannerInput.onchange = (e) => handleImageSelect(e, 'banner');
 
-// 🌟 ฟังก์ชันยืนยันการตัดรูป
 document.getElementById('confirm-crop-btn').onclick = () => {
     if (!cropper) return;
     
-    // ดึงภาพที่ตัดเสร็จแล้ว
     const canvas = cropper.getCroppedCanvas({
         width: currentCropType === 'avatar' ? 400 : 1200,
         height: currentCropType === 'avatar' ? 400 : 375,
-        fillColor: '#1e1f22' // สีพื้นหลังถ้าเกิดรูปโปร่งใส
+        fillColor: '#1e1f22' 
     });
 
-    // แปลงเป็นไฟล์ภาพ แล้วส่งเข้าฟังก์ชันอัปโหลด
     canvas.toBlob((blob) => {
         const croppedFile = new File([blob], `hive_${currentCropType}_${Date.now()}.png`, { type: 'image/png' });
         closeCropModal();
@@ -258,8 +249,6 @@ const closeCropModal = () => {
 document.getElementById('close-crop-btn').onclick = closeCropModal;
 document.getElementById('cancel-crop-btn').onclick = closeCropModal;
 
-
-// 🚀 ฟังก์ชันส่งรูปไป ImgBB
 async function uploadImage(file, type) { 
     showToast(`กำลังอัปโหลด${type === 'avatar' ? 'โปรไฟล์' : 'ภาพปก'}... ⏳`, "info"); 
     document.getElementById(`settings-${type}-wrapper`).classList.add('opacity-50', 'pointer-events-none'); 
@@ -298,7 +287,10 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('current-user-name').textContent = currentUsername;
         document.getElementById('current-user-avatar').src = user.photoURL || `https://ui-avatars.com/api/?name=${currentUsername}&background=5865F2&color=fff&rounded=true&bold=true`;
         try { const userDoc = await getDoc(doc(db, "users", currentUserId)); if (userDoc.exists()) { currentUserRole = userDoc.data().role; if (currentUserRole === 'Admin') document.getElementById('admin-menu-btn').classList.remove('hidden'); } } catch (err) {}
+        
+        // ขออนุญาตแจ้งเตือนบนมือถือ/PC
         if ("Notification" in window && Notification.permission === "default") { Notification.requestPermission(); }
+        
         const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
         if (wasInVoice) { await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e)); setTimeout(() => { joinVoice(); document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#dbdee1]'); b.classList.add('channel-inactive', 'text-[#80848e]'); if (b.getAttribute('data-view') === 'voice') { b.classList.remove('channel-inactive', 'text-[#80848e]'); b.classList.add('channel-active', 'text-[#dbdee1]'); } }); Object.values(views).forEach(v => v.classList.add('hidden')); views['voice'].classList.remove('hidden'); membersSidebar.classList.remove('hidden', 'md:hidden'); }, 1500); } else { await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false, isTyping: false }).catch(e=>console.log(e)); }
     } else { window.location.href = "index.html"; }
@@ -640,6 +632,33 @@ const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.g
 const camBtn = document.getElementById('camera-btn');
 const camIcon = document.getElementById('camera-icon');
 
+// 🌟 ฟังก์ชันสร้างการแจ้งเตือนสายโทร (Ongoing Call Notification)
+async function showCallNotification() {
+    if ("Notification" in window && navigator.serviceWorker) {
+        if (Notification.permission === "granted") {
+            const reg = await navigator.serviceWorker.ready;
+            reg.showNotification("HIVE Voice Lounge", {
+                body: "เชื่อมต่อเสียงแล้ว — แตะเพื่อกลับสู่การโทร",
+                icon: "https://ui-avatars.com/api/?name=H&background=23a559&color=fff&size=192",
+                tag: "hive-voice-call", // Tag สำคัญมาก! ใช้สำหรับเรียกปิด
+                requireInteraction: true, // ทำให้แจ้งเตือนไม่หายไปเอง (เหมือนการโทร)
+                vibrate: [200, 100, 200]
+            });
+        } else if (Notification.permission !== "denied") {
+            Notification.requestPermission();
+        }
+    }
+}
+
+// 🌟 ฟังก์ชันลบการแจ้งเตือนสายโทร
+async function hideCallNotification() {
+    if ("Notification" in window && navigator.serviceWorker) {
+        const reg = await navigator.serviceWorker.ready;
+        const notifications = await reg.getNotifications({ tag: "hive-voice-call" });
+        notifications.forEach(n => n.close()); // ปิดทุกแจ้งเตือนที่มี Tag นี้
+    }
+}
+
 async function joinVoice() { 
     try { 
         joinBtn.innerHTML = "กำลังเชื่อมต่อ..."; 
@@ -716,6 +735,9 @@ async function joinVoice() {
 
         startBackgroundAudioMode(); amIInVoice = true;
         if(latestWPData && latestWPData.videoId) { initOrUpdatePlayer(latestWPData.videoId, latestWPData.time, latestWPData.state, latestWPData.updatedBy); }
+
+        // 🌟 ยิงแจ้งเตือนค้างไว้ตอนเข้าห้องเสียง
+        showCallNotification();
 
     } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } 
 }
@@ -856,6 +878,9 @@ async function leaveVoice() {
     document.getElementById('active-voice-ui').classList.add('hidden'); 
     if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; } amIInVoice = false;
     if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; } document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; document.getElementById('watch-party-stage').classList.add('hidden'); document.getElementById('watch-party-stage').classList.remove('flex');
+    
+    // 🌟 ลบแจ้งเตือนค้างตอนออกจากห้องเสียง
+    hideCallNotification();
 }
 joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
 muteBtn.onclick = async () => { isMuted = !isMuted; localTracks.audioTrack.setEnabled(!isMuted); await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); const muteIcon = document.getElementById('mute-icon'); if (isMuted) { muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; } else { muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; } };
