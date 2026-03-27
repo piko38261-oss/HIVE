@@ -10,10 +10,9 @@ const app = initializeApp(firebaseConfig); const auth = getAuth(app); const db =
 const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a"; const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
 
 // ==========================================
-// 🧠 2. ระบบ AI คิดคำศัพท์ (Gemini API)
+// 🧠 2. ระบบ AI
 // ==========================================
 const GEMINI_API_KEY = "AIzaSyCifkioB2z1Ho9LAGSFBYWtV-kM4bgtzhw"; 
-
 async function getWordFromAI() {
     try {
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
@@ -23,22 +22,22 @@ async function getWordFromAI() {
         const data = await res.json();
         return data.candidates[0].content.parts[0].text.replace(/[\r\n.]/g, "").trim();
     } catch (err) {
-        console.log("❌ AI เอ๋อ หรือ API หมดอายุ:", err);
         const backup = ["ไดโนเสาร์", "ชาบู", "ยูทูบเบอร์", "มนุษย์ต่างดาว", "แฮมเบอร์เกอร์", "ชานมไข่มุก"];
         return backup[Math.floor(Math.random() * backup.length)];
     }
 }
 
 // ==========================================
-// ⚙️ 3. ตัวแปรและฟังก์ชันช่วยเหลือ (Globals)
+// ⚙️ 3. ตัวแปรและฟังก์ชันช่วยเหลือ
 // ==========================================
 const rtcClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-let localTracks = { audioTrack: null }, screenTrack = null, screenAudioTrack = null;
-let isMuted = false, isSharingScreen = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general", currentUserRole = "Member"; 
+let localTracks = { audioTrack: null, videoTrack: null }, screenTrack = null, screenAudioTrack = null;
+let isMuted = false, isSharingScreen = false, isVideoOn = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general", currentUserRole = "Member"; 
 let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false, unreadCounts = { general: 0, project: 0, game_draw: 0 };
 let replyingTo = null; let messageToDelete = null;
 
 let remoteAudioTracks = {}; 
+let remoteVideoTracks = {}; // เก็บ Track วิดีโอของเพื่อนๆ ไว้
 let userVolumes = JSON.parse(localStorage.getItem('dosh_volumes')) || {};
 
 const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); sfxMsg.volume = 0.5;
@@ -63,7 +62,7 @@ function startBackgroundAudioMode() {
         navigator.mediaSession.metadata = new MediaMetadata({ title: 'HIVE Voice Lounge', artist: 'Active Call', album: currentUsername, artwork: [{ src: 'https://ui-avatars.com/api/?name=H&background=5865F2&size=512', sizes: '512x512', type: 'image/png' }] });
         const silentAudio = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3'); silentAudio.volume = 0.01; silentAudio.loop = true;
         navigator.mediaSession.setActionHandler('play', () => silentAudio.play()); navigator.mediaSession.setActionHandler('pause', () => silentAudio.pause());
-        silentAudio.play().catch(e => console.log("Background Audio Triggered"));
+        silentAudio.play().catch(e => {});
     }
 }
 
@@ -95,24 +94,23 @@ window.showUserProfile = (userName) => { const u = usersData[userName]; if(!u) r
 document.getElementById('close-profile-card').onclick = () => document.getElementById('profile-card-modal').classList.add('hidden'); document.getElementById('profile-card-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('profile-card-modal')) document.getElementById('profile-card-modal').classList.add('hidden'); });
 
 // ==========================================
-// 🟢 6. โหลดรายชื่อผู้ใช้งาน (และระบบเร่งเสียง)
+// 🟢 6. โหลดรายชื่อผู้ใช้งาน (ระบบ Grid อัจฉริยะ)
 // ==========================================
 window.changeUserVolume = (uid, userId, vol) => {
-    if (remoteAudioTracks[uid]) {
-        remoteAudioTracks[uid].setVolume(parseInt(vol)); 
-    }
-    userVolumes[userId] = vol; 
-    localStorage.setItem('dosh_volumes', JSON.stringify(userVolumes)); 
+    if (remoteAudioTracks[uid]) { remoteAudioTracks[uid].setVolume(parseInt(vol)); }
+    userVolumes[userId] = vol; localStorage.setItem('dosh_volumes', JSON.stringify(userVolumes)); 
 };
 
 onSnapshot(collection(db, "users"), (snapshot) => {
     const membersList = document.getElementById('members-list'), voiceActiveList = document.getElementById('voice-active-users'), voiceGrid = document.getElementById('voice-grid'), typingIndicator = document.getElementById('typing-indicator');
-    membersList.innerHTML = ''; if (voiceActiveList) voiceActiveList.innerHTML = ''; let voiceGridHTML = '', usersInVoiceCount = 0, peopleTyping = []; document.getElementById('member-count').textContent = snapshot.size; usersData = {}; 
+    membersList.innerHTML = ''; if (voiceActiveList) voiceActiveList.innerHTML = ''; 
+    let usersInVoiceCount = 0, peopleTyping = []; document.getElementById('member-count').textContent = snapshot.size; usersData = {}; 
+    const currentVoiceCardIds = [];
 
     snapshot.forEach((docSnap) => {
         const u = docSnap.data(), id = docSnap.id, userName = u.username || 'Unknown';
         const userAvatar = u.photoURL || `https://ui-avatars.com/api/?name=${userName}&background=5865F2&color=fff&rounded=true&bold=true`;
-        usersData[userName] = { avatar: userAvatar, banner: u.bannerURL || '', id: id, agoraUid: u.agoraUid, customStatus: u.customStatus || '', role: u.role }; 
+        usersData[userName] = { avatar: userAvatar, banner: u.bannerURL || '', id: id, agoraUid: u.agoraUid, customStatus: u.customStatus || '', role: u.role, isSharingScreen: u.isSharingScreen, isVideoOn: u.isVideoOn }; 
         if (u.isTyping && u.typingChannel === activeChannel && id !== currentUserId) peopleTyping.push(userName);
         const isOnline = u.status === 'online', statusColor = isOnline ? 'bg-[#23a559]' : 'bg-[#5c6069]';
         const roleDisplay = u.role === 'Admin' ? `<span class="text-[#da373c] font-extrabold ml-1.5 text-[9px] bg-[#da373c]/10 px-1.5 py-0.5 rounded uppercase">Admin</span>` : '';
@@ -126,18 +124,76 @@ onSnapshot(collection(db, "users"), (snapshot) => {
 
         membersList.insertAdjacentHTML('beforeend', `<div onclick="showUserProfile('${userName}')" class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#2b2d31] transition group ${!isOnline ? 'opacity-50' : ''}"><div class="relative flex-shrink-0"><img id="img-avatar-${id}" src="${userAvatar}" class="w-8 h-8 rounded-full object-cover opacity-90"><div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619]"></div></div><div class="overflow-hidden flex-1"><div class="flex items-center"><p class="text-[14px] font-medium truncate ${nameStyle}">${userName} ${roleDisplay}</p></div>${customStatusText}</div></div>`);
         if (u.inVoice && voiceActiveList) voiceActiveList.insertAdjacentHTML('beforeend', `<div class="flex items-center space-x-2.5 text-[13px] text-[#80848e] py-1 px-2 hover:bg-[#2b2d31] hover:text-[#dbdee1] rounded-md transition cursor-pointer ml-2"><div class="relative flex-shrink-0"><img id="img-sidebar-voice-${id}" src="${userAvatar}" class="w-6 h-6 rounded-full object-cover opacity-90"></div><span class="truncate font-medium flex-1 flex items-center">${userName} ${screenBadgeSmall}</span>${muteIconSmall}</div>`);
+        
         if (u.inVoice) { 
             usersInVoiceCount++; 
             const isMe = id === currentUserId;
             const savedVol = userVolumes[id] !== undefined ? userVolumes[id] : 100;
             const volSlider = (!isMe && u.agoraUid) ? `<div class="w-full mt-1.5 px-3 flex items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()"><i class="ph ph-speaker-high text-[#80848e] text-[12px]"></i><input type="range" min="0" max="300" value="${savedVol}" class="w-full h-1 accent-[#5865F2] cursor-pointer" oninput="changeUserVolume('${u.agoraUid}', '${id}', this.value)" title="ปรับเสียง (สูงสุด 300%)"></div>` : `<div class="h-6"></div>`;
 
-            voiceGridHTML += `<div class="bg-[#111214] rounded-2xl w-[140px] h-[160px] sm:w-[160px] sm:h-[180px] md:w-[190px] md:h-[210px] pt-4 pb-2 px-2 flex flex-col items-center justify-center relative shadow-xl border border-[#1e1f22] animate-[fadeIn_0.3s_ease-out] hover:border-[#35373c] transition-colors group"><div class="relative mb-2 md:mb-3 flex-shrink-0"><img id="img-grid-voice-${id}" src="${userAvatar}" class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full object-cover bg-gray-900 border-4 border-[#151619] shadow-2xl">${muteIconLarge}</div><p class="font-bold text-[#dbdee1] text-[13px] md:text-[15px] truncate w-full text-center px-2">${userName}</p>${volSlider}</div>`; 
+            currentVoiceCardIds.push(`voice-card-${id}`);
+            let card = document.getElementById(`voice-card-${id}`);
+            
+            // 🌟 สร้างการ์ดใหม่เฉพาะคนที่ยังไม่มีในจอ เพื่อไม่ให้วิดีโอกระพริบ
+            if (!card) {
+                voiceGrid.insertAdjacentHTML('beforeend', `
+                    <div id="voice-card-${id}" class="bg-[#111214] rounded-2xl w-[140px] h-[160px] sm:w-[160px] sm:h-[180px] md:w-[190px] md:h-[210px] pt-4 pb-2 px-2 flex flex-col items-center justify-center relative shadow-xl border border-[#1e1f22] animate-[fadeIn_0.3s_ease-out] hover:border-[#35373c] transition-colors group overflow-hidden">
+                        <div id="cam-container-${id}" class="absolute inset-0 w-full h-full z-0 bg-black ${u.isVideoOn ? '' : 'hidden'}"></div>
+                        <div class="relative mb-2 md:mb-3 flex-shrink-0 z-10 transition-all duration-300 ${u.isVideoOn ? 'hidden' : ''}" id="avatar-container-${id}">
+                            <img id="img-grid-voice-${id}" src="${userAvatar}" class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full object-cover bg-gray-900 border-4 border-[#151619] shadow-2xl">
+                            <div id="mute-badge-${id}">${muteIconLarge}</div>
+                        </div>
+                        <p class="font-bold text-[#dbdee1] text-[13px] md:text-[15px] truncate w-full text-center px-2 z-10 drop-shadow-md" id="name-${id}">${userName}</p>
+                        <div class="z-10 w-full">${volSlider}</div>
+                    </div>
+                `);
+                
+                // ดึงภาพจากกล้องเพื่อนมาใส่ให้ทันทีถ้าเค้าเปิดกล้องอยู่แล้ว
+                if (u.isVideoOn && remoteVideoTracks[u.agoraUid]) {
+                    setTimeout(() => { remoteVideoTracks[u.agoraUid].play(`cam-container-${id}`, { fit: "cover" }); }, 100);
+                }
+            } else {
+                // อัปเดตข้อมูลให้คนเดิมโดยไม่เตะกล่องวิดีโอทิ้ง
+                const camCont = document.getElementById(`cam-container-${id}`);
+                const avCont = document.getElementById(`avatar-container-${id}`);
+                const muteBadge = document.getElementById(`mute-badge-${id}`);
+                
+                if (muteBadge) muteBadge.innerHTML = muteIconLarge;
+                
+                if (u.isVideoOn) {
+                    camCont.classList.remove('hidden');
+                    avCont.classList.add('hidden');
+                    // ถ้าในกล่องยังไม่มีวิดีโอ ให้เอามาใส่
+                    if (camCont.innerHTML === '' && remoteVideoTracks[u.agoraUid]) {
+                        remoteVideoTracks[u.agoraUid].play(camCont, { fit: "cover" });
+                    }
+                } else {
+                    camCont.classList.add('hidden');
+                    avCont.classList.remove('hidden');
+                    if (camCont.innerHTML !== '') camCont.innerHTML = '';
+                }
+            }
         }
     });
 
+    // ลบการ์ดคนที่ออกห้องไปแล้ว
+    Array.from(voiceGrid.children).forEach(child => {
+        if (child.id.startsWith('voice-card-') && !currentVoiceCardIds.includes(child.id)) {
+            child.remove();
+        }
+    });
+
+    // หน้าจอว่างเปล่าตอนไม่มีคน
+    if (usersInVoiceCount === 0) {
+        if (!document.getElementById('empty-voice')) {
+            voiceGrid.innerHTML = `<div id="empty-voice" class="w-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a]"><div class="w-20 h-20 md:w-24 md:h-24 bg-[#111214] rounded-full flex items-center justify-center mb-4 border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] opacity-40"></i></div><p class="font-bold text-base text-[#949ba4]">ไม่มีใครอยู่ในห้องเสียง</p></div>`;
+        }
+    } else {
+        const empty = document.getElementById('empty-voice');
+        if (empty) empty.remove();
+    }
+
     if (typingIndicator) { if (peopleTyping.length > 0) { typingIndicator.innerHTML = `<i class="ph-fill ph-chat-teardrop-dots mr-1.5 animate-bounce"></i> ${peopleTyping.join(', ')} กำลังพิมพ์...`; typingIndicator.classList.remove('opacity-0'); } else { typingIndicator.classList.add('opacity-0'); } }
-    if (voiceGrid) { if (usersInVoiceCount > 0) { voiceGrid.innerHTML = voiceGridHTML; } else { voiceGrid.innerHTML = `<div class="w-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a]"><div class="w-20 h-20 md:w-24 md:h-24 bg-[#111214] rounded-full flex items-center justify-center mb-4 border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] opacity-40"></i></div><p class="font-bold text-base text-[#949ba4]">ไม่มีใครอยู่ในห้องเสียง</p></div>`; } }
     renderMessages();
 });
 
@@ -161,10 +217,10 @@ onAuthStateChanged(auth, async (user) => {
         try { const userDoc = await getDoc(doc(db, "users", currentUserId)); if (userDoc.exists()) { currentUserRole = userDoc.data().role; if (currentUserRole === 'Admin') document.getElementById('admin-menu-btn').classList.remove('hidden'); } } catch (err) {}
         if ("Notification" in window && Notification.permission === "default") { Notification.requestPermission(); }
         const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
-        if (wasInVoice) { await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e)); setTimeout(() => { joinVoice(); document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#dbdee1]'); b.classList.add('channel-inactive', 'text-[#80848e]'); if (b.getAttribute('data-view') === 'voice') { b.classList.remove('channel-inactive', 'text-[#80848e]'); b.classList.add('channel-active', 'text-[#dbdee1]'); } }); Object.values(views).forEach(v => v.classList.add('hidden')); views['voice'].classList.remove('hidden'); membersSidebar.classList.remove('hidden', 'md:hidden'); }, 1500); } else { await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }).catch(e=>console.log(e)); }
+        if (wasInVoice) { await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e)); setTimeout(() => { joinVoice(); document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#dbdee1]'); b.classList.add('channel-inactive', 'text-[#80848e]'); if (b.getAttribute('data-view') === 'voice') { b.classList.remove('channel-inactive', 'text-[#80848e]'); b.classList.add('channel-active', 'text-[#dbdee1]'); } }); Object.values(views).forEach(v => v.classList.add('hidden')); views['voice'].classList.remove('hidden'); membersSidebar.classList.remove('hidden', 'md:hidden'); }, 1500); } else { await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false, isTyping: false }).catch(e=>console.log(e)); }
     } else { window.location.href = "index.html"; }
 });
-document.getElementById('logout-btn').addEventListener('click', async () => { if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isTyping: false }); } catch (e) {} } localStorage.removeItem('dosh_active_voice'); if (localTracks.audioTrack) { await leaveVoice(); } signOut(auth); });
+document.getElementById('logout-btn').addEventListener('click', async () => { if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false, isTyping: false }); } catch (e) {} } localStorage.removeItem('dosh_active_voice'); if (localTracks.audioTrack) { await leaveVoice(); } signOut(auth); });
 
 // ==========================================
 // 💬 9. ระบบ Chat & Mentions
@@ -497,6 +553,11 @@ onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => {
 // 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) พร้อมปรับความชัด
 // ==========================================
 const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.getElementById('leave-voice-btn'), muteBtn = document.getElementById('mute-btn'), ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
+
+// 🌟 เพิ่มปุ่มเปิดกล้อง
+const camBtn = document.getElementById('camera-btn');
+const camIcon = document.getElementById('camera-icon');
+
 async function joinVoice() { 
     try { 
         joinBtn.innerHTML = "กำลังเชื่อมต่อ..."; 
@@ -514,18 +575,38 @@ async function joinVoice() {
                 }
             }
             if (t === "video") { 
-                ssStage.classList.remove('hidden'); 
-                const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); 
-                let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; 
-                ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); 
+                remoteVideoTracks[u.uid] = u.videoTrack;
+                
+                // 🌟 ตรวจสอบว่าเพื่อนกำลังแชร์หน้าจอ หรือ เปิดกล้อง
+                let matchedUserId = null;
+                for(let k in usersData) { if(usersData[k].agoraUid === u.uid) { matchedUserId = usersData[k].id; break; } }
+                
+                if (matchedUserId) {
+                    const uData = usersData[Object.keys(usersData).find(k => usersData[k].id === matchedUserId)];
+                    if (uData && uData.isSharingScreen) {
+                        // 🖥️ แชร์หน้าจอ -> เอาไปไว้ตรงเวทีกลาง
+                        ssStage.classList.remove('hidden'); 
+                        const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); 
+                        let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; 
+                        ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); 
+                    } else {
+                        // 📹 เปิดกล้อง -> เอาไปใส่ในกรอบโปรไฟล์กลมๆ
+                        const camCont = document.getElementById(`cam-container-${matchedUserId}`);
+                        if (camCont) {
+                            camCont.classList.remove('hidden');
+                            document.getElementById(`avatar-container-${matchedUserId}`).classList.add('hidden');
+                            camCont.innerHTML = '';
+                            u.videoTrack.play(camCont, { fit: "cover" });
+                        }
+                    }
+                }
             } 
         }); 
         rtcClient.on("user-unpublished", async (u, t) => { 
             if (t === "audio") { delete remoteAudioTracks[u.uid]; } 
             if (t === "video") { 
+                delete remoteVideoTracks[u.uid];
                 const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); 
-                
-                // 🌟 เช็คว่าถ้าไม่มีกล่องวิดีโอ (v-wrap) เหลืออยู่เลย ค่อยซ่อนกรอบจอดำ
                 const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
                 if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
             } 
@@ -535,7 +616,7 @@ async function joinVoice() {
         localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true }); 
         await rtcClient.publish(localTracks.audioTrack); 
         isMuted = false; 
-        await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false, isSharingScreen: false }); 
+        await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false, isSharingScreen: false, isVideoOn: false }); 
         localStorage.setItem('dosh_active_voice', 'true'); 
         joinBtn.classList.add('hidden'); document.getElementById('active-voice-ui').classList.remove('hidden'); muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]"; 
 
@@ -545,7 +626,65 @@ async function joinVoice() {
     } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } 
 }
 
+// 🌟 ระบบเปิดกล้อง
+camBtn.onclick = async () => {
+    if (isSharingScreen) { showToast("กรุณาปิดแชร์หน้าจอก่อนเปิดกล้องครับ", "error"); return; }
+    
+    if (!isVideoOn) {
+        try {
+            localTracks.videoTrack = await AgoraRTC.createCameraVideoTrack();
+            await rtcClient.publish(localTracks.videoTrack);
+            isVideoOn = true;
+            
+            if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isVideoOn: true });
+            
+            camBtn.classList.remove('bg-[#2b2d31]'); camBtn.classList.add('bg-[#23a559]', 'text-white');
+            camIcon.className = "ph-fill ph-video-camera text-[20px] md:text-[24px]";
+            
+            // แสดงวิดีโอตัวเองทันที
+            const myCamCont = document.getElementById(`cam-container-${currentUserId}`);
+            const myAvCont = document.getElementById(`avatar-container-${currentUserId}`);
+            if(myCamCont && myAvCont) {
+                myCamCont.classList.remove('hidden');
+                myAvCont.classList.add('hidden');
+                myCamCont.innerHTML = '';
+                localTracks.videoTrack.play(myCamCont, { fit: "cover" });
+            }
+            
+            showToast("เปิดกล้องแล้ว!", "success");
+        } catch(e) { 
+            console.log(e); showToast("ไม่สามารถเข้าถึงกล้องได้ หรือไม่มีกล้องครับ", "error"); 
+        }
+    } else {
+        await stopCamera();
+    }
+};
+
+async function stopCamera() {
+    if (localTracks.videoTrack) {
+        await rtcClient.unpublish(localTracks.videoTrack);
+        localTracks.videoTrack.stop(); localTracks.videoTrack.close();
+        localTracks.videoTrack = null;
+    }
+    isVideoOn = false;
+    if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isVideoOn: false });
+    
+    camBtn.classList.add('bg-[#2b2d31]'); camBtn.classList.remove('bg-[#23a559]', 'text-white');
+    camIcon.className = "ph ph-video-camera text-[20px] md:text-[24px]";
+    
+    // คืนค่าโปรไฟล์รูปกลับมา
+    const myCamCont = document.getElementById(`cam-container-${currentUserId}`);
+    const myAvCont = document.getElementById(`avatar-container-${currentUserId}`);
+    if(myCamCont && myAvCont) {
+        myCamCont.classList.add('hidden');
+        myAvCont.classList.remove('hidden');
+        myCamCont.innerHTML = '';
+    }
+}
+
 ssBtn.onclick = async () => { 
+    if (isVideoOn) { showToast("กรุณาปิดกล้องก่อนแชร์หน้าจอครับ", "error"); return; }
+
     const sIco = document.getElementById('screen-icon'); 
     const ssWrapper = document.getElementById('screen-share-wrapper');
     const qualitySelect = document.getElementById('screen-quality');
@@ -575,7 +714,6 @@ ssBtn.onclick = async () => {
             let pc = document.createElement("div"); pc.id = `v-wrap-local`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); 
             screenTrack.play(pc, { fit: "contain" }); 
             
-            // ผูกเหตุการณ์ตอนกด "Stop sharing" ตรงปุ่มแผงควบคุมของ Chrome
             screenTrack.on("track-ended", stopScreenShare); 
         } catch (err) { console.log(err); showToast("แชร์หน้าจอไม่สำเร็จ", "error"); } 
     } else { 
@@ -583,7 +721,6 @@ ssBtn.onclick = async () => {
     } 
 };
 
-// 🌟 ฟังก์ชันหยุดแชร์จอแบบลบจอดำให้หายเกลี้ยง! 
 async function stopScreenShare() { 
     const ssWrapper = document.getElementById('screen-share-wrapper');
     const qualitySelect = document.getElementById('screen-quality');
@@ -606,8 +743,6 @@ async function stopScreenShare() {
     }
     
     const pc = document.getElementById(`v-wrap-local`); if (pc) pc.remove(); 
-    
-    // 🌟 เช็คว่าถ้าไม่มีกล่องวิดีโอ (v-wrap) เหลืออยู่เลย ค่อยซ่อนกรอบจอดำ
     const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
     if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
     
@@ -615,8 +750,11 @@ async function stopScreenShare() {
 }
 
 async function leaveVoice() { 
-    if (isSharingScreen) await stopScreenShare(); if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); } 
-    await rtcClient.leave(); if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false }); } 
+    if (isSharingScreen) await stopScreenShare(); 
+    if (isVideoOn) await stopCamera(); // เพิ่มการเคลียร์กล้องตอนออกห้อง
+    
+    if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); } 
+    await rtcClient.leave(); if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false }); } 
     localStorage.removeItem('dosh_active_voice'); document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); 
     joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
     document.getElementById('active-voice-ui').classList.add('hidden'); 
@@ -630,81 +768,8 @@ muteBtn.onclick = async () => { isMuted = !isMuted; localTracks.audioTrack.setEn
 // 📋 13. Task Board & Tour
 // ==========================================
 const zones = { 'todo': document.getElementById('todo'), 'in_progress': document.getElementById('in_progress'), 'done': document.getElementById('done') };
-onSnapshot(collection(db, "tasks"), (snapshot) => { Object.values(zones).forEach(z => z.innerHTML = ''); snapshot.forEach((docSnap) => { const d = docSnap.data(), id = docSnap.id, s = d.status || 'todo'; let tC = "bg-[#1e1f22] text-[#dbdee1] border border-[#35373c]"; if(d.tag && d.tag.includes('Dev')) tC = "bg-blue-500/10 text-blue-400 border border-blue-500/20"; if(d.tag && d.tag.includes('Music')) tC = "bg-pink-500/10 text-pink-400 border border-pink-500/20"; if(d.tag && d.tag.includes('Video')) tC = "bg-purple-500/10 text-purple-400 border border-purple-500/20"; if(d.tag && d.tag.includes('Design')) tC = "bg-[#23a559]/10 text-[#23a559] border border-[#23a559]/20"; const cardHTML = `<div draggable="true" data-id="${id}" class="task-card bg-[#1e1f22] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${s === 'done' ? 'border-[#4e5058] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]"><div class="flex space-x-2 mb-2.5"><span class="${tC} text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center"><i class="ph-fill ph-tag text-[10px] mr-1"></i>${d.tag}</span></div><p class="text-[13px] md:text-[14px] font-medium text-[#dbdee1] ${s === 'done' ? 'line-through text-[#80848e]' : ''} leading-snug">${d.title}</p></div>`; if (zones[s]) zones[s].insertAdjacentHTML('beforeend', cardHTML); }); document.querySelectorAll('.task-card').forEach(c => { c.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', c.getAttribute('data-id')); setTimeout(() => c.classList.add('opacity-30'), 0); }); c.addEventListener('dragend', () => c.classList.remove('opacity-30')); }); });
+onSnapshot(collection(db, "tasks"), (snapshot) => { Object.values(zones).forEach(z => z.innerHTML = ''); snapshot.forEach((docSnap) => { const d = docSnap.data(), id = docSnap.id, s = d.status || 'todo'; let tC = "bg-[#1e1f22] text-[#dbdee1] border border-[#35373c]"; if(d.tag && d.tag.includes('Dev')) tC = "bg-blue-500/10 text-blue-400 border border-blue-500/20"; if(d.tag && d.tag.includes('Music')) tC = "bg-pink-500/10 text-pink-400 border border-pink-500/20"; if(d.tag && d.tag.includes('Video')) tC = "bg-purple-500/10 text-purple-400 border border-purple-500/20"; if(d.tag && d.tag.includes('Design')) tC = "bg-[#23a559]/10 text-[#23a559] border border-[#23a559]/20"; const cardHTML = `<div draggable="true" data-id="${id}" class="task-card bg-[#1e1f22] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${s === 'done' ? 'border-[#4e5058] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]"><div class="flex space-x-2 mb-2.5"><span class="${tC} text-[10px] font-bold px-2 py-1 rounded flex items-center"><i class="ph-fill ph-tag text-[10px] mr-1"></i>${d.tag}</span></div><p class="text-[13px] md:text-[14px] font-medium text-[#dbdee1] ${s === 'done' ? 'line-through text-[#80848e]' : ''} leading-snug">${d.title}</p></div>`; if (zones[s]) zones[s].insertAdjacentHTML('beforeend', cardHTML); }); document.querySelectorAll('.task-card').forEach(c => { c.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', c.getAttribute('data-id')); setTimeout(() => c.classList.add('opacity-30'), 0); }); c.addEventListener('dragend', () => c.classList.remove('opacity-30')); }); });
 Object.keys(zones).forEach(s => { const z = zones[s]; z.addEventListener('dragover', (e) => { e.preventDefault(); z.classList.add('drop-zone-active'); }); z.addEventListener('dragleave', () => z.classList.remove('drop-zone-active')); z.addEventListener('drop', async (e) => { e.preventDefault(); z.classList.remove('drop-zone-active'); const tId = e.dataTransfer.getData('text/plain'); if (tId) await updateDoc(doc(db, "tasks", tId), { status: s }); }); });
 
 const taskModal = document.getElementById('task-modal');
 document.getElementById('add-task-btn').addEventListener('click', () => { document.getElementById('task-title-input').value = ''; taskModal.classList.remove('hidden'); }); document.getElementById('close-task-modal').addEventListener('click', () => { taskModal.classList.add('hidden'); }); document.getElementById('confirm-task-btn').addEventListener('click', async () => { const title = document.getElementById('task-title-input').value.trim(); const tag = document.getElementById('task-tag-input').value; if (!title) { showToast("กรุณากรอกชื่องานก่อนครับ!", "error"); return; } await addDoc(collection(db, "tasks"), { title: title, tag: tag, status: 'todo', timestamp: serverTimestamp() }); taskModal.classList.add('hidden'); showToast("เพิ่มงานใหม่ลงในกระดานแล้ว!", "success"); });
-
-if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(r => console.log('✅ HIVE SW Active')).catch(e => console.log('❌ SW Fail:', e)); }); }
-
-// 🌟 ระบบ Tour และเปลี่ยนชื่อเป็น HIVE
-const tourOverlay = document.getElementById('tour-overlay'); const tourTooltip = document.getElementById('tour-tooltip'); const tourTitle = document.getElementById('tour-title'); const tourDesc = document.getElementById('tour-desc'); const tourStepCount = document.getElementById('tour-step-count'); const tourNextBtn = document.getElementById('tour-next-btn'); const tourSkipBtn = document.getElementById('tour-skip-btn');
-const tourSteps = [ { target: null, title: "ยินดีต้อนรับสู่ HIVE! 🎉", desc: "Super App สำหรับทีมครีเอทีฟและมัลติมีเดีย จบครบทุกงานในเว็บเดียว! เดี๋ยวเราจะพาไปดูว่ามีเครื่องมืออะไรให้ใช้บ้าง", pos: "center" }, { target: ".nav-btn[data-view='chat']", title: "1. ห้องแชทอัจฉริยะ 💬", desc: "คุยงาน ส่งไฟล์ ซูมรูปภาพ พิมพ์คำสั่ง / บอท หรือแม้แต่ 'ตอบกลับข้อความ' ก็ทำได้ครบจบที่นี่!", pos: "right" }, { target: ".nav-btn[data-view='voice']", title: "2. ห้องนั่งเล่น (Voice Lounge) 🎙️", desc: "เปิดไมค์คุยงาน แชร์หน้าจอ (Screen Share) หรือจะเปิดคลิป YouTube รัน Watch Party ดูพร้อมกันทั้งแก๊งก็ยังได้!", pos: "right" }, { target: ".nav-btn[data-view='board']", title: "3. ระบบกระดานงาน (Task Board) 📋", desc: "สร้างงาน จัดหมวดหมู่ แล้วลากแปะ (Drag & Drop) เพื่ออัปเดตสถานะงานให้เพื่อนๆ ในทีมรู้ความคืบหน้าแบบ Real-time", pos: "right" }, { target: "#mini-profile-btn", title: "4. ปรับแต่งโปรไฟล์ 🪪", desc: "กดตรงนี้เพื่อตั้งค่า 'รูปภาพปก (Banner)' เปลี่ยนสีชื่อ และตั้งสถานะ (Custom Status) โชว์ความเท่ให้เพื่อนในทีมเห็น!", pos: "top" } ];
-let currentTourStep = 0; let activeHighlightTarget = null;
-
-function highlightElement(selector, pos) { 
-    if (activeHighlightTarget) activeHighlightTarget.classList.remove('relative', 'z-[102]', 'ring-4', 'ring-[#5865F2]', 'ring-offset-4', 'ring-offset-[#0e0f11]', 'rounded-lg', 'bg-[#1a1b1e]'); 
-    if (!selector) return; 
-    const el = document.querySelector(selector); 
-    if (el) { 
-        if(window.innerWidth < 768) { sidebar.classList.add('open'); overlay.classList.add('active'); } 
-        el.classList.add('relative', 'z-[102]', 'ring-4', 'ring-[#5865F2]', 'ring-offset-4', 'ring-offset-[#0e0f11]', 'rounded-lg', 'bg-[#1a1b1e]'); 
-        activeHighlightTarget = el; 
-        
-        setTimeout(() => {
-            const rect = el.getBoundingClientRect(); 
-            let tTop, tLeft;
-            
-            if (pos === "top") {
-                tTop = rect.top - tourTooltip.offsetHeight - 20;
-                tLeft = rect.left;
-            } else {
-                tTop = rect.top + (rect.height / 2) - (tourTooltip.offsetHeight / 2); 
-                tLeft = rect.right + 20; 
-                if(window.innerWidth < 768 || tLeft + 340 > window.innerWidth) { 
-                    tTop = rect.bottom + 20; 
-                    tLeft = 20; 
-                } 
-            }
-            
-            if (tTop + tourTooltip.offsetHeight > window.innerHeight) { tTop = window.innerHeight - tourTooltip.offsetHeight - 20; }
-            if (tTop < 20) tTop = 20; 
-            
-            tourTooltip.style.top = `${tTop}px`; 
-            tourTooltip.style.left = `${tLeft}px`; 
-        }, 10);
-    } 
-}
-
-function showTourStep(index) { 
-    const step = tourSteps[index]; tourTitle.innerHTML = step.title; tourDesc.innerHTML = step.desc; tourStepCount.textContent = `${index + 1}/${tourSteps.length}`; 
-    if (index === tourSteps.length - 1) { tourNextBtn.innerHTML = `เริ่มใช้งาน HIVE! <i class="ph-fill ph-rocket-launch ml-1.5"></i>`; tourNextBtn.classList.replace('bg-[#5865F2]', 'bg-[#23a559]'); tourNextBtn.classList.replace('hover:bg-[#4752C4]', 'hover:bg-[#1e8a49]'); } 
-    else { tourNextBtn.innerHTML = `ต่อไป <i class="ph-fill ph-caret-right ml-1.5"></i>`; } 
-    
-    if (step.pos === "center") { tourTooltip.style.top = "50%"; tourTooltip.style.left = "50%"; tourTooltip.style.transform = "translate(-50%, -50%)"; highlightElement(null); } 
-    else { tourTooltip.style.transform = "none"; highlightElement(step.target, step.pos); } 
-}
-
-function startTour() { currentTourStep = 0; tourOverlay.classList.remove('hidden'); tourTooltip.classList.remove('hidden'); showTourStep(currentTourStep); } 
-function endTour() { tourOverlay.classList.add('hidden'); tourTooltip.classList.add('hidden'); highlightElement(null); localStorage.setItem('dosh_tour_completed', 'true'); showToast("🎉 จบทัวร์แล้ว! ลุยงานกันเลย!", "success"); if(window.innerWidth < 768) { sidebar.classList.remove('open'); overlay.classList.remove('active'); } }
-
-tourNextBtn.onclick = () => { currentTourStep++; if (currentTourStep >= tourSteps.length) { endTour(); } else { showTourStep(currentTourStep); } }; 
-tourSkipBtn.onclick = endTour;
-
-setTimeout(() => { if (!localStorage.getItem('dosh_tour_completed') && currentUserId) { startTour(); } }, 2000);
-
-// ==========================================
-// 🎬 14. ระบบ Splash Screen (แอนิเมชันเปิดแอป)
-// ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-    const splashScreen = document.getElementById('splash-screen');
-    if (splashScreen) {
-        setTimeout(() => {
-            if (document.body.contains(splashScreen)) {
-                splashScreen.classList.add('opacity-0');
-                setTimeout(() => splashScreen.remove(), 500);
-            }
-        }, 2500); 
-    }
-});

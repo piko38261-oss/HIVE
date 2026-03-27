@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hive-pwa-cache-v3.2';
+const CACHE_NAME = 'hive-pwa-cache-v3.3';
 
 const urlsToCache = [
   './',
