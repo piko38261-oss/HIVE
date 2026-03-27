@@ -809,9 +809,22 @@ ssBtn.onclick = async () => {
     
     if (!isSharingScreen) { 
         try { 
-            const selectedQuality = qualitySelect ? qualitySelect.value : "1080p_1";
+            // ดึงค่าจาก Dropdown ว่าผู้ใช้เลือกความชัดเท่าไหร่
+            const selectedVal = qualitySelect ? qualitySelect.value : "1080p";
             
-            const res = await AgoraRTC.createScreenVideoTrack({ encoderConfig: selectedQuality, optimizationMode: "detail" }, "auto"); 
+            // 🌟 ตั้งค่าความละเอียด และดัน FPS ตามที่ผู้ใช้เลือก
+            let encoderConfig = { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 };
+            if (selectedVal.includes("720")) encoderConfig = { width: 1280, height: 720, frameRate: 30, bitrateMax: 2000 };
+            else if (selectedVal.includes("480")) encoderConfig = { width: 853, height: 480, frameRate: 30, bitrateMax: 1000 };
+            else if (selectedVal.includes("360")) encoderConfig = { width: 640, height: 360, frameRate: 30, bitrateMax: 800 };
+            else if (selectedVal === "1080p_60") encoderConfig = { width: 1920, height: 1080, frameRate: 60, bitrateMax: 4500 }; 
+            
+            // 🌟 เปลี่ยน optimizationMode เป็น "motion" เพื่อเน้นความลื่นไหล (ไม่ให้เฟรมดรอป)
+            const res = await AgoraRTC.createScreenVideoTrack({ 
+                encoderConfig: encoderConfig, 
+                optimizationMode: "motion" 
+            }, "auto"); 
+            
             if (Array.isArray(res)) { screenTrack = res[0]; screenAudioTrack = res[1]; await rtcClient.publish([screenTrack, screenAudioTrack]); } 
             else { screenTrack = res; await rtcClient.publish(screenTrack); } 
             

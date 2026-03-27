@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>HIVE Workspace - HIVE Server</title>
     
-    <link rel="manifest" href="manifest.json?v=9">
+    <link rel="manifest" href="manifest.json?v=10">
     <meta name="theme-color" content="#1e1f22">
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=H&background=5865F2&color=fff&size=192">
 
@@ -56,7 +56,10 @@
     <script>
         setTimeout(() => {
             const splash = document.getElementById('splash-screen');
-            if (splash) { splash.classList.add('opacity-0'); setTimeout(() => splash.remove(), 500); }
+            if (splash) {
+                splash.classList.add('opacity-0');
+                setTimeout(() => splash.remove(), 500);
+            }
         }, 2500);
     </script>
 
@@ -178,7 +181,13 @@
 
                     <div class="flex flex-col items-center group tooltip relative">
                         <div id="screen-share-wrapper" class="flex items-center bg-[#2b2d31] rounded-full shadow-md transition-all duration-200 border border-transparent">
-                            <select id="screen-quality" class="bg-transparent text-[#80848e] hover:text-[#dbdee1] text-[11px] font-bold pl-3 pr-1 py-3 md:py-4 focus:outline-none cursor-pointer appearance-none outline-none text-center"><option value="360p_1">360p</option><option value="480p_1">480p</option><option value="720p_1">720p</option><option value="1080p_1" selected>1080p</option></select>
+                            <select id="screen-quality" class="bg-transparent text-[#80848e] hover:text-[#dbdee1] text-[11px] font-bold pl-3 pr-1 py-3 md:py-4 focus:outline-none cursor-pointer appearance-none outline-none text-center">
+                                <option value="360p">360p</option>
+                                <option value="480p">480p</option>
+                                <option value="720p">720p</option>
+                                <option value="1080p" selected>1080p 30fps</option>
+                                <option value="1080p_60">1080p 60fps</option>
+                            </select>
                             <div class="h-6 w-px bg-[#1e1f22]"></div>
                             <button id="screen-share-btn" class="w-10 h-12 md:w-12 md:h-14 text-[#dbdee1] hover:text-white rounded-r-full flex items-center justify-center transition"><i id="screen-icon" class="ph ph-screencast text-[20px] md:text-[24px]"></i></button>
                         </div>
