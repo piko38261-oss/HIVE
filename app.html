@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>HIVE Workspace - HIVE Server</title>
     
-    <link rel="manifest" href="manifest.json?v=4">
+    <link rel="manifest" href="manifest.json?v=5">
     <meta name="theme-color" content="#1e1f22">
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=H&background=5865F2&color=fff&size=192">
 
@@ -32,6 +32,7 @@
         .speaking-ring { box-shadow: 0 0 0 3px #23a559; border-color: #23a559 !important; transition: all 0.1s ease; }
         .bg-dots { background-image: radial-gradient(#dbdee1 1px, transparent 1px); background-size: 20px 20px; }
         
+        /* 📱 ปรับหน้าเกมสำหรับมือถือแบบ Fixed Height */
         @media (max-width: 768px) {
             #view-game-draw { height: calc(100dvh - 48px) !important; overflow: hidden !important; }
             .game-board-mobile { height: 42% !important; min-height: 42% !important; }
@@ -153,20 +154,15 @@
                     </div>
                 </div>
                 <div class="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col relative pb-32">
-                    
                     <div id="watch-party-stage" class="hidden w-full max-w-4xl mx-auto aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-8 flex-col relative border border-[#2b2d31]">
                         <div class="h-8 bg-[#111214] flex items-center justify-between px-3"><span class="text-[11px] font-bold text-[#dbdee1] flex items-center"><i class="ph-fill ph-broadcast text-[#da373c] mr-1.5 animate-pulse"></i> เปิดคลิปโดย: <span id="wp-host" class="ml-1 text-[#5865F2]"></span></span><button id="close-wp-btn" class="text-[#da373c] hover:bg-[#da373c]/20 px-2 py-0.5 rounded transition text-[11px] font-bold">ปิดสตรีม</button></div>
                         <div id="yt-wrapper" class="flex-1 w-full bg-black relative"><div id="yt-player-container"></div></div>
                     </div>
-                    
                     <div id="screen-share-stage" class="hidden w-full max-w-4xl mx-auto aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-8 border border-[#5865F2] ring-2 ring-[#5865F2]/30 relative">
                         <div class="absolute top-2 left-2 bg-[#da373c] text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center z-10"><i class="ph-fill ph-record mr-1 animate-pulse"></i> LIVE</div>
                     </div>
-
                     <div id="camera-stage" class="hidden w-full max-w-6xl mx-auto flex-wrap justify-center gap-4 md:gap-6 mb-8 transition-all"></div>
-
                     <div id="voice-grid" class="flex flex-wrap justify-center gap-4 md:gap-6 w-full max-w-5xl mx-auto"></div>
-                    
                     <button id="join-voice-btn" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#23a559] hover:bg-[#1e8a49] text-white px-8 py-4 rounded-full font-bold shadow-2xl transition transform hover:scale-105 flex items-center text-[16px]"><i class="ph-fill ph-phone-call text-[22px] mr-2"></i> เข้าร่วมห้องเสียง</button>
                 </div>
                 
@@ -248,57 +244,109 @@
         <div id="members-list" class="flex-1 overflow-y-auto p-2 space-y-0.5"></div>
     </aside>
 
-    <div id="settings-modal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-[#313338] rounded-xl w-full max-w-md overflow-hidden border border-[#1e1f22]">
-            <div class="h-14 flex items-center justify-between px-6 border-b border-[#1e1f22] bg-[#2b2d31]"><h2 class="font-extrabold text-[16px] text-white">ตั้งค่าโปรไฟล์</h2><button id="close-settings-btn" class="text-[#949ba4] hover:text-white"><i class="ph-bold ph-x text-[20px]"></i></button></div>
-            <div class="p-6 space-y-6">
-                <div class="relative group"><div id="settings-banner-wrapper" class="h-24 bg-[#1e1f22] rounded-t-lg relative cursor-pointer"><img id="settings-banner-preview" src="" class="w-full h-full object-cover hidden"></div><div id="settings-avatar-wrapper" class="absolute -bottom-8 left-4 w-20 h-20 rounded-full border-4 border-[#313338] bg-gray-800 cursor-pointer overflow-hidden"><img id="settings-avatar-preview" src="" class="w-full h-full object-cover"></div></div>
-                <div class="pt-10 space-y-4">
-                    <input type="text" id="settings-username-input" placeholder="ชื่อ" class="w-full bg-[#1e1f22] border border-[#1e1f22] rounded-md px-3 py-2 text-[14px] text-white outline-none">
-                    <input type="text" id="settings-custom-status" placeholder="สถานะ" class="w-full bg-[#1e1f22] border border-[#1e1f22] rounded-md px-3 py-2 text-[14px] text-[#23a559] outline-none">
+    <div id="settings-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-md transition-opacity opacity-0 [&:not(.hidden)]:opacity-100">
+        <div class="bg-[#111214]/80 backdrop-blur-2xl rounded-2xl shadow-[0_0_50px_rgba(88,101,242,0.15)] w-full max-w-md overflow-hidden transform scale-95 transition-all duration-300 [&:not(.hidden)]:scale-100 border border-white/10 relative">
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-[#5865F2] rounded-full mix-blend-screen filter blur-[80px] opacity-30 pointer-events-none"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-[#23a559] rounded-full mix-blend-screen filter blur-[80px] opacity-20 pointer-events-none"></div>
+
+            <div class="h-16 flex items-center justify-between px-6 border-b border-white/5 relative z-10">
+                <h2 class="font-extrabold text-[18px] text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">ตั้งค่าโปรไฟล์ส่วนตัว</h2>
+                <button id="close-settings-btn" class="text-gray-400 hover:text-white hover:rotate-90 transition-all duration-300"><i class="ph-bold ph-x text-[20px]"></i></button>
+            </div>
+            
+            <div class="p-6 space-y-6 relative z-10">
+                <div class="relative group mt-2">
+                    <div id="settings-banner-wrapper" class="h-28 bg-[#1e1f22]/50 rounded-xl relative cursor-pointer overflow-hidden group-hover:ring-2 ring-[#5865F2]/50 transition-all border border-white/5 shadow-inner">
+                        <img id="settings-banner-preview" src="" class="w-full h-full object-cover hidden mix-blend-lighten">
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition duration-300"><i class="ph-fill ph-camera text-white text-3xl drop-shadow-lg"></i></div>
+                    </div>
+                    <div id="settings-avatar-wrapper" class="absolute -bottom-10 left-6 w-24 h-24 rounded-full border-4 border-[#111214] bg-gray-800 cursor-pointer overflow-hidden z-10 group-hover:shadow-[0_0_20px_rgba(88,101,242,0.5)] transition-all duration-300">
+                        <img id="settings-avatar-preview" src="" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition duration-300"><i class="ph-fill ph-camera text-white text-xl"></i></div>
+                    </div>
+                </div>
+                
+                <div class="pt-12 space-y-5">
+                    <div class="group">
+                        <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 group-focus-within:text-[#5865F2] transition-colors">ชื่อแสดงผล</label>
+                        <input type="text" id="settings-username-input" class="w-full bg-white/5 border border-white/10 focus:border-[#5865F2] focus:ring-1 focus:ring-[#5865F2] rounded-lg px-4 py-2.5 text-[14px] text-white outline-none transition-all placeholder-gray-600 shadow-inner">
+                    </div>
+                    <div class="group">
+                        <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 group-focus-within:text-[#23a559] transition-colors">สถานะที่กำหนดเอง</label>
+                        <input type="text" id="settings-custom-status" placeholder="วันนี้ทำงานถึงดึกนะ..." class="w-full bg-white/5 border border-white/10 focus:border-[#23a559] focus:ring-1 focus:ring-[#23a559] rounded-lg px-4 py-2.5 text-[14px] text-[#23a559] outline-none transition-all placeholder-gray-600 shadow-inner">
+                    </div>
                 </div>
             </div>
-            <div class="p-4 bg-[#2b2d31] border-t border-[#1e1f22] flex justify-end"><button id="save-settings-btn" class="bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-2 px-6 rounded transition">บันทึก</button></div>
+            
+            <div class="p-5 border-t border-white/5 flex justify-end relative z-10">
+                <button id="save-settings-btn" class="bg-gradient-to-r from-[#5865F2] to-[#4752C4] hover:from-[#4752C4] hover:to-[#3b44a8] text-white font-bold py-2.5 px-8 rounded-lg transition-all duration-300 shadow-[0_4px_15px_rgba(88,101,242,0.4)] hover:shadow-[0_6px_20px_rgba(88,101,242,0.6)] transform hover:-translate-y-0.5">บันทึกการเปลี่ยนแปลง</button>
+            </div>
         </div>
         <input type="file" id="settings-banner-input" class="hidden" accept="image/*">
         <input type="file" id="settings-avatar-input" class="hidden" accept="image/*">
     </div>
     
-    <div id="profile-card-modal" class="fixed inset-0 z-[90] hidden flex items-center justify-center p-4">
-        <div class="bg-[#111214] rounded-xl shadow-2xl w-full max-w-[340px] overflow-hidden border border-[#2b2d31] relative">
-            <button id="close-profile-card" class="absolute top-2 right-2 z-20 w-7 h-7 bg-black/50 hover:bg-black/80 rounded-full flex items-center justify-center text-white transition"><i class="ph-bold ph-x text-[14px]"></i></button>
-            <div class="h-[100px] bg-[#5865F2] relative"><img id="profile-card-banner" src="" class="w-full h-full object-cover hidden"></div>
-            <div class="px-4 pb-4 relative">
-                <div class="absolute -top-10 left-4 w-[80px] h-[80px] rounded-full border-[6px] border-[#111214] bg-gray-800 overflow-hidden"><img id="profile-card-avatar" src="" class="w-full h-full object-cover"></div>
-                <div class="pt-12 pb-2 border-b border-[#2b2d31]"><h2 id="profile-card-name" class="font-extrabold text-[18px] text-white tracking-wide"></h2><p id="profile-card-status" class="text-[12px] text-[#dbdee1]"></p></div>
-                <div id="profile-card-badges" class="mt-3"></div>
+    <div id="profile-card-modal" class="fixed inset-0 z-[90] hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity opacity-0 [&:not(.hidden)]:opacity-100">
+        <div class="bg-[#111214]/85 backdrop-blur-xl rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.6)] w-full max-w-[340px] overflow-hidden border border-white/10 relative transform scale-95 transition-all duration-300 [&:not(.hidden)]:scale-100">
+            <button id="close-profile-card" class="absolute top-3 right-3 z-20 w-8 h-8 bg-black/40 hover:bg-black/80 backdrop-blur-md rounded-full flex items-center justify-center text-white transition hover:rotate-90"><i class="ph-bold ph-x text-[14px]"></i></button>
+            <div class="h-[120px] bg-gradient-to-r from-[#5865F2] to-[#8b5cf6] relative">
+                <img id="profile-card-banner" src="" class="w-full h-full object-cover hidden mix-blend-overlay">
+            </div>
+            <div class="px-6 pb-6 relative">
+                <div class="absolute -top-12 left-6 w-[96px] h-[96px] rounded-full border-[6px] border-[#111214] bg-gray-800 overflow-hidden shadow-xl"><img id="profile-card-avatar" src="" class="w-full h-full object-cover"></div>
+                <div class="pt-14 pb-4 border-b border-white/5">
+                    <h2 id="profile-card-name" class="font-extrabold text-[22px] text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 tracking-wide"></h2>
+                    <p id="profile-card-status" class="text-[13px] text-[#dbdee1] mt-1"></p>
+                </div>
+                <div class="mt-4"><h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">บทบาทในทีม</h3><div class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner"><div class="w-2.5 h-2.5 rounded-full bg-[#5865F2] mr-2 shadow-[0_0_8px_#5865F2]"></div> ทีมครีเอทีฟ</div></div>
             </div>
         </div>
     </div>
 
-    <div id="task-modal" class="fixed inset-0 bg-black/70 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-[#313338] rounded-xl shadow-2xl w-full max-w-sm border border-[#1e1f22]">
-            <div class="p-5 border-b border-[#1e1f22] font-bold text-white">สร้างงานใหม่</div>
-            <div class="p-5 space-y-4">
-                <input type="text" id="task-title-input" placeholder="ชื่องาน" class="w-full bg-[#1e1f22] border border-[#1e1f22] rounded-md px-3 py-2 text-[14px] text-white outline-none">
-                <select id="task-tag-input" class="w-full bg-[#1e1f22] border border-[#1e1f22] rounded-md px-3 py-2 text-[14px] text-white outline-none"><option value="Dev">Dev</option><option value="Design">Design</option><option value="Video">Video</option><option value="Music">Music</option></select>
+    <div id="task-modal" class="fixed inset-0 bg-black/70 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-[#111214]/90 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-sm border border-white/10 relative">
+            <div class="p-5 border-b border-white/5 font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 text-[16px]">สร้างงานใหม่</div>
+            <div class="p-5 space-y-4 relative z-10">
+                <div class="group">
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 group-focus-within:text-[#5865F2] transition-colors">ชื่องาน / หัวข้อ</label>
+                    <input type="text" id="task-title-input" placeholder="พิมพ์ชื่องานตรงนี้..." class="w-full bg-white/5 border border-white/10 focus:border-[#5865F2] focus:ring-1 focus:ring-[#5865F2] rounded-lg px-4 py-2.5 text-[14px] text-white outline-none transition-all placeholder-gray-600 shadow-inner">
+                </div>
+                <div class="group">
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 group-focus-within:text-[#5865F2] transition-colors">ป้ายกำกับ (Tag)</label>
+                    <select id="task-tag-input" class="w-full bg-[#1e1f22] border border-white/10 focus:border-[#5865F2] rounded-lg px-4 py-2.5 text-[14px] text-white outline-none"><option value="Dev">💻 โค้ดดิ้ง (Dev)</option><option value="Design">🎨 ออกแบบ (Design)</option><option value="Video">🎞️ ตัดต่อวิดีโอ (Video)</option><option value="Music">🎵 ทำเพลง (Music)</option></select>
+                </div>
             </div>
-            <div class="p-4 bg-[#2b2d31] flex justify-end space-x-3 rounded-b-xl"><button id="close-task-modal" class="text-[#dbdee1]">ยกเลิก</button><button id="confirm-task-btn" class="bg-[#5865F2] text-white px-5 py-2 rounded font-bold">สร้าง</button></div>
+            <div class="p-5 bg-[#1a1b1e]/50 border-t border-white/5 flex justify-end space-x-3 rounded-b-2xl">
+                <button id="close-task-modal" class="text-gray-400 hover:text-white px-4 text-[13px] font-bold transition-colors">ยกเลิก</button>
+                <button id="confirm-task-btn" class="bg-gradient-to-r from-[#5865F2] to-[#4752C4] hover:from-[#4752C4] hover:to-[#3b44a8] text-white px-6 py-2 rounded-lg font-bold shadow-[0_4px_15px_rgba(88,101,242,0.4)] transform hover:-translate-y-0.5 transition-all text-[13px]">สร้างงาน</button>
+            </div>
         </div>
     </div>
 
-    <div id="delete-confirm-modal" class="fixed inset-0 bg-black/70 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-[#313338] p-6 rounded-xl w-full max-w-sm text-center border border-[#1e1f22]">
-            <h3 class="text-white font-bold text-[18px] mb-6">ยืนยันการลบ?</h3>
-            <div class="flex space-x-3"><button id="cancel-delete-btn" class="flex-1 py-2 rounded bg-[#2b2d31] text-white">ยกเลิก</button><button id="confirm-delete-btn" class="flex-1 py-2 rounded bg-[#da373c] text-white">ลบ</button></div>
+    <div id="delete-confirm-modal" class="fixed inset-0 bg-black/70 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-[#111214]/90 backdrop-blur-xl p-8 rounded-3xl w-full max-w-sm text-center border border-white/10 shadow-[0_0_40px_rgba(218,55,60,0.15)]">
+            <div class="w-20 h-20 bg-gradient-to-br from-[#da373c]/20 to-transparent text-[#da373c] rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-[#da373c]/30"><i class="ph-fill ph-trash text-4xl drop-shadow-[0_0_10px_rgba(218,55,60,0.5)]"></i></div>
+            <h3 class="text-white font-extrabold text-[20px] mb-2">ยืนยันการลบ?</h3>
+            <p class="text-gray-400 text-[13px] mb-8">คุณแน่ใจหรือไม่ว่าต้องการลบข้อความนี้? การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+            <div class="flex space-x-3">
+                <button id="cancel-delete-btn" class="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold transition-all">ยกเลิก</button>
+                <button id="confirm-delete-btn" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#da373c] to-[#b52a2e] text-white font-bold shadow-[0_4px_15px_rgba(218,55,60,0.4)] hover:shadow-[0_6px_20px_rgba(218,55,60,0.6)] transform hover:-translate-y-0.5 transition-all">ลบทิ้งเลย</button>
+            </div>
         </div>
     </div>
 
     <div id="tour-overlay" class="fixed inset-0 bg-black/60 z-[101] hidden backdrop-blur-sm transition-opacity"></div>
-    <div id="tour-tooltip" class="fixed z-[103] bg-[#313338] border border-[#5865F2] rounded-xl shadow-2xl p-5 w-[300px] hidden text-center transform transition-all duration-300">
-        <h3 id="tour-title" class="font-bold text-white text-[16px] mb-2"></h3>
-        <p id="tour-desc" class="text-[#dbdee1] text-[13px] leading-relaxed mb-5"></p>
-        <div class="flex items-center justify-between border-t border-[#1e1f22] pt-4"><button id="tour-skip-btn" class="text-[#949ba4]">ข้าม</button><button id="tour-next-btn" class="bg-[#5865F2] text-white px-4 py-1.5 rounded font-bold text-[13px]">ต่อไป</button></div>
+    <div id="tour-tooltip" class="fixed z-[103] bg-[#111214]/95 backdrop-blur-xl border border-[#5865F2]/50 rounded-2xl shadow-[0_0_40px_rgba(88,101,242,0.3)] p-6 w-[320px] hidden text-center transform transition-all duration-300">
+        <div class="w-14 h-14 bg-gradient-to-br from-[#5865F2] to-[#4752C4] text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(88,101,242,0.5)]"><i class="ph-fill ph-info text-3xl"></i></div>
+        <h3 id="tour-title" class="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 text-[18px] mb-2"></h3>
+        <p id="tour-desc" class="text-gray-300 text-[13px] leading-relaxed mb-6"></p>
+        <div class="flex items-center justify-between border-t border-white/10 pt-5">
+            <button id="tour-skip-btn" class="text-gray-400 hover:text-white text-[12px] font-bold transition-colors">ข้ามทั้งหมด</button>
+            <div class="flex items-center space-x-4">
+                <span id="tour-step-count" class="text-gray-500 text-[12px] font-bold">1/4</span>
+                <button id="tour-next-btn" class="bg-gradient-to-r from-[#5865F2] to-[#4752C4] hover:from-[#4752C4] hover:to-[#3b44a8] text-white px-5 py-2 rounded-lg font-bold text-[13px] shadow-[0_4px_15px_rgba(88,101,242,0.4)] transform hover:-translate-y-0.5 transition-all flex items-center">ต่อไป <i class="ph-fill ph-caret-right ml-1.5"></i></button>
+            </div>
+        </div>
     </div>
 
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
