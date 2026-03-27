@@ -513,11 +513,22 @@ async function joinVoice() {
                     u.audioTrack.setVolume(parseInt(userVolumes[matchedUserId]));
                 }
             }
-            if (t === "video") { ssStage.classList.remove('hidden'); const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); } 
+            if (t === "video") { 
+                ssStage.classList.remove('hidden'); 
+                const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); 
+                let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; 
+                ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); 
+            } 
         }); 
         rtcClient.on("user-unpublished", async (u, t) => { 
             if (t === "audio") { delete remoteAudioTracks[u.uid]; } 
-            if (t === "video") { const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); if (ssStage.children.length === 0) ssStage.classList.add('hidden'); } 
+            if (t === "video") { 
+                const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); 
+                
+                // 🌟 เช็คว่าถ้าไม่มีกล่องวิดีโอ (v-wrap) เหลืออยู่เลย ค่อยซ่อนกรอบจอดำ
+                const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
+                if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
+            } 
         }); 
         rtcClient.enableAudioVolumeIndicator(); rtcClient.on("volume-indicator", vs => { document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); vs.forEach(v => { if (v.level > 10) { let sId = null; if (v.uid === myNumericUid || v.uid === 0) { sId = currentUserId; } else { for (const k in usersData) { if (usersData[k].agoraUid === v.uid) { sId = usersData[k].id; break; } } } if (sId) { const a1 = document.getElementById(`img-avatar-${sId}`), a2 = document.getElementById(`img-sidebar-voice-${sId}`), a3 = document.getElementById(`img-grid-voice-${sId}`); if(a1) a1.classList.add('speaking-ring'); if(a2) a2.classList.add('speaking-ring'); if(a3) a3.classList.add('speaking-ring'); } } }); }); 
         await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid); 
@@ -563,6 +574,8 @@ ssBtn.onclick = async () => {
             ssStage.classList.remove('hidden'); 
             let pc = document.createElement("div"); pc.id = `v-wrap-local`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); 
             screenTrack.play(pc, { fit: "contain" }); 
+            
+            // ผูกเหตุการณ์ตอนกด "Stop sharing" ตรงปุ่มแผงควบคุมของ Chrome
             screenTrack.on("track-ended", stopScreenShare); 
         } catch (err) { console.log(err); showToast("แชร์หน้าจอไม่สำเร็จ", "error"); } 
     } else { 
@@ -570,6 +583,7 @@ ssBtn.onclick = async () => {
     } 
 };
 
+// 🌟 ฟังก์ชันหยุดแชร์จอแบบลบจอดำให้หายเกลี้ยง! 
 async function stopScreenShare() { 
     const ssWrapper = document.getElementById('screen-share-wrapper');
     const qualitySelect = document.getElementById('screen-quality');
@@ -592,7 +606,12 @@ async function stopScreenShare() {
     }
     
     const pc = document.getElementById(`v-wrap-local`); if (pc) pc.remove(); 
-    if (ssStage.children.length === 0) ssStage.classList.add('hidden'); 
+    
+    // 🌟 เช็คว่าถ้าไม่มีกล่องวิดีโอ (v-wrap) เหลืออยู่เลย ค่อยซ่อนกรอบจอดำ
+    const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
+    if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
+    
+    showToast("หยุดแชร์หน้าจอแล้ว", "info");
 }
 
 async function leaveVoice() { 
@@ -681,11 +700,9 @@ setTimeout(() => { if (!localStorage.getItem('dosh_tour_completed') && currentUs
 document.addEventListener("DOMContentLoaded", () => {
     const splashScreen = document.getElementById('splash-screen');
     if (splashScreen) {
-        // หน่วงเวลาให้แอนิเมชันเล่นความเท่สัก 2.5 วินาที แล้วค่อยเฟดออก
         setTimeout(() => {
             if (document.body.contains(splashScreen)) {
                 splashScreen.classList.add('opacity-0');
-                // รอให้ CSS transition (opacity 500ms) เฟดเสร็จก่อนค่อยลบ div ทิ้ง
                 setTimeout(() => splashScreen.remove(), 500);
             }
         }, 2500); 
