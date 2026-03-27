@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hive-pwa-cache-v4';
+const CACHE_NAME = 'hive-pwa-cache-v5';
 
 const urlsToCache = [
   './',
@@ -13,7 +13,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('เปิดใช้งาน Cache HIVE V2 สำเร็จ');
+        console.log('เปิดใช้งาน Cache HIVE V5 สำเร็จ');
         return cache.addAll(urlsToCache);
       })
   );
@@ -35,7 +35,7 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName); // ลบ DOSH อันเก่าทิ้ง
+            return caches.delete(cacheName); // ลบแคชที่พังทิ้งให้หมด!
           }
         })
       );

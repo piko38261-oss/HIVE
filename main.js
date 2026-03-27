@@ -95,7 +95,7 @@ window.showUserProfile = (userName) => { const u = usersData[userName]; if(!u) r
 document.getElementById('close-profile-card').onclick = () => document.getElementById('profile-card-modal').classList.add('hidden'); document.getElementById('profile-card-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('profile-card-modal')) document.getElementById('profile-card-modal').classList.add('hidden'); });
 
 // ==========================================
-// 🟢 6. โหลดรายชื่อผู้ใช้งาน (ระบบ Grid อัจฉริยะ)
+// 🟢 6. โหลดรายชื่อผู้ใช้งาน (กลับไปเป็นรูปวงกลม)
 // ==========================================
 window.changeUserVolume = (uid, userId, vol) => {
     if (remoteAudioTracks[uid]) { remoteAudioTracks[uid].setVolume(parseInt(vol)); }
@@ -135,11 +135,11 @@ onSnapshot(collection(db, "users"), (snapshot) => {
             currentVoiceCardIds.push(`voice-card-${id}`);
             let card = document.getElementById(`voice-card-${id}`);
             
+            // 🌟 สร้างการ์ดโปรไฟล์รูปแบบปกติ (ไม่เอากล้องมายัดใส่แล้ว)
             if (!card) {
                 voiceGrid.insertAdjacentHTML('beforeend', `
                     <div id="voice-card-${id}" class="bg-[#111214] rounded-2xl w-[140px] h-[160px] sm:w-[160px] sm:h-[180px] md:w-[190px] md:h-[210px] pt-4 pb-2 px-2 flex flex-col items-center justify-center relative shadow-xl border border-[#1e1f22] animate-[fadeIn_0.3s_ease-out] hover:border-[#35373c] transition-colors group overflow-hidden">
-                        <div id="cam-container-${id}" class="absolute inset-0 w-full h-full z-0 bg-black ${u.isVideoOn ? '' : 'hidden'}"></div>
-                        <div class="relative mb-2 md:mb-3 flex-shrink-0 z-10 transition-all duration-300 ${u.isVideoOn ? 'hidden' : ''}" id="avatar-container-${id}">
+                        <div class="relative mb-2 md:mb-3 flex-shrink-0 z-10 transition-all duration-300" id="avatar-container-${id}">
                             <img id="img-grid-voice-${id}" src="${userAvatar}" class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full object-cover bg-gray-900 border-4 border-[#151619] shadow-2xl">
                             <div id="mute-badge-${id}">${muteIconLarge}</div>
                         </div>
@@ -147,28 +147,9 @@ onSnapshot(collection(db, "users"), (snapshot) => {
                         <div class="z-10 w-full">${volSlider}</div>
                     </div>
                 `);
-                
-                if (u.isVideoOn && remoteVideoTracks[u.agoraUid]) {
-                    setTimeout(() => { remoteVideoTracks[u.agoraUid].play(`cam-container-${id}`, { fit: "cover" }); }, 100);
-                }
             } else {
-                const camCont = document.getElementById(`cam-container-${id}`);
-                const avCont = document.getElementById(`avatar-container-${id}`);
                 const muteBadge = document.getElementById(`mute-badge-${id}`);
-                
                 if (muteBadge) muteBadge.innerHTML = muteIconLarge;
-                
-                if (u.isVideoOn) {
-                    camCont.classList.remove('hidden');
-                    avCont.classList.add('hidden');
-                    if (camCont.innerHTML === '' && remoteVideoTracks[u.agoraUid]) {
-                        remoteVideoTracks[u.agoraUid].play(camCont, { fit: "cover" });
-                    }
-                } else {
-                    camCont.classList.add('hidden');
-                    avCont.classList.remove('hidden');
-                    if (camCont.innerHTML !== '') camCont.innerHTML = '';
-                }
             }
         }
     });
@@ -572,23 +553,32 @@ async function joinVoice() {
                 remoteVideoTracks[u.uid] = u.videoTrack;
                 
                 let matchedUserId = null;
-                for(let k in usersData) { if(usersData[k].agoraUid === u.uid) { matchedUserId = usersData[k].id; break; } }
+                let matchedUserName = "Unknown";
+                for(let k in usersData) { if(usersData[k].agoraUid === u.uid) { matchedUserId = usersData[k].id; matchedUserName = k; break; } }
                 
                 if (matchedUserId) {
-                    const uData = usersData[Object.keys(usersData).find(k => usersData[k].id === matchedUserId)];
+                    const uData = usersData[matchedUserName];
                     if (uData && uData.isSharingScreen) {
+                        // 🖥️ แชร์หน้าจอ -> เอาไปไว้เวทีกลาง
                         ssStage.classList.remove('hidden'); 
                         const ex = document.getElementById(`v-wrap-${u.uid}`); if(ex) ex.remove(); 
                         let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; 
                         ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); 
                     } else {
-                        const camCont = document.getElementById(`cam-container-${matchedUserId}`);
-                        if (camCont) {
-                            camCont.classList.remove('hidden');
-                            document.getElementById(`avatar-container-${matchedUserId}`).classList.add('hidden');
-                            camCont.innerHTML = '';
-                            u.videoTrack.play(camCont, { fit: "cover" });
-                        }
+                        // 📹 เปิดกล้อง -> เด้งไปที่ Camera Stage (จอแยก)
+                        const camStage = document.getElementById('camera-stage');
+                        camStage.classList.remove('hidden');
+                        camStage.classList.add('flex');
+                        
+                        const ex = document.getElementById(`camera-wrap-${u.uid}`); if(ex) ex.remove();
+                        
+                        let camCard = document.createElement("div");
+                        camCard.id = `camera-wrap-${u.uid}`;
+                        camCard.className = "w-[280px] h-[210px] sm:w-[320px] sm:h-[240px] md:w-[400px] md:h-[300px] bg-[#111214] rounded-2xl overflow-hidden shadow-2xl border-2 border-[#2b2d31] relative animate-[fadeIn_0.3s_ease-out]";
+                        camCard.innerHTML = `<div id="cam-player-${u.uid}" class="absolute inset-0 w-full h-full bg-black"></div><div class="absolute bottom-3 left-3 bg-[#111214]/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-[12px] font-bold text-white z-10 flex items-center shadow-lg border border-[#35373c]"><i class="ph-fill ph-video-camera mr-1.5 text-[#23a559]"></i> ${matchedUserName}</div>`;
+                        
+                        camStage.appendChild(camCard);
+                        u.videoTrack.play(`cam-player-${u.uid}`, { fit: "cover" });
                     }
                 }
             } 
@@ -597,11 +587,19 @@ async function joinVoice() {
             if (t === "audio") { delete remoteAudioTracks[u.uid]; } 
             if (t === "video") { 
                 delete remoteVideoTracks[u.uid];
-                const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); 
                 
-                // 🌟 หัวใจสำคัญที่แก้บั๊กจอดำค้าง!
+                // 1. ซ่อนหน้าจอแชร์ (ถ้ามี)
+                const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); 
                 const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
                 if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
+                
+                // 2. ซ่อนหน้ากล้อง (ถ้ามี)
+                const camCard = document.getElementById(`camera-wrap-${u.uid}`); if (camCard) camCard.remove();
+                const camStage = document.getElementById('camera-stage');
+                if (camStage.children.length === 0) {
+                    camStage.classList.add('hidden');
+                    camStage.classList.remove('flex');
+                }
             } 
         }); 
         rtcClient.enableAudioVolumeIndicator(); rtcClient.on("volume-indicator", vs => { document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); vs.forEach(v => { if (v.level > 10) { let sId = null; if (v.uid === myNumericUid || v.uid === 0) { sId = currentUserId; } else { for (const k in usersData) { if (usersData[k].agoraUid === v.uid) { sId = usersData[k].id; break; } } } if (sId) { const a1 = document.getElementById(`img-avatar-${sId}`), a2 = document.getElementById(`img-sidebar-voice-${sId}`), a3 = document.getElementById(`img-grid-voice-${sId}`); if(a1) a1.classList.add('speaking-ring'); if(a2) a2.classList.add('speaking-ring'); if(a3) a3.classList.add('speaking-ring'); } } }); }); 
@@ -619,6 +617,7 @@ async function joinVoice() {
     } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } 
 }
 
+// 🌟 ระบบเปิดกล้อง (แบบแยกเวที)
 camBtn.onclick = async () => {
     if (isSharingScreen) { showToast("กรุณาปิดแชร์หน้าจอก่อนเปิดกล้องครับ", "error"); return; }
     
@@ -633,14 +632,20 @@ camBtn.onclick = async () => {
             camBtn.classList.remove('bg-[#2b2d31]'); camBtn.classList.add('bg-[#23a559]', 'text-white');
             camIcon.className = "ph-fill ph-video-camera text-[20px] md:text-[24px]";
             
-            const myCamCont = document.getElementById(`cam-container-${currentUserId}`);
-            const myAvCont = document.getElementById(`avatar-container-${currentUserId}`);
-            if(myCamCont && myAvCont) {
-                myCamCont.classList.remove('hidden');
-                myAvCont.classList.add('hidden');
-                myCamCont.innerHTML = '';
-                localTracks.videoTrack.play(myCamCont, { fit: "cover" });
-            }
+            // 🌟 นำกล้องตัวเองไปโชว์ที่ Camera Stage
+            const camStage = document.getElementById('camera-stage');
+            camStage.classList.remove('hidden');
+            camStage.classList.add('flex');
+            
+            const ex = document.getElementById(`camera-wrap-local`); if(ex) ex.remove();
+            
+            let camCard = document.createElement("div");
+            camCard.id = `camera-wrap-local`;
+            camCard.className = "w-[280px] h-[210px] sm:w-[320px] sm:h-[240px] md:w-[400px] md:h-[300px] bg-[#111214] rounded-2xl overflow-hidden shadow-2xl border-2 border-[#2b2d31] relative animate-[fadeIn_0.3s_ease-out]";
+            camCard.innerHTML = `<div id="cam-player-local" class="absolute inset-0 w-full h-full bg-black"></div><div class="absolute bottom-3 left-3 bg-[#111214]/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-[12px] font-bold text-white z-10 flex items-center shadow-lg border border-[#35373c]"><i class="ph-fill ph-video-camera mr-1.5 text-[#23a559]"></i> ${currentUsername} (คุณ)</div>`;
+            
+            camStage.appendChild(camCard);
+            localTracks.videoTrack.play(`cam-player-local`, { fit: "cover" });
             
             showToast("เปิดกล้องแล้ว!", "success");
         } catch(e) { 
@@ -663,12 +668,12 @@ async function stopCamera() {
     camBtn.classList.add('bg-[#2b2d31]'); camBtn.classList.remove('bg-[#23a559]', 'text-white');
     camIcon.className = "ph ph-video-camera text-[20px] md:text-[24px]";
     
-    const myCamCont = document.getElementById(`cam-container-${currentUserId}`);
-    const myAvCont = document.getElementById(`avatar-container-${currentUserId}`);
-    if(myCamCont && myAvCont) {
-        myCamCont.classList.add('hidden');
-        myAvCont.classList.remove('hidden');
-        myCamCont.innerHTML = '';
+    // 🌟 เอากล้องตัวเองออกจาก Camera Stage
+    const camCard = document.getElementById(`camera-wrap-local`); if (camCard) camCard.remove();
+    const camStage = document.getElementById('camera-stage');
+    if (camStage && camStage.children.length === 0) {
+        camStage.classList.add('hidden');
+        camStage.classList.remove('flex');
     }
 }
 
@@ -734,7 +739,6 @@ async function stopScreenShare() {
     
     const pc = document.getElementById(`v-wrap-local`); if (pc) pc.remove(); 
     
-    // 🌟 เช็คว่าถ้าไม่มีกล่องวิดีโอ (v-wrap) เหลืออยู่เลย ค่อยซ่อนกรอบจอดำ
     const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
     if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
     
@@ -810,7 +814,7 @@ function highlightElement(selector, pos) {
 function showTourStep(index) { 
     const step = tourSteps[index]; tourTitle.innerHTML = step.title; tourDesc.innerHTML = step.desc; tourStepCount.textContent = `${index + 1}/${tourSteps.length}`; 
     if (index === tourSteps.length - 1) { tourNextBtn.innerHTML = `เริ่มใช้งาน HIVE! <i class="ph-fill ph-rocket-launch ml-1.5"></i>`; tourNextBtn.classList.replace('bg-[#5865F2]', 'bg-[#23a559]'); tourNextBtn.classList.replace('hover:bg-[#4752C4]', 'hover:bg-[#1e8a49]'); } 
-    else { tourNextBtn.innerHTML = `ต่อไป <i class="ph-fill ph-caret-right ml-1.5"></i>`; } 
+    else { tourNextBtn.innerHTML = `ต่อไป <i class=\"ph-fill ph-caret-right ml-1.5\"></i>`; } 
     
     if (step.pos === "center") { tourTooltip.style.top = "50%"; tourTooltip.style.left = "50%"; tourTooltip.style.transform = "translate(-50%, -50%)"; highlightElement(null); } 
     else { tourTooltip.style.transform = "none"; highlightElement(step.target, step.pos); } 
@@ -823,3 +827,18 @@ tourNextBtn.onclick = () => { currentTourStep++; if (currentTourStep >= tourStep
 tourSkipBtn.onclick = endTour;
 
 setTimeout(() => { if (!localStorage.getItem('dosh_tour_completed') && currentUserId) { startTour(); } }, 2000);
+
+// ==========================================
+// 🎬 14. ระบบ Splash Screen (แอนิเมชันเปิดแอป)
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+    const splashScreen = document.getElementById('splash-screen');
+    if (splashScreen) {
+        setTimeout(() => {
+            if (document.body.contains(splashScreen)) {
+                splashScreen.classList.add('opacity-0');
+                setTimeout(() => splashScreen.remove(), 500);
+            }
+        }, 2500); 
+    }
+});
