@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dosh-pwa-cache-v8.2.2';
+const CACHE_NAME = 'dosh-pwa-cache-v8.2.3';
 
 // 📦 รายชื่อไฟล์ที่ต้องการให้แอปจดจำไว้ในเครื่อง (โหลดไวขึ้น)
 const urlsToCache = [
