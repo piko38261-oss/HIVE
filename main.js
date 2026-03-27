@@ -91,11 +91,11 @@ document.querySelectorAll('.nav-btn').forEach(btn => { btn.onclick = (e) => { e.
 if (view === 'game-draw') { activeChannel = 'game_draw'; unreadCounts[activeChannel] = 0; updateUnreadBadge(activeChannel); renderMessages(); setTimeout(initGameCanvasSize, 100); }
 if (view === 'whiteboard') setTimeout(initCanvasSize, 100); sidebar.classList.remove('open'); overlay.classList.remove('active'); }; });
 
-window.showUserProfile = (userName) => { const u = usersData[userName]; if(!u) return; document.getElementById('profile-card-name').textContent = userName; document.getElementById('profile-card-avatar').src = u.avatar; const bannerImg = document.getElementById('profile-card-banner'); if (u.banner) { bannerImg.src = u.banner; bannerImg.classList.remove('hidden'); } else { bannerImg.classList.add('hidden'); } document.getElementById('profile-card-status').textContent = u.customStatus || 'ไม่ได้ตั้งสถานะ'; let badges = ''; if(u.role === 'Admin') badges += '<span class="bg-[#da373c]/20 text-[#da373c] px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-[#da373c]/30">Admin</span>'; else badges += '<span class="bg-[#5865F2]/20 text-[#5865F2] px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-[#5865F2]/30">Member</span>'; document.getElementById('profile-card-badges').innerHTML = badges; document.getElementById('profile-card-modal').classList.remove('hidden'); }
+window.showUserProfile = (userName) => { const u = usersData[userName]; if(!u) return; document.getElementById('profile-card-name').textContent = userName; document.getElementById('profile-card-avatar').src = u.avatar; const bannerImg = document.getElementById('profile-card-banner'); if (u.banner) { bannerImg.src = u.banner; bannerImg.classList.remove('hidden'); } else { bannerImg.classList.add('hidden'); } document.getElementById('profile-card-status').textContent = u.customStatus || 'ไม่ได้ตั้งสถานะ'; let badges = ''; if(u.role === 'Admin') badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#da373c] mr-2 shadow-[0_0_8px_#da373c]"></div> Admin</span>'; else badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#5865F2] mr-2 shadow-[0_0_8px_#5865F2]"></div> Member</span>'; document.getElementById('profile-card-badges').innerHTML = badges; document.getElementById('profile-card-modal').classList.remove('hidden'); }
 document.getElementById('close-profile-card').onclick = () => document.getElementById('profile-card-modal').classList.add('hidden'); document.getElementById('profile-card-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('profile-card-modal')) document.getElementById('profile-card-modal').classList.add('hidden'); });
 
 // ==========================================
-// 🟢 6. โหลดรายชื่อผู้ใช้งาน (กลับไปเป็นรูปวงกลม)
+// 🟢 6. โหลดรายชื่อผู้ใช้งาน (ระบบ Grid อัจฉริยะ)
 // ==========================================
 window.changeUserVolume = (uid, userId, vol) => {
     if (remoteAudioTracks[uid]) { remoteAudioTracks[uid].setVolume(parseInt(vol)); }
@@ -135,7 +135,6 @@ onSnapshot(collection(db, "users"), (snapshot) => {
             currentVoiceCardIds.push(`voice-card-${id}`);
             let card = document.getElementById(`voice-card-${id}`);
             
-            // 🌟 สร้างการ์ดโปรไฟล์รูปแบบปกติ (ไม่เอากล้องมายัดใส่แล้ว)
             if (!card) {
                 voiceGrid.insertAdjacentHTML('beforeend', `
                     <div id="voice-card-${id}" class="bg-[#111214] rounded-2xl w-[140px] h-[160px] sm:w-[160px] sm:h-[180px] md:w-[190px] md:h-[210px] pt-4 pb-2 px-2 flex flex-col items-center justify-center relative shadow-xl border border-[#1e1f22] animate-[fadeIn_0.3s_ease-out] hover:border-[#35373c] transition-colors group overflow-hidden">
@@ -588,12 +587,12 @@ async function joinVoice() {
             if (t === "video") { 
                 delete remoteVideoTracks[u.uid];
                 
-                // 1. ซ่อนหน้าจอแชร์ (ถ้ามี)
+                // ซ่อนหน้าจอแชร์ (ถ้ามี)
                 const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); 
                 const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
                 if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
                 
-                // 2. ซ่อนหน้ากล้อง (ถ้ามี)
+                // ซ่อนหน้ากล้อง (ถ้ามี)
                 const camCard = document.getElementById(`camera-wrap-${u.uid}`); if (camCard) camCard.remove();
                 const camStage = document.getElementById('camera-stage');
                 if (camStage.children.length === 0) {
@@ -814,7 +813,7 @@ function highlightElement(selector, pos) {
 function showTourStep(index) { 
     const step = tourSteps[index]; tourTitle.innerHTML = step.title; tourDesc.innerHTML = step.desc; tourStepCount.textContent = `${index + 1}/${tourSteps.length}`; 
     if (index === tourSteps.length - 1) { tourNextBtn.innerHTML = `เริ่มใช้งาน HIVE! <i class="ph-fill ph-rocket-launch ml-1.5"></i>`; tourNextBtn.classList.replace('bg-[#5865F2]', 'bg-[#23a559]'); tourNextBtn.classList.replace('hover:bg-[#4752C4]', 'hover:bg-[#1e8a49]'); } 
-    else { tourNextBtn.innerHTML = `ต่อไป <i class=\"ph-fill ph-caret-right ml-1.5\"></i>`; } 
+    else { tourNextBtn.innerHTML = `ต่อไป <i class="ph-fill ph-caret-right ml-1.5"></i>`; } 
     
     if (step.pos === "center") { tourTooltip.style.top = "50%"; tourTooltip.style.left = "50%"; tourTooltip.style.transform = "translate(-50%, -50%)"; highlightElement(null); } 
     else { tourTooltip.style.transform = "none"; highlightElement(step.target, step.pos); } 
@@ -827,18 +826,3 @@ tourNextBtn.onclick = () => { currentTourStep++; if (currentTourStep >= tourStep
 tourSkipBtn.onclick = endTour;
 
 setTimeout(() => { if (!localStorage.getItem('dosh_tour_completed') && currentUserId) { startTour(); } }, 2000);
-
-// ==========================================
-// 🎬 14. ระบบ Splash Screen (แอนิเมชันเปิดแอป)
-// ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-    const splashScreen = document.getElementById('splash-screen');
-    if (splashScreen) {
-        setTimeout(() => {
-            if (document.body.contains(splashScreen)) {
-                splashScreen.classList.add('opacity-0');
-                setTimeout(() => splashScreen.remove(), 500);
-            }
-        }, 2500); 
-    }
-});

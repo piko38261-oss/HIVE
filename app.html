@@ -161,8 +161,10 @@
                     <div id="screen-share-stage" class="hidden w-full max-w-4xl mx-auto aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-8 border border-[#5865F2] ring-2 ring-[#5865F2]/30 relative">
                         <div class="absolute top-2 left-2 bg-[#da373c] text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center z-10"><i class="ph-fill ph-record mr-1 animate-pulse"></i> LIVE</div>
                     </div>
+                    
                     <div id="camera-stage" class="hidden w-full max-w-6xl mx-auto flex-wrap justify-center gap-4 md:gap-6 mb-8 transition-all"></div>
                     <div id="voice-grid" class="flex flex-wrap justify-center gap-4 md:gap-6 w-full max-w-5xl mx-auto"></div>
+                    
                     <button id="join-voice-btn" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#23a559] hover:bg-[#1e8a49] text-white px-8 py-4 rounded-full font-bold shadow-2xl transition transform hover:scale-105 flex items-center text-[16px]"><i class="ph-fill ph-phone-call text-[22px] mr-2"></i> เข้าร่วมห้องเสียง</button>
                 </div>
                 
@@ -282,8 +284,6 @@
                 <button id="save-settings-btn" class="bg-gradient-to-r from-[#5865F2] to-[#4752C4] hover:from-[#4752C4] hover:to-[#3b44a8] text-white font-bold py-2.5 px-8 rounded-lg transition-all duration-300 shadow-[0_4px_15px_rgba(88,101,242,0.4)] hover:shadow-[0_6px_20px_rgba(88,101,242,0.6)] transform hover:-translate-y-0.5">บันทึกการเปลี่ยนแปลง</button>
             </div>
         </div>
-        <input type="file" id="settings-banner-input" class="hidden" accept="image/*">
-        <input type="file" id="settings-avatar-input" class="hidden" accept="image/*">
     </div>
     
     <div id="profile-card-modal" class="fixed inset-0 z-[90] hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity opacity-0 [&:not(.hidden)]:opacity-100">
@@ -298,7 +298,11 @@
                     <h2 id="profile-card-name" class="font-extrabold text-[22px] text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 tracking-wide"></h2>
                     <p id="profile-card-status" class="text-[13px] text-[#dbdee1] mt-1"></p>
                 </div>
-                <div class="mt-4"><h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">บทบาทในทีม</h3><div class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner"><div class="w-2.5 h-2.5 rounded-full bg-[#5865F2] mr-2 shadow-[0_0_8px_#5865F2]"></div> ทีมครีเอทีฟ</div></div>
+                <div class="mt-4">
+                    <h3 class="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">บทบาทในทีม</h3>
+                    <div id="profile-card-badges" class="flex flex-wrap gap-1.5">
+                        </div>
+                </div>
             </div>
         </div>
     </div>
@@ -348,6 +352,9 @@
             </div>
         </div>
     </div>
+
+    <input type="file" id="settings-banner-input" class="hidden" accept="image/*">
+    <input type="file" id="settings-avatar-input" class="hidden" accept="image/*">
 
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
