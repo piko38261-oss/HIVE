@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>HIVE Workspace - HIVE Server</title>
     
-    <link rel="manifest" href="manifest.json?v=2">
+    <link rel="manifest" href="manifest.json?v=4">
     <meta name="theme-color" content="#1e1f22">
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=H&background=5865F2&color=fff&size=192">
 
@@ -32,7 +32,6 @@
         .speaking-ring { box-shadow: 0 0 0 3px #23a559; border-color: #23a559 !important; transition: all 0.1s ease; }
         .bg-dots { background-image: radial-gradient(#dbdee1 1px, transparent 1px); background-size: 20px 20px; }
         
-        /* 📱 ปรับหน้าเกมสำหรับมือถือแบบ Fixed Height */
         @media (max-width: 768px) {
             #view-game-draw { height: calc(100dvh - 48px) !important; overflow: hidden !important; }
             .game-board-mobile { height: 42% !important; min-height: 42% !important; }
@@ -50,6 +49,16 @@
         <h1 class="text-white font-extrabold text-2xl mt-6 tracking-[0.2em] opacity-0 animate-[fadeIn_0.5s_ease-out_0.5s_forwards]">HIVE</h1>
         <p class="text-[#80848e] text-xs mt-2 opacity-0 animate-[fadeIn_0.5s_ease-out_0.7s_forwards]">กำลังเชื่อมต่อเข้าสู่ Workspace...</p>
     </div>
+
+    <script>
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                splash.classList.add('opacity-0');
+                setTimeout(() => splash.remove(), 500);
+            }
+        }, 2500);
+    </script>
 
     <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center space-y-2 pointer-events-none"></div>
     <div id="overlay" class="fixed inset-0 bg-black/60 z-30 hidden md:hidden transition-opacity opacity-0 [&.active]:block [&.active]:opacity-100"></div>
@@ -154,8 +163,16 @@
                     <div id="voice-grid" class="flex flex-wrap justify-center gap-4 md:gap-6 w-full max-w-5xl mx-auto"></div>
                     <button id="join-voice-btn" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#23a559] hover:bg-[#1e8a49] text-white px-8 py-4 rounded-full font-bold shadow-2xl transition transform hover:scale-105 flex items-center text-[16px]"><i class="ph-fill ph-phone-call text-[22px] mr-2"></i> เข้าร่วมห้องเสียง</button>
                 </div>
+                
                 <div id="active-voice-ui" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#111214]/90 backdrop-blur-md px-6 py-3 md:py-4 rounded-full shadow-2xl border border-[#2b2d31] flex items-center space-x-4 md:space-x-6 z-50">
                     <div class="flex flex-col items-center group tooltip"><button id="mute-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#2b2d31] text-[#dbdee1] rounded-full flex items-center justify-center hover:bg-[#35373c] transition-all duration-200 shadow-md"><i id="mute-icon" class="ph ph-microphone text-[20px] md:text-[24px]"></i></button></div>
+                    
+                    <div class="flex flex-col items-center group tooltip">
+                        <button id="camera-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#2b2d31] text-[#dbdee1] rounded-full flex items-center justify-center hover:bg-[#35373c] transition-all duration-200 shadow-md">
+                            <i id="camera-icon" class="ph ph-video-camera text-[20px] md:text-[24px]"></i>
+                        </button>
+                    </div>
+
                     <div class="flex flex-col items-center group tooltip relative">
                         <div id="screen-share-wrapper" class="flex items-center bg-[#2b2d31] rounded-full shadow-md transition-all duration-200 border border-transparent">
                             <select id="screen-quality" class="bg-transparent text-[#80848e] hover:text-[#dbdee1] text-[11px] font-bold pl-3 pr-1 py-3 md:py-4 focus:outline-none cursor-pointer appearance-none outline-none text-center"><option value="360p_1">360p</option><option value="480p_1">480p</option><option value="720p_1">720p</option><option value="1080p_1" selected>1080p</option></select>
@@ -173,9 +190,9 @@
                     <button id="add-task-btn" class="bg-[#5865F2] hover:bg-[#4752C4] text-white text-[12px] font-bold px-4 py-1.5 rounded shadow transition flex items-center"><i class="ph-bold ph-plus mr-1.5"></i> เพิ่มงานใหม่</button>
                 </div>
                 <div class="flex-1 p-4 md:p-6 overflow-x-auto flex space-x-4 md:space-x-6 items-start">
-                    <div class="w-72 md:w-80 bg-[#2b2d31] rounded-xl flex flex-col max-h-full border border-[#1e1f22] flex-shrink-0"><div class="p-3 border-b border-[#1e1f22] flex items-center"><div class="w-2.5 h-2.5 bg-[#80848e] rounded-full mr-2"></div><h3 class="font-bold text-[13px] uppercase tracking-wider text-[#dbdee1]">📋 To Do</h3></div><div id="todo" class="flex-1 p-3 overflow-y-auto space-y-2.5 min-h-[150px]"></div></div>
-                    <div class="w-72 md:w-80 bg-[#2b2d31] rounded-xl flex flex-col max-h-full border border-[#1e1f22] flex-shrink-0"><div class="p-3 border-b border-[#1e1f22] flex items-center"><div class="w-2.5 h-2.5 bg-[#f59e0b] rounded-full mr-2"></div><h3 class="font-bold text-[13px] uppercase tracking-wider text-[#dbdee1]">⏳ In Progress</h3></div><div id="in_progress" class="flex-1 p-3 overflow-y-auto space-y-2.5 min-h-[150px]"></div></div>
-                    <div class="w-72 md:w-80 bg-[#2b2d31] rounded-xl flex flex-col max-h-full border border-[#1e1f22] flex-shrink-0"><div class="p-3 border-b border-[#1e1f22] flex items-center"><div class="w-2.5 h-2.5 bg-[#23a559] rounded-full mr-2"></div><h3 class="font-bold text-[13px] uppercase tracking-wider text-[#dbdee1]">✅ Done</h3></div><div id="done" class="flex-1 p-3 overflow-y-auto space-y-2.5 min-h-[150px]"></div></div>
+                    <div class="w-72 md:w-80 bg-[#2b2d31] rounded-xl flex flex-col max-h-full border border-[#1e1f22] flex-shrink-0"><div class="p-3 border-b border-[#1e1f22] flex items-center"><div class="w-2.5 h-2.5 bg-[#80848e] rounded-full mr-2"></div><h3 class="font-bold text-[13px] uppercase tracking-wider text-[#dbdee1]">📋 สิ่งที่ต้องทำ (To Do)</h3></div><div id="todo" class="flex-1 p-3 overflow-y-auto space-y-2.5 min-h-[150px]"></div></div>
+                    <div class="w-72 md:w-80 bg-[#2b2d31] rounded-xl flex flex-col max-h-full border border-[#1e1f22] flex-shrink-0"><div class="p-3 border-b border-[#1e1f22] flex items-center"><div class="w-2.5 h-2.5 bg-[#f59e0b] rounded-full mr-2"></div><h3 class="font-bold text-[13px] uppercase tracking-wider text-[#dbdee1]">⏳ กำลังทำ (In Progress)</h3></div><div id="in_progress" class="flex-1 p-3 overflow-y-auto space-y-2.5 min-h-[150px]"></div></div>
+                    <div class="w-72 md:w-80 bg-[#2b2d31] rounded-xl flex flex-col max-h-full border border-[#1e1f22] flex-shrink-0"><div class="p-3 border-b border-[#1e1f22] flex items-center"><div class="w-2.5 h-2.5 bg-[#23a559] rounded-full mr-2"></div><h3 class="font-bold text-[13px] uppercase tracking-wider text-[#dbdee1]">✅ เสร็จแล้ว (Done)</h3></div><div id="done" class="flex-1 p-3 overflow-y-auto space-y-2.5 min-h-[150px]"></div></div>
                 </div>
             </div>
 
@@ -191,9 +208,7 @@
             <div id="view-game-draw" class="absolute inset-0 hidden flex flex-col md:flex-row bg-[#313338]">
                 <div class="game-board-mobile flex-none md:flex-[3] flex flex-col border-b md:border-b-0 md:border-r border-[#1e1f22] relative bg-[#1e1f22]">
                     <div class="absolute top-3 left-0 w-full px-4 flex justify-between items-center z-10 pointer-events-none">
-                        <div id="game-word-display" class="bg-[#111214]/90 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-xl border border-[#2b2d31] font-bold text-[12px] md:text-[14px] pointer-events-auto text-[#dbdee1]">
-                            <i class="ph-fill ph-spinner animate-spin mr-1 text-[#5865F2]"></i> รอเริ่ม...
-                        </div>
+                        <div id="game-word-display" class="bg-[#111214]/90 backdrop-blur-md px-3 py-1.5 rounded-lg shadow-xl border border-[#2b2d31] font-bold text-[12px] md:text-[14px] pointer-events-auto text-[#dbdee1]"><i class="ph-fill ph-spinner animate-spin mr-1 text-[#5865F2]"></i> รอเริ่ม...</div>
                         <button id="start-game-btn" class="bg-[#5865F2] hover:bg-[#4752C4] text-white px-3 py-1.5 rounded-lg shadow-xl font-bold text-[12px] transition pointer-events-auto">เริ่มเกมใหม่</button>
                     </div>
                     <div id="game-canvas-container" class="flex-1 w-full relative touch-none"><canvas id="game-whiteboard-canvas" class="absolute top-0 left-0 w-full h-full bg-dots"></canvas></div>
@@ -205,10 +220,7 @@
                     </div>
                 </div>
                 <div class="game-chat-mobile flex-1 md:flex-[2] flex flex-col bg-[#2b2d31] overflow-hidden min-h-0">
-                    <div class="h-10 border-b border-[#1e1f22] flex items-center px-4 bg-[#313338] shadow-sm flex-shrink-0 z-20">
-                        <i class="ph-fill ph-chat-centered-dots text-[#eab308] mr-2 text-[18px]"></i>
-                        <h3 class="font-bold text-[13px]">ช่องแชททายคำ</h3>
-                    </div>
+                    <div class="h-10 border-b border-[#1e1f22] flex items-center px-4 bg-[#313338] shadow-sm flex-shrink-0 z-20"><i class="ph-fill ph-chat-centered-dots text-[#eab308] mr-2 text-[18px]"></i><h3 class="font-bold text-[13px]">ช่องแชททายคำ</h3></div>
                     <div id="game-chat-container" class="flex-1 overflow-y-auto p-3 space-y-1 bg-[#2b2d31] min-h-0"></div>
                     <div class="p-2 bg-[#313338] border-t border-[#1e1f22] flex-shrink-0 z-30 pb-safe">
                         <div class="flex items-center bg-[#1e1f22] rounded-lg p-1 border border-[#35373c] focus-within:border-yellow-500/50">
@@ -284,7 +296,5 @@
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
     <script type="module" src="main.js"></script>
-    <input type="file" id="settings-banner-input" class="hidden" accept="image/*">
-    <input type="file" id="settings-avatar-input" class="hidden" accept="image/*">
 </body>
 </html>

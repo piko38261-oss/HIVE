@@ -23,7 +23,6 @@ async function getWordFromAI() {
         const data = await res.json();
         return data.candidates[0].content.parts[0].text.replace(/[\r\n.]/g, "").trim();
     } catch (err) {
-        console.log("❌ AI เอ๋อ หรือ API หมดอายุ:", err);
         const backup = ["ไดโนเสาร์", "ชาบู", "ยูทูบเบอร์", "มนุษย์ต่างดาว", "แฮมเบอร์เกอร์", "ชานมไข่มุก"];
         return backup[Math.floor(Math.random() * backup.length)];
     }
@@ -64,7 +63,7 @@ function startBackgroundAudioMode() {
         navigator.mediaSession.metadata = new MediaMetadata({ title: 'HIVE Voice Lounge', artist: 'Active Call', album: currentUsername, artwork: [{ src: 'https://ui-avatars.com/api/?name=H&background=5865F2&size=512', sizes: '512x512', type: 'image/png' }] });
         const silentAudio = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3'); silentAudio.volume = 0.01; silentAudio.loop = true;
         navigator.mediaSession.setActionHandler('play', () => silentAudio.play()); navigator.mediaSession.setActionHandler('pause', () => silentAudio.pause());
-        silentAudio.play().catch(e => console.log("Background Audio Triggered"));
+        silentAudio.play().catch(e => {});
     }
 }
 
@@ -599,6 +598,8 @@ async function joinVoice() {
             if (t === "video") { 
                 delete remoteVideoTracks[u.uid];
                 const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); 
+                
+                // 🌟 หัวใจสำคัญที่แก้บั๊กจอดำค้าง!
                 const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
                 if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
             } 
@@ -732,6 +733,8 @@ async function stopScreenShare() {
     }
     
     const pc = document.getElementById(`v-wrap-local`); if (pc) pc.remove(); 
+    
+    // 🌟 เช็คว่าถ้าไม่มีกล่องวิดีโอ (v-wrap) เหลืออยู่เลย ค่อยซ่อนกรอบจอดำ
     const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
     if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
     
@@ -757,7 +760,7 @@ muteBtn.onclick = async () => { isMuted = !isMuted; localTracks.audioTrack.setEn
 // 📋 13. Task Board & Tour
 // ==========================================
 const zones = { 'todo': document.getElementById('todo'), 'in_progress': document.getElementById('in_progress'), 'done': document.getElementById('done') };
-onSnapshot(collection(db, "tasks"), (snapshot) => { Object.values(zones).forEach(z => z.innerHTML = ''); snapshot.forEach((docSnap) => { const d = docSnap.data(), id = docSnap.id, s = d.status || 'todo'; let tC = "bg-[#1e1f22] text-[#dbdee1] border border-[#35373c]"; if(d.tag && d.tag.includes('Dev')) tC = "bg-blue-500/10 text-blue-400 border border-blue-500/20"; if(d.tag && d.tag.includes('Music')) tC = "bg-pink-500/10 text-pink-400 border border-pink-500/20"; if(d.tag && d.tag.includes('Video')) tC = "bg-purple-500/10 text-purple-400 border border-purple-500/20"; if(d.tag && d.tag.includes('Design')) tC = "bg-[#23a559]/10 text-[#23a559] border border-[#23a559]/20"; const cardHTML = `<div draggable="true" data-id="${id}" class="task-card bg-[#1e1f22] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${s === 'done' ? 'border-[#4e5058] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]"><div class="flex space-x-2 mb-2.5"><span class="${tC} text-[10px] font-bold px-2 py-1 rounded flex items-center"><i class="ph-fill ph-tag text-[10px] mr-1"></i>${d.tag}</span></div><p class="text-[13px] md:text-[14px] font-medium text-[#dbdee1] ${s === 'done' ? 'line-through text-[#80848e]' : ''} leading-snug">${d.title}</p></div>`; if (zones[s]) zones[s].insertAdjacentHTML('beforeend', cardHTML); }); document.querySelectorAll('.task-card').forEach(c => { c.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', c.getAttribute('data-id')); setTimeout(() => c.classList.add('opacity-30'), 0); }); c.addEventListener('dragend', () => c.classList.remove('opacity-30')); }); });
+onSnapshot(collection(db, "tasks"), (snapshot) => { Object.values(zones).forEach(z => z.innerHTML = ''); snapshot.forEach((docSnap) => { const d = docSnap.data(), id = docSnap.id, s = d.status || 'todo'; let tC = "bg-[#1e1f22] text-[#dbdee1] border border-[#35373c]"; if(d.tag && d.tag.includes('Dev')) tC = "bg-blue-500/10 text-blue-400 border border-blue-500/20"; if(d.tag && d.tag.includes('Music')) tC = "bg-pink-500/10 text-pink-400 border border-pink-500/20"; if(d.tag && d.tag.includes('Video')) tC = "bg-purple-500/10 text-purple-400 border border-purple-500/20"; if(d.tag && d.tag.includes('Design')) tC = "bg-[#23a559]/10 text-[#23a559] border border-[#23a559]/20"; const cardHTML = `<div draggable="true" data-id="${id}" class="task-card bg-[#1e1f22] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${s === 'done' ? 'border-[#4e5058] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]"><div class="flex space-x-2 mb-2.5"><span class="${tC} text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center"><i class="ph-fill ph-tag text-[10px] mr-1"></i>${d.tag}</span></div><p class="text-[13px] md:text-[14px] font-medium text-[#dbdee1] ${s === 'done' ? 'line-through text-[#80848e]' : ''} leading-snug">${d.title}</p></div>`; if (zones[s]) zones[s].insertAdjacentHTML('beforeend', cardHTML); }); document.querySelectorAll('.task-card').forEach(c => { c.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', c.getAttribute('data-id')); setTimeout(() => c.classList.add('opacity-30'), 0); }); c.addEventListener('dragend', () => c.classList.remove('opacity-30')); }); });
 Object.keys(zones).forEach(s => { const z = zones[s]; z.addEventListener('dragover', (e) => { e.preventDefault(); z.classList.add('drop-zone-active'); }); z.addEventListener('dragleave', () => z.classList.remove('drop-zone-active')); z.addEventListener('drop', async (e) => { e.preventDefault(); z.classList.remove('drop-zone-active'); const tId = e.dataTransfer.getData('text/plain'); if (tId) await updateDoc(doc(db, "tasks", tId), { status: s }); }); });
 
 const taskModal = document.getElementById('task-modal');
@@ -820,18 +823,3 @@ tourNextBtn.onclick = () => { currentTourStep++; if (currentTourStep >= tourStep
 tourSkipBtn.onclick = endTour;
 
 setTimeout(() => { if (!localStorage.getItem('dosh_tour_completed') && currentUserId) { startTour(); } }, 2000);
-
-// ==========================================
-// 🎬 14. ระบบ Splash Screen (แอนิเมชันเปิดแอป)
-// ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-    const splashScreen = document.getElementById('splash-screen');
-    if (splashScreen) {
-        setTimeout(() => {
-            if (document.body.contains(splashScreen)) {
-                splashScreen.classList.add('opacity-0');
-                setTimeout(() => splashScreen.remove(), 500);
-            }
-        }, 2500); 
-    }
-});
