@@ -617,43 +617,36 @@ onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => {
 });
 
 // ==========================================
-// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) 🌟 อัปเกรดแจ้งเตือนอมตะ 🌟
+// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) 🌟 อัปเกรดปิดไมค์ 100% 🌟
 // ==========================================
 const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.getElementById('leave-voice-btn'), muteBtn = document.getElementById('mute-btn'), ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
+const camBtn = document.getElementById('camera-btn'), camIcon = document.getElementById('camera-icon');
 
-const camBtn = document.getElementById('camera-btn');
-const camIcon = document.getElementById('camera-icon');
-
-// 🌟 ฟังก์ชันสร้างการแจ้งเตือนสายโทร (ยิงแค่ครั้งเดียวตอนเข้าห้อง ป้องกันการโดนแบน)
+// 🌟 ฟังก์ชันสร้างการแจ้งเตือนสายโทร
 async function showCallNotification() {
     if ("Notification" in window && navigator.serviceWorker) {
-        if (Notification.permission === "default") {
-            await Notification.requestPermission();
-        }
+        if (Notification.permission === "default") { await Notification.requestPermission(); }
         if (Notification.permission === "granted") {
             const reg = await navigator.serviceWorker.ready;
-            
-            // ลบของเก่าออกก่อน
             const existing = await reg.getNotifications({ tag: "hive-voice-call" });
             existing.forEach(n => n.close());
-
-            // สร้างใหม่แบบฝังราก (requireInteraction)
-            reg.showNotification("HIVE Voice Lounge", {
-                body: "เชื่อมต่อเสียงแล้ว — แตะเพื่อกลับสู่การโทร",
-                icon: "https://ui-avatars.com/api/?name=H&background=23a559&color=fff&size=192",
+            reg.showNotification("📞 HIVE Voice Lounge", {
+                body: "🟢 กำลังเชื่อมต่อห้องเสียง...",
+                icon: "https://ui-avatars.com/api/?name=HIVE&background=23a559&color=fff&size=192",
                 tag: "hive-voice-call", 
-                requireInteraction: true, // 🌟 บังคับค้างไว้บนจอ
+                requireInteraction: true, 
+                renotify: true,           
                 silent: true,
+                vibrate: [100, 50, 100],
                 actions: [
                     { action: 'open', title: '📱 เปิดแอป' },
-                    { action: 'leave_call', title: '📞 วางสาย' }
+                    { action: 'leave_call', title: '🔴 วางสาย' }
                 ]
             });
         }
     }
 }
 
-// 🌟 ฟังก์ชันลบการแจ้งเตือนสายโทร
 async function hideCallNotification() {
     if ("Notification" in window && navigator.serviceWorker) {
         const reg = await navigator.serviceWorker.ready;
@@ -740,7 +733,6 @@ async function joinVoice() {
         startBackgroundAudioMode(); 
         if(latestWPData && latestWPData.videoId) { initOrUpdatePlayer(latestWPData.videoId, latestWPData.time, latestWPData.state, latestWPData.updatedBy); }
 
-        // 🌟 เรียกแจ้งเตือนแค่ครั้งเดียวพอ
         showCallNotification();
 
     } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } 
@@ -876,7 +868,11 @@ async function leaveVoice() {
     if (isSharingScreen) await stopScreenShare(); 
     if (isVideoOn) await stopCamera(); 
     
-    if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); } 
+    if (localTracks.audioTrack) { 
+        localTracks.audioTrack.stop(); 
+        localTracks.audioTrack.close(); 
+        localTracks.audioTrack = null;
+    } 
     await rtcClient.leave(); if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false }); } 
     localStorage.removeItem('dosh_active_voice'); document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); 
     joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
@@ -884,7 +880,6 @@ async function leaveVoice() {
     if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; } amIInVoice = false;
     if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; } document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; document.getElementById('watch-party-stage').classList.add('hidden'); document.getElementById('watch-party-stage').classList.remove('flex');
     
-    // 🌟 เคลียร์ทุกอย่างเมื่อออก
     amIInVoice = false;
     stopBackgroundAudioMode();
     hideCallNotification();
@@ -892,7 +887,25 @@ async function leaveVoice() {
 
 window.leaveVoice = leaveVoice; // ให้ SW เรียกใช้ได้!
 joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
-muteBtn.onclick = async () => { isMuted = !isMuted; localTracks.audioTrack.setEnabled(!isMuted); await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); const muteIcon = document.getElementById('mute-icon'); if (isMuted) { muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; } else { muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; } };
+
+// 🌟 แก้บั๊กปิดไมค์แล้วสะท้อน (สกัดเสียง 100%)
+muteBtn.onclick = async () => { 
+    isMuted = !isMuted; 
+    if (localTracks.audioTrack) {
+        await localTracks.audioTrack.setMuted(isMuted); // 🌟 ใช้ setMuted แทน setEnabled
+    }
+    await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); 
+    const muteIcon = document.getElementById('mute-icon'); 
+    if (isMuted) { 
+        muteBtn.classList.remove('bg-[#2b2d31]'); 
+        muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); 
+        muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; 
+    } else { 
+        muteBtn.classList.add('bg-[#2b2d31]'); 
+        muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); 
+        muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; 
+    } 
+};
 
 // ==========================================
 // 📋 13. Task Board & Tour
@@ -907,8 +920,6 @@ document.getElementById('add-task-btn').addEventListener('click', () => { docume
 if ('serviceWorker' in navigator) { 
     window.addEventListener('load', () => { 
         navigator.serviceWorker.register('sw.js').then(r => console.log('✅ HIVE SW Active')).catch(e => console.log('❌ SW Fail:', e)); 
-        
-        // 🌟 รอรับคำสั่งจาก SW (เมื่อกดปุ่มวางสายบนมือถือ)
         navigator.serviceWorker.addEventListener('message', event => {
             if (event.data && event.data.command === 'leave_voice') {
                 leaveVoice();
