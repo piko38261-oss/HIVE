@@ -58,14 +58,43 @@ window.openLightbox = (url) => { document.getElementById('lightbox-img').src = u
 lightbox.onclick = () => { lightbox.classList.add('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-100', 'scale-95'); setTimeout(() => lightbox.classList.add('hidden'), 300); };
 window.sendWave = () => { const input = document.getElementById('chat-input'); input.value = '👋 โบกมือทักทาย!'; document.getElementById('send-btn').click(); };
 
-function startBackgroundAudioMode() {
-    if ('mediaSession' in navigator) {
-        navigator.mediaSession.metadata = new MediaMetadata({ title: 'HIVE Voice Lounge', artist: 'Active Call', album: currentUsername, artwork: [{ src: 'https://ui-avatars.com/api/?name=H&background=5865F2&size=512', sizes: '512x512', type: 'image/png' }] });
-        const silentAudio = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3'); silentAudio.volume = 0.01; silentAudio.loop = true;
-        navigator.mediaSession.setActionHandler('play', () => silentAudio.play()); navigator.mediaSession.setActionHandler('pause', () => silentAudio.pause());
-        silentAudio.play().catch(e => {});
+// 🌟 ระบบกันหลับใหม่ (Ultimate Anti-Sleep)
+let bgAudio = null; let wakeLock = null;
+async function startBackgroundAudioMode() {
+    // 1. สร้างเสียงเงียบๆ เคลือบฐานระบบไว้ไม่ให้แอปตาย
+    if (!bgAudio) {
+        bgAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+        bgAudio.loop = true;
+        bgAudio.volume = 0.01;
     }
+    try { await bgAudio.play(); } catch(e) {}
+
+    // 2. ใช้ Media Session ล็อกหน้าจอ (ปุ่ม Play/Pause จะโดนแฮกให้เล่นต่อเสมอ)
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({ title: 'HIVE Voice Lounge', artist: 'Active Call', album: currentUsername, artwork: [{ src: 'https://ui-avatars.com/api/?name=H&background=23a559&color=fff&size=512', sizes: '512x512', type: 'image/png' }] });
+        navigator.mediaSession.setActionHandler('play', () => { bgAudio.play(); }); 
+        navigator.mediaSession.setActionHandler('pause', () => { bgAudio.play(); }); // แฮกไม่ให้หยุด
+    }
+    
+    // 3. ใช้ WakeLock API บังคับไม่ให้มือถือตัด JS Thread
+    try {
+        if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); }
+    } catch (e) {}
 }
+
+function stopBackgroundAudioMode() {
+    if (bgAudio) { bgAudio.pause(); bgAudio.currentTime = 0; }
+    if (wakeLock) { wakeLock.release().then(() => { wakeLock = null; }); }
+}
+
+// 🌟 ปลุกแอปทุกครั้งที่สลับหน้าจอกลับมา
+document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState === 'visible' && amIInVoice) {
+        if (bgAudio) bgAudio.play().catch(e=>{});
+        try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (e) {}
+    }
+});
+
 
 // ==========================================
 // 📺 4. ระบบ Watch Party
@@ -288,6 +317,9 @@ onAuthStateChanged(auth, async (user) => {
         document.getElementById('current-user-avatar').src = user.photoURL || `https://ui-avatars.com/api/?name=${currentUsername}&background=5865F2&color=fff&rounded=true&bold=true`;
         try { const userDoc = await getDoc(doc(db, "users", currentUserId)); if (userDoc.exists()) { currentUserRole = userDoc.data().role; if (currentUserRole === 'Admin') document.getElementById('admin-menu-btn').classList.remove('hidden'); } } catch (err) {}
         
+        if ("Notification" in window && Notification.permission === "default") { Notification.requestPermission(); }
+        
+        const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
         if (wasInVoice) { await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e)); setTimeout(() => { joinVoice(); document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#dbdee1]'); b.classList.add('channel-inactive', 'text-[#80848e]'); if (b.getAttribute('data-view') === 'voice') { b.classList.remove('channel-inactive', 'text-[#80848e]'); b.classList.add('channel-active', 'text-[#dbdee1]'); } }); Object.values(views).forEach(v => v.classList.add('hidden')); views['voice'].classList.remove('hidden'); membersSidebar.classList.remove('hidden', 'md:hidden'); }, 1500); } else { await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false, isTyping: false }).catch(e=>console.log(e)); }
     } else { window.location.href = "index.html"; }
 });
@@ -895,7 +927,7 @@ async function leaveVoice() {
     if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; } amIInVoice = false;
     if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; } document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; document.getElementById('watch-party-stage').classList.add('hidden'); document.getElementById('watch-party-stage').classList.remove('flex');
     
-    // 🌟 ลบแจ้งเตือนเมื่อออก
+    stopBackgroundAudioMode();
     hideCallNotification();
 }
 
