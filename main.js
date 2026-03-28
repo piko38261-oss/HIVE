@@ -46,7 +46,7 @@ window.openLightbox = (url) => { document.getElementById('lightbox-img').src = u
 lightbox.onclick = () => { lightbox.classList.add('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-100', 'scale-95'); setTimeout(() => lightbox.classList.add('hidden'), 300); };
 window.sendWave = () => { const input = document.getElementById('chat-input'); input.value = '👋 โบกมือทักทาย!'; document.getElementById('send-btn').click(); };
 
-// 🌟 ระบบกันหลับใหม่ (Silent Audio Anti-Sleep)
+// 🌟 ระบบกันหลับ (Silent Audio Anti-Sleep)
 let bgAudio = null; let wakeLock = null;
 async function startBackgroundAudioMode() {
     if (!bgAudio) {
@@ -617,14 +617,14 @@ onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => {
 });
 
 // ==========================================
-// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) 🌟 อัปเกรดแจ้งเตือนถาวร 🌟
+// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) 🌟 อัปเกรดแจ้งเตือนอมตะ 🌟
 // ==========================================
 const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.getElementById('leave-voice-btn'), muteBtn = document.getElementById('mute-btn'), ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
 
 const camBtn = document.getElementById('camera-btn');
 const camIcon = document.getElementById('camera-icon');
 
-// 🌟 ฟังก์ชันสร้างการแจ้งเตือนสายโทร (ยิงแค่ครั้งเดียวตอนเข้าห้อง!)
+// 🌟 ฟังก์ชันสร้างการแจ้งเตือนสายโทร (ยิงแค่ครั้งเดียวตอนเข้าห้อง ป้องกันการโดนแบน)
 async function showCallNotification() {
     if ("Notification" in window && navigator.serviceWorker) {
         if (Notification.permission === "default") {
@@ -633,7 +633,7 @@ async function showCallNotification() {
         if (Notification.permission === "granted") {
             const reg = await navigator.serviceWorker.ready;
             
-            // ลบของเก่าออกก่อน (ถ้ามีค้างอยู่)
+            // ลบของเก่าออกก่อน
             const existing = await reg.getNotifications({ tag: "hive-voice-call" });
             existing.forEach(n => n.close());
 
@@ -642,7 +642,7 @@ async function showCallNotification() {
                 body: "เชื่อมต่อเสียงแล้ว — แตะเพื่อกลับสู่การโทร",
                 icon: "https://ui-avatars.com/api/?name=H&background=23a559&color=fff&size=192",
                 tag: "hive-voice-call", 
-                requireInteraction: true, // 🌟 บังคับไม่ให้ลบตัวเองจนกว่าจะวางสาย
+                requireInteraction: true, // 🌟 บังคับค้างไว้บนจอ
                 silent: true,
                 actions: [
                     { action: 'open', title: '📱 เปิดแอป' },
@@ -740,7 +740,7 @@ async function joinVoice() {
         startBackgroundAudioMode(); 
         if(latestWPData && latestWPData.videoId) { initOrUpdatePlayer(latestWPData.videoId, latestWPData.time, latestWPData.state, latestWPData.updatedBy); }
 
-        // 🌟 เรียกแจ้งเตือนแค่รอบเดียวพอครับ! ไม่สแปมแล้ว
+        // 🌟 เรียกแจ้งเตือนแค่ครั้งเดียวพอ
         showCallNotification();
 
     } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } 
@@ -812,7 +812,7 @@ ssBtn.onclick = async () => {
     
     if (!isSharingScreen) { 
         try { 
-            const selectedVal = qualitySelect ? qualitySelect.value : "1080p";
+            const selectedVal = qualitySelect ? qualitySelect.value : "1080p_1";
             
             let encoderConfig = { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 };
             if (selectedVal.includes("720")) encoderConfig = { width: 1280, height: 720, frameRate: 30, bitrateMax: 2000 };

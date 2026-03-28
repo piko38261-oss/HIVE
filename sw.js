@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hive-pwa-cache-v13';
+const CACHE_NAME = 'hive-pwa-cache-v14';
 
 const urlsToCache = [
   './',
@@ -12,7 +12,7 @@ const urlsToCache = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-        console.log('เปิดใช้งาน Cache HIVE V13 สำเร็จ');
+        console.log('เปิดใช้งาน Cache HIVE V14 สำเร็จ');
         return cache.addAll(urlsToCache);
     })
   );
@@ -36,10 +36,10 @@ self.addEventListener('activate', event => {
   );
 });
 
-// 🌟 ดักจับการกดแจ้งเตือนบนมือถือ
+// 🌟 ดักจับการกดแจ้งเตือนบนมือถือแบบโปร!
 self.addEventListener('notificationclick', event => {
   if (event.action === 'leave_call') {
-    // ถ้ากดปุ่ม "วางสาย" ให้ปิดแจ้งเตือนและส่งคำสั่งตัดสาย
+    // ถ้ากดปุ่ม "วางสาย" ค่อยสั่งปิดการแจ้งเตือน
     event.notification.close(); 
     event.waitUntil(
       clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
@@ -49,7 +49,7 @@ self.addEventListener('notificationclick', event => {
       })
     );
   } else {
-    // 🌟 ถ้ากดที่ตัวแจ้งเตือน หรือกด "เปิดแอป" ให้เด้งกลับเข้าแอป โดยไม่ปิดแจ้งเตือน (ค้างไว้!)
+    // 🌟 ถ้ากดที่ตัวแจ้งเตือน หรือกด "เปิดแอป" ให้เด้งกลับเข้าแอป **โดยไม่ปิดแจ้งเตือน (ให้ค้างไว้!)**
     event.waitUntil(
       clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
         for (let i = 0; i < windowClients.length; i++) {
