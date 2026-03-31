@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>HIVE Workspace - HIVE Server</title>
     
-    <link rel="manifest" href="manifest.json?v=24">
+    <link rel="manifest" href="manifest.json?v=25">
     <meta name="theme-color" content="#1e1f22">
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=H&background=5865F2&color=fff&size=192">
 
@@ -25,12 +25,14 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #111214; }
+        .custom-scrollbar::-webkit-scrollbar { height: 4px; }
+        
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUpFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes hivePulse { 0% { transform: scale(0.8); opacity: 0; box-shadow: 0 0 0 rgba(88, 101, 242, 0); } 50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 40px rgba(88, 101, 242, 0.6); } 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 20px rgba(88, 101, 242, 0.3); } }
         .hive-logo-anim { animation: hivePulse 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         
-        /* 🌟 สไตล์ปุ่มเซิร์ฟเวอร์แบบดิสคอร์ด */
+        /* สไตล์ปุ่มเซิร์ฟเวอร์แบบดิสคอร์ด */
         .server-icon { transition: all 0.2s ease; border-radius: 24px; }
         .server-icon:hover { border-radius: 12px; background-color: #5865F2; color: white; }
         .server-icon.active { border-radius: 12px; background-color: #5865F2; color: white; }
@@ -130,17 +132,17 @@
                     <a href="#" class="nav-btn channel-inactive group flex items-center px-2 py-1.5 rounded-md text-[#da373c] hover:bg-[#35373c] hover:text-red-400 transition mt-2" data-view="game-spy"><i class="ph-fill ph-detective text-[18px] mr-1.5 animate-pulse"></i><span class="font-bold text-[15px] truncate">จับสปาย (Spy Game)</span></a>
                 </div>
             </div>
-            
             <div class="pt-4 border-t border-[#1e1f22]">
                 <a href="#" id="admin-menu-btn" class="hidden group flex items-center px-2 py-1.5 rounded-md text-[#da373c] hover:bg-[#da373c]/10 transition cursor-pointer"><i class="ph ph-shield-warning text-[18px] mr-1.5"></i><span class="font-bold text-[15px] truncate">Admin Panel</span></a>
             </div>
         </div>
 
         <div class="h-[52px] bg-[#232428] px-2 flex items-center justify-between flex-shrink-0">
-            <div id="mini-profile-btn" class="flex items-center space-x-2 cursor-pointer hover:bg-[#35373c]/50 p-1.5 rounded-md transition flex-1 min-w-0 mr-1 group">
-                <div class="relative flex-shrink-0">
-                    <img id="current-user-avatar" src="" class="w-8 h-8 rounded-full object-cover bg-gray-700">
-                    <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#23a559] rounded-full border-2 border-[#232428]"></div>
+            <div id="mini-profile-btn" class="flex items-center space-x-2 cursor-pointer hover:bg-[#35373c]/50 p-1 rounded-md transition flex-1 min-w-0 mr-1 group relative">
+                <div class="relative flex-shrink-0 flex items-center justify-center w-8 h-8 mr-1">
+                    <img id="current-user-avatar" src="" class="w-8 h-8 rounded-full object-cover bg-gray-700 absolute">
+                    <img id="current-user-frame" src="" class="absolute w-[135%] h-[135%] max-w-none pointer-events-none z-10 hidden drop-shadow-md">
+                    <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[#23a559] rounded-full border-2 border-[#232428] z-20"></div>
                 </div>
                 <div class="min-w-0 flex-1 leading-tight">
                     <p id="current-user-name" class="font-bold text-[13px] text-[#dbdee1] group-hover:text-white truncate leading-none"></p>
@@ -150,7 +152,7 @@
             <div class="flex items-center space-x-0.5">
                 <button id="bottom-mic-btn" class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="เปิด/ปิดไมค์"><i id="bottom-mic-icon" class="ph-fill ph-microphone text-[18px]"></i></button>
                 <button id="bottom-deafen-btn" class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="หูหนวก/หูฟัง"><i id="bottom-deafen-icon" class="ph-fill ph-headphones text-[18px]"></i></button>
-                <button id="bottom-settings-btn" class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="ตั้งค่าผู้ใช้"><i class="ph-fill ph-gear text-[18px]"></i></button>
+                <button id="open-settings-btn" class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="ตั้งค่าผู้ใช้"><i class="ph-fill ph-gear text-[18px]"></i></button>
             </div>
         </div>
     </nav>
@@ -291,16 +293,13 @@
                     <h2 class="font-bold text-[15px] text-white flex items-center"><i class="ph-fill ph-detective mr-2 text-[#da373c] text-[22px]"></i> จับสปาย (Spyfall)</h2>
                 </div>
                 <div class="flex-1 p-4 md:p-8 flex flex-col items-center justify-center min-h-[500px]">
-                    
                     <div id="spy-lobby-ui" class="w-full max-w-lg bg-[#2b2d31] rounded-3xl border border-[#1e1f22] p-8 shadow-2xl text-center transform transition-all duration-300">
                         <div class="w-20 h-20 bg-[#da373c]/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#da373c]/30 shadow-inner">
                             <i class="ph-fill ph-detective text-5xl text-[#da373c] drop-shadow-[0_0_10px_rgba(218,55,60,0.6)]"></i>
                         </div>
                         <h3 class="text-white font-extrabold text-2xl mb-2 tracking-wide">ห้องรอเริ่มเกม</h3>
                         <p class="text-[#949ba4] text-[14px] mb-8 font-medium">รอผู้เล่นเข้าห้อง (ต้องการอย่างน้อย 3 คน)</p>
-                        
                         <div id="spy-players-list" class="flex flex-wrap justify-center gap-3 mb-8 min-h-[60px] bg-[#111214] p-4 rounded-xl border border-[#1e1f22]"></div>
-                        
                         <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 justify-center">
                             <button id="spy-join-btn" class="flex-1 bg-gradient-to-r from-[#5865F2] to-[#4752C4] hover:from-[#4752C4] hover:to-[#3b44a8] text-white px-6 py-3.5 rounded-xl font-bold shadow-[0_4px_15px_rgba(88,101,242,0.4)] transition-transform transform hover:-translate-y-0.5 text-[15px]">✋ เข้าร่วมวง</button>
                             <button id="spy-start-btn" class="flex-1 bg-gradient-to-r from-[#23a559] to-[#1e8a49] hover:from-[#1e8a49] hover:to-[#166534] text-white px-6 py-3.5 rounded-xl font-bold shadow-[0_4px_15px_rgba(35,165,89,0.4)] transition-transform transform hover:-translate-y-0.5 hidden text-[15px]">🚀 เริ่มเกมเลย!</button>
@@ -310,7 +309,6 @@
                     <div id="spy-play-ui" class="w-full max-w-lg bg-[#2b2d31] rounded-3xl border border-[#1e1f22] p-8 shadow-2xl text-center hidden animate-[fadeIn_0.3s_ease-out]">
                         <h3 class="text-white font-extrabold text-2xl mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">🤫 เกมเริ่มแล้ว!</h3>
                         <p class="text-[#949ba4] text-[14px] mb-8 font-medium bg-[#1e1f22] py-2 px-4 rounded-lg inline-block border border-white/5">กรุณาเปิดไมค์คุยกัน ห้ามให้ใครดูหน้าจอของคุณเด็ดขาด!</p>
-                        
                         <div class="relative w-full h-40 bg-[#111214] rounded-2xl border-2 border-dashed border-[#5865F2]/50 flex items-center justify-center cursor-pointer select-none group shadow-inner" id="spy-reveal-btn">
                             <div class="absolute inset-0 flex items-center justify-center transition-all duration-200 group-active:opacity-0 group-active:scale-95 z-10">
                                 <span class="text-[#dbdee1] font-bold flex items-center text-[16px]"><i class="ph-fill ph-eye mr-2 text-[28px] text-[#5865F2] animate-pulse"></i> กดค้างเพื่อดูคำศัพท์</span>
@@ -320,7 +318,6 @@
                                 <span id="spy-secret-word" class="text-3xl font-extrabold text-white tracking-wide drop-shadow-md">???</span>
                             </div>
                         </div>
-
                         <div class="mt-10 pt-6 border-t border-[#1e1f22]">
                             <button id="spy-end-btn" class="bg-gradient-to-r from-[#da373c] to-[#b52a2e] hover:from-[#b52a2e] hover:to-[#961c1f] text-white px-6 py-3.5 rounded-xl font-bold text-[14px] shadow-[0_4px_15px_rgba(218,55,60,0.4)] transition-transform transform hover:-translate-y-0.5 w-full">🚨 เปิดโหวตจับสปาย (ลับ)</button>
                         </div>
@@ -332,7 +329,6 @@
                         </div>
                         <h3 class="text-white font-extrabold text-2xl mb-1 tracking-wide">ได้เวลาโหวตลับ!</h3>
                         <p id="spy-vote-status" class="text-[#949ba4] text-[13px] mb-6 font-medium bg-[#1e1f22] py-1.5 px-4 rounded-full inline-block">รอคนโหวต 0/0 คน</p>
-                        
                         <p class="text-[#dbdee1] text-[14px] mb-4 font-bold">คุณคิดว่าใครคือสปาย? (เลือกได้คนเดียว)</p>
                         <div id="spy-vote-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2"></div>
                     </div>
@@ -361,31 +357,38 @@
                 <button id="close-settings-btn" class="text-gray-400 hover:text-white hover:rotate-90 transition-all duration-300"><i class="ph-bold ph-x text-[20px]"></i></button>
             </div>
             
-            <div class="p-6 space-y-6 relative z-10">
-                <div class="relative group mt-2">
-                    <div id="settings-banner-wrapper" class="h-28 bg-[#1e1f22]/50 rounded-xl relative cursor-pointer overflow-hidden group-hover:ring-2 ring-[#5865F2]/50 transition-all border border-white/5 shadow-inner">
+            <div class="p-6 relative z-10 overflow-y-auto max-h-[70vh] custom-scrollbar">
+                <div class="relative group mt-2 mb-10">
+                    <div id="settings-banner-wrapper" class="h-24 bg-[#1e1f22]/50 rounded-xl relative cursor-pointer overflow-hidden group-hover:ring-2 ring-[#5865F2]/50 transition-all border border-white/5 shadow-inner">
                         <img id="settings-banner-preview" src="" class="w-full h-full object-cover hidden">
                         <div class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition duration-300"><i class="ph-fill ph-camera text-white text-3xl drop-shadow-lg"></i></div>
                     </div>
-                    <div id="settings-avatar-wrapper" class="absolute -bottom-10 left-6 w-24 h-24 rounded-full border-4 border-[#111214] bg-gray-800 cursor-pointer overflow-hidden z-10 group-hover:shadow-[0_0_20px_rgba(88,101,242,0.5)] transition-all duration-300">
-                        <img id="settings-avatar-preview" src="" class="w-full h-full object-cover">
-                        <div class="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition duration-300"><i class="ph-fill ph-camera text-white text-xl"></i></div>
+                    <div id="settings-avatar-wrapper" class="absolute -bottom-6 left-6 w-20 h-20 rounded-full border-4 border-[#111214] bg-gray-800 cursor-pointer z-10 group-hover:shadow-[0_0_20px_rgba(88,101,242,0.5)] transition-all duration-300 flex items-center justify-center">
+                        <img id="settings-avatar-preview" src="" class="w-full h-full rounded-full object-cover absolute">
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 z-20"><i class="ph-fill ph-camera text-white text-xl"></i></div>
                     </div>
                 </div>
                 
-                <div class="pt-12 space-y-5">
+                <div class="space-y-4">
                     <div class="group">
                         <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 group-focus-within:text-[#5865F2] transition-colors">ชื่อแสดงผล</label>
-                        <input type="text" id="settings-username-input" class="w-full bg-white/5 border border-white/10 focus:border-[#5865F2] focus:ring-1 focus:ring-[#5865F2] rounded-lg px-4 py-2.5 text-[14px] text-white outline-none transition-all placeholder-gray-600 shadow-inner">
+                        <input type="text" id="settings-username-input" class="w-full bg-white/5 border border-white/10 focus:border-[#5865F2] focus:ring-1 focus:ring-[#5865F2] rounded-lg px-4 py-2 text-[14px] text-white outline-none transition-all placeholder-gray-600 shadow-inner">
                     </div>
                     <div class="group">
                         <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 group-focus-within:text-[#23a559] transition-colors">สถานะที่กำหนดเอง</label>
-                        <input type="text" id="settings-custom-status" placeholder="วันนี้ทำงานถึงดึกนะ..." class="w-full bg-white/5 border border-white/10 focus:border-[#23a559] focus:ring-1 focus:ring-[#23a559] rounded-lg px-4 py-2.5 text-[14px] text-[#23a559] outline-none transition-all placeholder-gray-600 shadow-inner">
+                        <input type="text" id="settings-custom-status" placeholder="วันนี้ทำงานถึงดึกนะ..." class="w-full bg-white/5 border border-white/10 focus:border-[#23a559] focus:ring-1 focus:ring-[#23a559] rounded-lg px-4 py-2 text-[14px] text-[#23a559] outline-none transition-all placeholder-gray-600 shadow-inner">
+                    </div>
+                    
+                    <div class="group mt-2 border-t border-white/5 pt-4">
+                        <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">กรอบรูปโปรไฟล์ (Avatar Frame)</label>
+                        <div id="frame-selector" class="flex space-x-3 overflow-x-auto pb-2 custom-scrollbar">
+                            </div>
+                        <input type="hidden" id="settings-selected-frame" value="">
                     </div>
                 </div>
             </div>
             
-            <div class="p-5 border-t border-white/5 flex justify-end relative z-10">
+            <div class="p-5 border-t border-white/5 flex justify-end relative z-10 bg-[#111214]">
                 <button id="save-settings-btn" class="bg-gradient-to-r from-[#5865F2] to-[#4752C4] hover:from-[#4752C4] hover:to-[#3b44a8] text-white font-bold py-2.5 px-8 rounded-lg transition-all duration-300 shadow-[0_4px_15px_rgba(88,101,242,0.4)] hover:shadow-[0_6px_20px_rgba(88,101,242,0.6)] transform hover:-translate-y-0.5">บันทึกการเปลี่ยนแปลง</button>
             </div>
         </div>
@@ -416,9 +419,12 @@
             <div class="h-[120px] bg-[#1e1f22] relative">
                 <img id="profile-card-banner" src="" class="w-full h-full object-cover hidden">
             </div>
-            <div class="px-6 pb-6 relative">
-                <div class="absolute -top-12 left-6 w-[96px] h-[96px] rounded-full border-[6px] border-[#111214] bg-gray-800 overflow-hidden shadow-xl"><img id="profile-card-avatar" src="" class="w-full h-full object-cover"></div>
-                <div class="pt-14 pb-4 border-b border-white/5">
+            <div class="px-6 pb-6 relative mt-12">
+                <div class="absolute -top-24 left-6 w-[96px] h-[96px] flex items-center justify-center">
+                    <img id="profile-card-avatar" src="" class="w-full h-full rounded-full border-[6px] border-[#111214] bg-gray-800 object-cover absolute z-0">
+                    <img id="profile-card-frame" src="" class="absolute w-[130%] h-[130%] max-w-none pointer-events-none z-10 hidden drop-shadow-lg">
+                </div>
+                <div class="pt-2 pb-4 border-b border-white/5">
                     <h2 id="profile-card-name" class="font-extrabold text-[22px] text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300 tracking-wide"></h2>
                     <p id="profile-card-status" class="text-[13px] text-[#dbdee1] mt-1"></p>
                 </div>
@@ -449,7 +455,6 @@
             </div>
         </div>
     </div>
-
     <div id="delete-confirm-modal" class="fixed inset-0 bg-black/70 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-md">
         <div class="bg-[#111214]/90 backdrop-blur-xl p-8 rounded-3xl w-full max-w-sm text-center border border-white/10 shadow-[0_0_40px_rgba(218,55,60,0.15)]">
             <div class="w-20 h-20 bg-gradient-to-br from-[#da373c]/20 to-transparent text-[#da373c] rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-[#da373c]/30"><i class="ph-fill ph-trash text-4xl drop-shadow-[0_0_10px_rgba(218,55,60,0.5)]"></i></div>
