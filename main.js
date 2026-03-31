@@ -10,11 +10,16 @@ const app = initializeApp(firebaseConfig); const auth = getAuth(app); const db =
 const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a"; const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
 const GEMINI_API_KEY = "AIzaSyCifkioB2z1Ho9LAGSFBYWtV-kM4bgtzhw"; 
 
-async function getWordFromAI() {
+// 🌟 อัปเกรด AI ให้ฉลาดขึ้น สุ่มคำสำหรับเกมทั้ง 2 เกมได้
+async function getWordFromAI(gameType = "draw") {
     try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: "สุ่มคำศัพท์ภาษาไทย 1 คำ สำหรับเกมทายภาพ ขอแปลกๆ สร้างสรรค์ ไม่ซ้ำเดิม ห้ามมีเครื่องหมายใดๆ" }] }], generationConfig: { temperature: 1.5 } }) });
+        let promptText = "สุ่มคำศัพท์ภาษาไทย 1 คำ สำหรับเกมทายภาพ ขอแปลกๆ สร้างสรรค์ ไม่ซ้ำเดิม ห้ามมีเครื่องหมายใดๆ";
+        if (gameType === "spy") {
+            promptText = "สุ่มคำศัพท์ภาษาไทย 1 คำ (เป็นหมวดของกิน, ของใช้, สัตว์ หรือสถานที่) สำหรับเล่นเกม Spyfall ขอคำที่คนทั่วไปรู้จักดี ห้ามมีคำอธิบาย ห้ามมีเครื่องหมายใดๆ ขอแค่คำศัพท์ 1 คำเท่านั้น";
+        }
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], generationConfig: { temperature: 1.5 } }) });
         const data = await res.json(); return data.candidates[0].content.parts[0].text.replace(/[\r\n.]/g, "").trim();
-    } catch (err) { const backup = ["ไดโนเสาร์", "ชาบู", "มนุษย์ต่างดาว", "แฮมเบอร์เกอร์"]; return backup[Math.floor(Math.random() * backup.length)]; }
+    } catch (err) { const backup = ["ไดโนเสาร์", "ชาบู", "มนุษย์ต่างดาว", "แฮมเบอร์เกอร์", "หมูกระทะ", "โรงหนัง"]; return backup[Math.floor(Math.random() * backup.length)]; }
 }
 
 // ==========================================
@@ -78,7 +83,7 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => { if(d.exists()) { const wp 
 // ==========================================
 // 🗺️ 5. ระบบ Navigation
 // ==========================================
-const views = { chat: document.getElementById('view-chat'), board: document.getElementById('view-board'), voice: document.getElementById('view-voice'), whiteboard: document.getElementById('view-whiteboard'), 'game-draw': document.getElementById('view-game-draw') };
+const views = { chat: document.getElementById('view-chat'), board: document.getElementById('view-board'), voice: document.getElementById('view-voice'), whiteboard: document.getElementById('view-whiteboard'), 'game-draw': document.getElementById('view-game-draw'), 'game-spy': document.getElementById('view-game-spy') };
 const membersSidebar = document.getElementById('members-sidebar'), sidebar = document.getElementById('sidebar'), overlay = document.getElementById('overlay');
 document.querySelectorAll('.open-menu, #open-members-voice').forEach(btn => btn.onclick = () => { sidebar.classList.add('open'); overlay.classList.add('active'); }); document.getElementById('close-menu').onclick = () => { sidebar.classList.remove('open'); overlay.classList.remove('active'); }; document.getElementById('open-members').onclick = () => { membersSidebar.classList.remove('translate-x-full'); overlay.classList.add('active'); }; document.getElementById('close-members').onclick = () => { membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); }; overlay.onclick = () => { sidebar.classList.remove('open'); membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); };
 function updateUnreadBadge(channel) { const btn = document.querySelector(`.nav-btn[data-channel="${channel}"]`); if (!btn) return; let badge = btn.querySelector('.unread-badge'); if (unreadCounts[channel] > 0) { if (!badge) { badge = document.createElement('span'); badge.className = 'unread-badge bg-[#da373c] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-auto animate-[fadeIn_0.2s_ease-out] shadow-sm'; btn.appendChild(badge); } badge.textContent = unreadCounts[channel] > 99 ? '99+' : unreadCounts[channel]; } else { if (badge) badge.remove(); } }
@@ -495,7 +500,7 @@ document.getElementById('start-game-btn').onclick = async () => {
     btn.innerHTML = `<i class="ph-fill ph-spinner animate-spin mr-1.5 text-[16px]"></i> AI กำลังคิดคำ...`;
     btn.disabled = true;
 
-    const randomWord = await getWordFromAI(); 
+    const randomWord = await getWordFromAI("draw"); 
     
     const gameCanvas = document.getElementById('game-whiteboard-canvas'); const gctx = gameCanvas.getContext('2d');
     gctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
@@ -521,7 +526,7 @@ async function sendAnyMessage(inputEl, channelStr) {
         else if(txt === '/clear') { if(currentUserRole !== 'Admin') { showToast("คุณไม่ใช่ Admin ไม่มีสิทธิ์", "error"); return; } const msgs = allMessages.filter(m => m.channel === channelStr); for(let m of msgs) await deleteDoc(doc(db, "messages", m.id)); botReply = `🧹 แอดมินล้างห้องแชทเรียบร้อยแล้ว`; } 
         else if(txt === '/draw') { 
             await addDoc(collection(db, "messages"), { text: `⏳ บอทกำลังปลุก AI ให้หาคำศัพท์ยากๆ แป๊บนึงนะ...`, senderName: "🤖 System Bot", channel: activeChannel, timestamp: serverTimestamp() });
-            const randomWord = await getWordFromAI();
+            const randomWord = await getWordFromAI("draw");
             const canvas = document.getElementById('whiteboard-canvas'); const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             await setDoc(doc(db, "appData", "whiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
@@ -569,7 +574,7 @@ document.getElementById('attach-btn').onclick = () => document.getElementById('f
 document.getElementById('file-input').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; chatInput.placeholder = "กำลังอัปโหลดไฟล์..."; chatInput.disabled = true; try { const fd = new FormData(); fd.append("image", f); const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); const r = await res.json(); if (r.success) { await addDoc(collection(db, "messages"), { text: "", imageUrl: r.data.url, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp(), reactions: {}, replyTo: replyingTo }); replyingTo = null; document.getElementById('reply-banner').classList.add('hidden'); } } catch (err) { showToast("อัปโหลดพลาด", "error"); } finally { chatInput.placeholder = "ส่งข้อความถึง #ห้องแชท"; chatInput.disabled = false; chatInput.value = ""; chatInput.focus(); } };
 
 // ==========================================
-// 🎨 11. ระบบกระดานวาดรูป แก้กระตุก (WebP) + แก้บั๊กยางลบ
+// 🎨 11. ระบบกระดานวาดรูป
 // ==========================================
 const canvas = document.getElementById('whiteboard-canvas'), ctx = canvas.getContext('2d'), canvasContainer = document.getElementById('canvas-container'), wbStatus = document.getElementById('wb-status');
 const gameCanvas = document.getElementById('game-whiteboard-canvas'), gameCtx = gameCanvas.getContext('2d'), gameCanvasContainer = document.getElementById('game-canvas-container');
@@ -598,7 +603,6 @@ gameCanvas.onmousedown = startGameDrawing; gameCanvas.onmousemove = drawGame; ga
 document.getElementById('game-clear-btn').onclick = () => { gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); syncGameWhiteboard(true); }; 
 async function syncGameWhiteboard(isC = false) { const imgData = isC ? "" : gameCanvas.toDataURL("image/webp", 0.5); await setDoc(doc(db, "appData", "gameWhiteboard"), { image: imgData, updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); } 
 
-// 🌟 แก้บั๊กยางลบ
 onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => { 
     if (d.exists() && !isGameDrawing) { 
         const val = d.data(); 
@@ -617,12 +621,121 @@ onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => {
 });
 
 // ==========================================
-// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) 🌟 อัปเกรดปิดไมค์ 100% 🌟
+// 🕵️‍♂️ 11.5 เกมจับสปาย (Who is the Spy?) - ระบบ Lobby & Real-time
+// ==========================================
+let currentSpyData = { status: 'waiting', players: {} };
+const lobbyUI = document.getElementById('spy-lobby-ui');
+const playUI = document.getElementById('spy-play-ui');
+const playersListUI = document.getElementById('spy-players-list');
+const joinSpyBtn = document.getElementById('spy-join-btn');
+const startSpyBtn = document.getElementById('spy-start-btn');
+const secretWordUI = document.getElementById('spy-secret-word');
+
+onSnapshot(doc(db, "appData", "spyGame"), (d) => {
+    if(d.exists()) {
+        currentSpyData = d.data();
+        renderSpyGame();
+    }
+});
+
+function renderSpyGame() {
+    playersListUI.innerHTML = '';
+    const playerIds = Object.keys(currentSpyData.players || {});
+    let amIJoined = playerIds.includes(currentUserId);
+
+    playerIds.forEach(uid => {
+        const p = currentSpyData.players[uid];
+        playersListUI.insertAdjacentHTML('beforeend', `<div class="bg-[#111214] px-4 py-2 rounded-full text-[14px] font-bold text-[#dbdee1] flex items-center border border-[#1e1f22] shadow-sm"><img src="${p.avatar}" class="w-6 h-6 rounded-full mr-2.5 object-cover">${p.name}</div>`);
+    });
+
+    if (playerIds.length === 0) {
+        playersListUI.innerHTML = '<span class="text-[#6d717a] text-[13px] my-auto">ยังไม่มีผู้เล่น... เป็นคนแรกเลยสิ!</span>';
+    }
+
+    if (currentSpyData.status === 'waiting' || !currentSpyData.status) {
+        lobbyUI.classList.remove('hidden'); 
+        playUI.classList.add('hidden');
+        
+        if (amIJoined) {
+            joinSpyBtn.innerHTML = "ออกจากการรอ";
+            joinSpyBtn.className = "flex-1 bg-gradient-to-r from-[#da373c] to-[#b52a2e] hover:from-[#b52a2e] hover:to-[#961c1f] text-white px-6 py-3.5 rounded-xl font-bold shadow-[0_4px_15px_rgba(218,55,60,0.4)] transition-transform transform hover:-translate-y-0.5 text-[15px]";
+            if (playerIds.length >= 3) startSpyBtn.classList.remove('hidden'); 
+            else startSpyBtn.classList.add('hidden');
+        } else {
+            joinSpyBtn.innerHTML = "✋ เข้าร่วมวง";
+            joinSpyBtn.className = "flex-1 bg-gradient-to-r from-[#5865F2] to-[#4752C4] hover:from-[#4752C4] hover:to-[#3b44a8] text-white px-6 py-3.5 rounded-xl font-bold shadow-[0_4px_15px_rgba(88,101,242,0.4)] transition-transform transform hover:-translate-y-0.5 text-[15px]";
+            startSpyBtn.classList.add('hidden');
+        }
+    } else if (currentSpyData.status === 'playing') {
+        lobbyUI.classList.add('hidden'); 
+        if (amIJoined) {
+            playUI.classList.remove('hidden');
+            const myRole = currentSpyData.players[currentUserId].role;
+            if (myRole === 'spy') {
+                secretWordUI.textContent = "🕵️‍♂️ คุณคือสปาย!";
+                secretWordUI.className = "text-3xl font-extrabold text-[#da373c] tracking-wide drop-shadow-md";
+            } else {
+                secretWordUI.textContent = currentSpyData.normalWord;
+                secretWordUI.className = "text-3xl font-extrabold text-[#23a559] tracking-wide drop-shadow-md";
+            }
+        } else {
+            lobbyUI.classList.remove('hidden');
+            lobbyUI.innerHTML = `<h3 class="text-white font-bold mt-4 text-xl">⏳ เกมกำลังดำเนินอยู่...</h3><p class="text-[#80848e] text-[14px] mt-2">รอผู้เล่นรอบนี้โหวตให้เสร็จก่อนนะครับ</p>`;
+            joinSpyBtn.classList.add('hidden');
+            startSpyBtn.classList.add('hidden');
+        }
+    }
+}
+
+joinSpyBtn.onclick = async () => {
+    const pList = currentSpyData.players || {};
+    if (pList[currentUserId]) {
+        delete pList[currentUserId];
+    } else {
+        pList[currentUserId] = { name: currentUsername, avatar: document.getElementById('current-user-avatar').src, role: 'normal' };
+    }
+    await setDoc(doc(db, "appData", "spyGame"), { players: pList, status: 'waiting' }, { merge: true });
+};
+
+startSpyBtn.onclick = async () => {
+    startSpyBtn.innerHTML = `<i class="ph-fill ph-spinner animate-spin"></i> กำลังสุ่มคำ...`;
+    startSpyBtn.disabled = true;
+    
+    // AI สร้างคำศัพท์หมวดทั่วไป
+    const word = await getWordFromAI("spy"); 
+    
+    const pList = currentSpyData.players || {};
+    const uids = Object.keys(pList);
+    // สุ่มสปาย 1 คน
+    const spyIndex = Math.floor(Math.random() * uids.length);
+    
+    uids.forEach((uid, idx) => {
+        pList[uid].role = (idx === spyIndex) ? 'spy' : 'normal';
+    });
+
+    await setDoc(doc(db, "appData", "spyGame"), { status: 'playing', players: pList, normalWord: word, host: currentUsername, timestamp: serverTimestamp() });
+    await addDoc(collection(db, "messages"), { text: `🕵️‍♂️ **${currentUsername}** เริ่มเกมจับสปายแล้ว! (AI แจกคำศัพท์ให้ทุกคนเรียบร้อย) ใครเป็นสปายเนียนๆ ไว้ล่ะ!`, senderName: "🤖 System Bot", channel: "general", timestamp: serverTimestamp() });
+    
+    startSpyBtn.disabled = false;
+    startSpyBtn.innerHTML = `🚀 เริ่มเกมเลย!`;
+};
+
+document.getElementById('spy-end-btn').onclick = async () => {
+    if(confirm("ต้องการจบเกมนี้และเฉลยใช่ไหม?")) {
+        let spyName = "ไม่มี";
+        for(let uid in currentSpyData.players) { if(currentSpyData.players[uid].role === 'spy') spyName = currentSpyData.players[uid].name; }
+        await setDoc(doc(db, "appData", "spyGame"), { status: 'waiting', players: {}, timestamp: serverTimestamp() });
+        await addDoc(collection(db, "messages"), { text: `🏁 จบเกมจับสปาย! สปายในรอบนี้คือ **${spyName}** 🕵️‍♂️ (คำศัพท์ของชาวบ้านคือ: ${currentSpyData.normalWord})`, senderName: "🤖 System Bot", channel: "general", timestamp: serverTimestamp() });
+        showToast("เฉลยแล้ว! ไปดูผลในช่องประกาศทั่วไป", "info");
+    }
+};
+
+// ==========================================
+// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora)
 // ==========================================
 const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.getElementById('leave-voice-btn'), muteBtn = document.getElementById('mute-btn'), ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
 const camBtn = document.getElementById('camera-btn'), camIcon = document.getElementById('camera-icon');
 
-// 🌟 ฟังก์ชันสร้างการแจ้งเตือนสายโทร
 async function showCallNotification() {
     if ("Notification" in window && navigator.serviceWorker) {
         if (Notification.permission === "default") { await Notification.requestPermission(); }
@@ -635,13 +748,8 @@ async function showCallNotification() {
                 icon: "https://ui-avatars.com/api/?name=HIVE&background=23a559&color=fff&size=192",
                 tag: "hive-voice-call", 
                 requireInteraction: true, 
-                renotify: true,           
                 silent: true,
-                vibrate: [100, 50, 100],
-                actions: [
-                    { action: 'open', title: '📱 เปิดแอป' },
-                    { action: 'leave_call', title: '🔴 วางสาย' }
-                ]
+                actions: [ { action: 'open', title: '📱 เปิดแอป' }, { action: 'leave_call', title: '🔴 วางสาย' } ]
             });
         }
     }
@@ -664,20 +772,14 @@ async function joinVoice() {
             if (t === "audio") {
                 u.audioTrack.play(); 
                 remoteAudioTracks[u.uid] = u.audioTrack; 
-                
                 let matchedUserId = null;
                 for(let k in usersData) { if(usersData[k].agoraUid === u.uid) { matchedUserId = usersData[k].id; break; } }
-                if(matchedUserId && userVolumes[matchedUserId] !== undefined) {
-                    u.audioTrack.setVolume(parseInt(userVolumes[matchedUserId]));
-                }
+                if(matchedUserId && userVolumes[matchedUserId] !== undefined) { u.audioTrack.setVolume(parseInt(userVolumes[matchedUserId])); }
             }
             if (t === "video") { 
                 remoteVideoTracks[u.uid] = u.videoTrack;
-                
-                let matchedUserId = null;
-                let matchedUserName = "Unknown";
+                let matchedUserId = null; let matchedUserName = "Unknown";
                 for(let k in usersData) { if(usersData[k].agoraUid === u.uid) { matchedUserId = usersData[k].id; matchedUserName = k; break; } }
-                
                 if (matchedUserId) {
                     const uData = usersData[matchedUserName];
                     if (uData && uData.isSharingScreen) {
@@ -686,19 +788,11 @@ async function joinVoice() {
                         let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; 
                         ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); 
                     } else {
-                        const camStage = document.getElementById('camera-stage');
-                        camStage.classList.remove('hidden');
-                        camStage.classList.add('flex');
-                        
+                        const camStage = document.getElementById('camera-stage'); camStage.classList.remove('hidden'); camStage.classList.add('flex');
                         const ex = document.getElementById(`camera-wrap-${u.uid}`); if(ex) ex.remove();
-                        
-                        let camCard = document.createElement("div");
-                        camCard.id = `camera-wrap-${u.uid}`;
-                        camCard.className = "w-[280px] h-[210px] sm:w-[320px] sm:h-[240px] md:w-[400px] md:h-[300px] bg-[#111214] rounded-2xl overflow-hidden shadow-2xl border-2 border-[#2b2d31] relative animate-[fadeIn_0.3s_ease-out]";
+                        let camCard = document.createElement("div"); camCard.id = `camera-wrap-${u.uid}`; camCard.className = "w-[280px] h-[210px] sm:w-[320px] sm:h-[240px] md:w-[400px] md:h-[300px] bg-[#111214] rounded-2xl overflow-hidden shadow-2xl border-2 border-[#2b2d31] relative animate-[fadeIn_0.3s_ease-out]";
                         camCard.innerHTML = `<div id="cam-player-${u.uid}" class="absolute inset-0 w-full h-full bg-black"></div><div class="absolute bottom-3 left-3 bg-[#111214]/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-[12px] font-bold text-white z-10 flex items-center shadow-lg border border-[#35373c]"><i class="ph-fill ph-video-camera mr-1.5 text-[#23a559]"></i> ${matchedUserName}</div>`;
-                        
-                        camStage.appendChild(camCard);
-                        u.videoTrack.play(`cam-player-${u.uid}`, { fit: "cover" });
+                        camStage.appendChild(camCard); u.videoTrack.play(`cam-player-${u.uid}`, { fit: "cover" });
                     }
                 }
             } 
@@ -707,17 +801,12 @@ async function joinVoice() {
             if (t === "audio") { delete remoteAudioTracks[u.uid]; } 
             if (t === "video") { 
                 delete remoteVideoTracks[u.uid];
-                
                 const pc = document.getElementById(`v-wrap-${u.uid}`); if (pc) pc.remove(); 
                 const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
                 if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
-                
                 const camCard = document.getElementById(`camera-wrap-${u.uid}`); if (camCard) camCard.remove();
                 const camStage = document.getElementById('camera-stage');
-                if (camStage.children.length === 0) {
-                    camStage.classList.add('hidden');
-                    camStage.classList.remove('flex');
-                }
+                if (camStage.children.length === 0) { camStage.classList.add('hidden'); camStage.classList.remove('flex'); }
             } 
         }); 
         rtcClient.enableAudioVolumeIndicator(); rtcClient.on("volume-indicator", vs => { document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); vs.forEach(v => { if (v.level > 10) { let sId = null; if (v.uid === myNumericUid || v.uid === 0) { sId = currentUserId; } else { for (const k in usersData) { if (usersData[k].agoraUid === v.uid) { sId = usersData[k].id; break; } } } if (sId) { const a1 = document.getElementById(`img-avatar-${sId}`), a2 = document.getElementById(`img-sidebar-voice-${sId}`), a3 = document.getElementById(`img-grid-voice-${sId}`); if(a1) a1.classList.add('speaking-ring'); if(a2) a2.classList.add('speaking-ring'); if(a3) a3.classList.add('speaking-ring'); } } }); }); 
@@ -729,182 +818,96 @@ async function joinVoice() {
         localStorage.setItem('dosh_active_voice', 'true'); 
         joinBtn.classList.add('hidden'); document.getElementById('active-voice-ui').classList.remove('hidden'); muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]"; 
 
-        amIInVoice = true;
-        startBackgroundAudioMode(); 
+        amIInVoice = true; startBackgroundAudioMode(); 
         if(latestWPData && latestWPData.videoId) { initOrUpdatePlayer(latestWPData.videoId, latestWPData.time, latestWPData.state, latestWPData.updatedBy); }
-
         showCallNotification();
-
     } catch (err) { console.error(err); localStorage.removeItem('dosh_active_voice'); showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; } 
 }
 
 camBtn.onclick = async () => {
     if (isSharingScreen) { showToast("กรุณาปิดแชร์หน้าจอก่อนเปิดกล้องครับ", "error"); return; }
-    
     if (!isVideoOn) {
         try {
             localTracks.videoTrack = await AgoraRTC.createCameraVideoTrack();
             await rtcClient.publish(localTracks.videoTrack);
             isVideoOn = true;
-            
             if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isVideoOn: true });
-            
             camBtn.classList.remove('bg-[#2b2d31]'); camBtn.classList.add('bg-[#23a559]', 'text-white');
             camIcon.className = "ph-fill ph-video-camera text-[20px] md:text-[24px]";
-            
-            const camStage = document.getElementById('camera-stage');
-            camStage.classList.remove('hidden');
-            camStage.classList.add('flex');
-            
+            const camStage = document.getElementById('camera-stage'); camStage.classList.remove('hidden'); camStage.classList.add('flex');
             const ex = document.getElementById(`camera-wrap-local`); if(ex) ex.remove();
-            
-            let camCard = document.createElement("div");
-            camCard.id = `camera-wrap-local`;
-            camCard.className = "w-[280px] h-[210px] sm:w-[320px] sm:h-[240px] md:w-[400px] md:h-[300px] bg-[#111214] rounded-2xl overflow-hidden shadow-2xl border-2 border-[#2b2d31] relative animate-[fadeIn_0.3s_ease-out]";
+            let camCard = document.createElement("div"); camCard.id = `camera-wrap-local`; camCard.className = "w-[280px] h-[210px] sm:w-[320px] sm:h-[240px] md:w-[400px] md:h-[300px] bg-[#111214] rounded-2xl overflow-hidden shadow-2xl border-2 border-[#2b2d31] relative animate-[fadeIn_0.3s_ease-out]";
             camCard.innerHTML = `<div id="cam-player-local" class="absolute inset-0 w-full h-full bg-black"></div><div class="absolute bottom-3 left-3 bg-[#111214]/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-[12px] font-bold text-white z-10 flex items-center shadow-lg border border-[#35373c]"><i class="ph-fill ph-video-camera mr-1.5 text-[#23a559]"></i> ${currentUsername} (คุณ)</div>`;
-            
-            camStage.appendChild(camCard);
-            localTracks.videoTrack.play(`cam-player-local`, { fit: "cover" });
-            
+            camStage.appendChild(camCard); localTracks.videoTrack.play(`cam-player-local`, { fit: "cover" });
             showToast("เปิดกล้องแล้ว!", "success");
-        } catch(e) { 
-            console.log(e); showToast("ไม่สามารถเข้าถึงกล้องได้ หรือไม่มีกล้องครับ", "error"); 
-        }
-    } else {
-        await stopCamera();
-    }
+        } catch(e) { console.log(e); showToast("ไม่สามารถเข้าถึงกล้องได้ หรือไม่มีกล้องครับ", "error"); }
+    } else { await stopCamera(); }
 };
 
 async function stopCamera() {
-    if (localTracks.videoTrack) {
-        await rtcClient.unpublish(localTracks.videoTrack);
-        localTracks.videoTrack.stop(); localTracks.videoTrack.close();
-        localTracks.videoTrack = null;
-    }
-    isVideoOn = false;
-    if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isVideoOn: false });
-    
-    camBtn.classList.add('bg-[#2b2d31]'); camBtn.classList.remove('bg-[#23a559]', 'text-white');
-    camIcon.className = "ph ph-video-camera text-[20px] md:text-[24px]";
-    
+    if (localTracks.videoTrack) { await rtcClient.unpublish(localTracks.videoTrack); localTracks.videoTrack.stop(); localTracks.videoTrack.close(); localTracks.videoTrack = null; }
+    isVideoOn = false; if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isVideoOn: false });
+    camBtn.classList.add('bg-[#2b2d31]'); camBtn.classList.remove('bg-[#23a559]', 'text-white'); camIcon.className = "ph ph-video-camera text-[20px] md:text-[24px]";
     const camCard = document.getElementById(`camera-wrap-local`); if (camCard) camCard.remove();
-    const camStage = document.getElementById('camera-stage');
-    if (camStage && camStage.children.length === 0) {
-        camStage.classList.add('hidden');
-        camStage.classList.remove('flex');
-    }
+    const camStage = document.getElementById('camera-stage'); if (camStage && camStage.children.length === 0) { camStage.classList.add('hidden'); camStage.classList.remove('flex'); }
 }
 
 ssBtn.onclick = async () => { 
     if (isVideoOn) { showToast("กรุณาปิดกล้องก่อนแชร์หน้าจอครับ", "error"); return; }
-
-    const sIco = document.getElementById('screen-icon'); 
-    const ssWrapper = document.getElementById('screen-share-wrapper');
-    const qualitySelect = document.getElementById('screen-quality');
-    
+    const sIco = document.getElementById('screen-icon'); const ssWrapper = document.getElementById('screen-share-wrapper'); const qualitySelect = document.getElementById('screen-quality');
     if (!isSharingScreen) { 
         try { 
             const selectedVal = qualitySelect ? qualitySelect.value : "1080p_1";
-            
             let encoderConfig = { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 };
             if (selectedVal.includes("720")) encoderConfig = { width: 1280, height: 720, frameRate: 30, bitrateMax: 2000 };
             else if (selectedVal.includes("480")) encoderConfig = { width: 853, height: 480, frameRate: 30, bitrateMax: 1000 };
             else if (selectedVal.includes("360")) encoderConfig = { width: 640, height: 360, frameRate: 30, bitrateMax: 800 };
             else if (selectedVal === "1080p_60") encoderConfig = { width: 1920, height: 1080, frameRate: 60, bitrateMax: 4500 }; 
-            
             const res = await AgoraRTC.createScreenVideoTrack({ encoderConfig: encoderConfig, optimizationMode: "motion" }, "auto"); 
-            
-            if (Array.isArray(res)) { screenTrack = res[0]; screenAudioTrack = res[1]; await rtcClient.publish([screenTrack, screenAudioTrack]); } 
-            else { screenTrack = res; await rtcClient.publish(screenTrack); } 
-            
-            isSharingScreen = true; 
-            await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: true }); 
-            
-            if (ssWrapper) ssWrapper.classList.replace('bg-[#2b2d31]', 'bg-[#23a559]'); 
-            else ssBtn.classList.replace('bg-[#2b2d31]', 'bg-[#23a559]');
-            
+            if (Array.isArray(res)) { screenTrack = res[0]; screenAudioTrack = res[1]; await rtcClient.publish([screenTrack, screenAudioTrack]); } else { screenTrack = res; await rtcClient.publish(screenTrack); } 
+            isSharingScreen = true; await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: true }); 
+            if (ssWrapper) ssWrapper.classList.replace('bg-[#2b2d31]', 'bg-[#23a559]'); else ssBtn.classList.replace('bg-[#2b2d31]', 'bg-[#23a559]');
             if(sIco) sIco.className = "ph-fill ph-screencast text-[20px] md:text-[24px] text-white"; 
-            
             if (qualitySelect) { qualitySelect.classList.replace('text-[#80848e]', 'text-white'); qualitySelect.disabled = true; }
-            
-            ssStage.classList.remove('hidden'); 
-            let pc = document.createElement("div"); pc.id = `v-wrap-local`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); 
-            screenTrack.play(pc, { fit: "contain" }); 
-            
+            ssStage.classList.remove('hidden'); let pc = document.createElement("div"); pc.id = `v-wrap-local`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); screenTrack.play(pc, { fit: "contain" }); 
             screenTrack.on("track-ended", stopScreenShare); 
         } catch (err) { console.log(err); showToast("แชร์หน้าจอไม่สำเร็จ", "error"); } 
-    } else { 
-        await stopScreenShare(); 
-    } 
+    } else { await stopScreenShare(); } 
 };
 
 async function stopScreenShare() { 
-    const ssWrapper = document.getElementById('screen-share-wrapper');
-    const qualitySelect = document.getElementById('screen-quality');
-    const sIco = document.getElementById('screen-icon');
-    
+    const ssWrapper = document.getElementById('screen-share-wrapper'); const qualitySelect = document.getElementById('screen-quality'); const sIco = document.getElementById('screen-icon');
     if (screenTrack) { await rtcClient.unpublish(screenTrack); screenTrack.stop(); screenTrack.close(); screenTrack = null; } 
     if (screenAudioTrack) { await rtcClient.unpublish(screenAudioTrack); screenAudioTrack.stop(); screenAudioTrack.close(); screenAudioTrack = null; } 
-    
-    isSharingScreen = false; 
-    if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: false }); 
-    
-    if (ssWrapper) ssWrapper.classList.replace('bg-[#23a559]', 'bg-[#2b2d31]'); 
-    else ssBtn.classList.replace('bg-[#23a559]', 'bg-[#2b2d31]');
-    
+    isSharingScreen = false; if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: false }); 
+    if (ssWrapper) ssWrapper.classList.replace('bg-[#23a559]', 'bg-[#2b2d31]'); else ssBtn.classList.replace('bg-[#23a559]', 'bg-[#2b2d31]');
     if (sIco) sIco.className = "ph ph-screencast text-[20px] md:text-[24px] text-[#dbdee1]"; 
-    
     if (qualitySelect) { qualitySelect.classList.replace('text-white', 'text-[#80848e]'); qualitySelect.disabled = false; }
-    
     const pc = document.getElementById(`v-wrap-local`); if (pc) pc.remove(); 
-    
-    const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
-    if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
-    
+    const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]'); if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
     showToast("หยุดแชร์หน้าจอแล้ว", "info");
 }
 
 async function leaveVoice() { 
     if (isSharingScreen) await stopScreenShare(); 
     if (isVideoOn) await stopCamera(); 
-    
-    if (localTracks.audioTrack) { 
-        localTracks.audioTrack.stop(); 
-        localTracks.audioTrack.close(); 
-        localTracks.audioTrack = null;
-    } 
+    if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); localTracks.audioTrack = null; } 
     await rtcClient.leave(); if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false }); } 
     localStorage.removeItem('dosh_active_voice'); document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); 
     joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
     document.getElementById('active-voice-ui').classList.add('hidden'); 
     if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; } amIInVoice = false;
     if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; } document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; document.getElementById('watch-party-stage').classList.add('hidden'); document.getElementById('watch-party-stage').classList.remove('flex');
-    
-    amIInVoice = false;
-    stopBackgroundAudioMode();
-    hideCallNotification();
+    amIInVoice = false; stopBackgroundAudioMode(); hideCallNotification();
 }
 
-window.leaveVoice = leaveVoice; // ให้ SW เรียกใช้ได้!
-joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
-
-// 🌟 แก้บั๊กปิดไมค์แล้วสะท้อน (สกัดเสียง 100%)
+window.leaveVoice = leaveVoice; joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
 muteBtn.onclick = async () => { 
     isMuted = !isMuted; 
-    if (localTracks.audioTrack) {
-        await localTracks.audioTrack.setMuted(isMuted); // 🌟 ใช้ setMuted แทน setEnabled
-    }
+    if (localTracks.audioTrack) { await localTracks.audioTrack.setMuted(isMuted); }
     await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); 
     const muteIcon = document.getElementById('mute-icon'); 
-    if (isMuted) { 
-        muteBtn.classList.remove('bg-[#2b2d31]'); 
-        muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); 
-        muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; 
-    } else { 
-        muteBtn.classList.add('bg-[#2b2d31]'); 
-        muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); 
-        muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; 
-    } 
+    if (isMuted) { muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; } else { muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; } 
 };
 
 // ==========================================
@@ -920,19 +923,20 @@ document.getElementById('add-task-btn').addEventListener('click', () => { docume
 if ('serviceWorker' in navigator) { 
     window.addEventListener('load', () => { 
         navigator.serviceWorker.register('sw.js').then(r => console.log('✅ HIVE SW Active')).catch(e => console.log('❌ SW Fail:', e)); 
-        navigator.serviceWorker.addEventListener('message', event => {
-            if (event.data && event.data.command === 'leave_voice') {
-                leaveVoice();
-            }
-        });
+        navigator.serviceWorker.addEventListener('message', event => { if (event.data && event.data.command === 'leave_voice') { leaveVoice(); } });
     }); 
 }
 
-// 🌟 ปลุกแอปตอนสลับจอ
 document.addEventListener("visibilitychange", async () => {
-    if (document.visibilityState === 'visible' && amIInVoice) {
-        if (bgAudio) bgAudio.play().catch(e=>{});
-        try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (e) {}
+    if (amIInVoice) {
+        if (document.visibilityState === 'hidden') { console.log("App suspended by Mobile OS"); } 
+        else if (document.visibilityState === 'visible') {
+            showToast("🔄 กลับสู่แอป... กำลังเชื่อมต่อเสียงใหม่", "info");
+            for (let uid in remoteAudioTracks) { try { remoteAudioTracks[uid].play(); } catch(e) {} }
+            if (localTracks.audioTrack && !isMuted) { try { await localTracks.audioTrack.setEnabled(false); await localTracks.audioTrack.setEnabled(true); } catch(e) {} }
+            if (bgAudio) bgAudio.play().catch(e=>{});
+            try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (e) {}
+        }
     }
 });
 
