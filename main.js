@@ -10,13 +10,10 @@ const app = initializeApp(firebaseConfig); const auth = getAuth(app); const db =
 const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a"; const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
 const GEMINI_API_KEY = "AIzaSyCifkioB2z1Ho9LAGSFBYWtV-kM4bgtzhw"; 
 
-// 🌟 อัปเกรด AI ให้ฉลาดขึ้น สุ่มคำสำหรับเกมทั้ง 2 เกมได้
 async function getWordFromAI(gameType = "draw") {
     try {
         let promptText = "สุ่มคำศัพท์ภาษาไทย 1 คำ สำหรับเกมทายภาพ ขอแปลกๆ สร้างสรรค์ ไม่ซ้ำเดิม ห้ามมีเครื่องหมายใดๆ";
-        if (gameType === "spy") {
-            promptText = "สุ่มคำศัพท์ภาษาไทย 1 คำ (เป็นหมวดของกิน, ของใช้, สัตว์ หรือสถานที่) สำหรับเล่นเกม Spyfall ขอคำที่คนทั่วไปรู้จักดี ห้ามมีคำอธิบาย ห้ามมีเครื่องหมายใดๆ ขอแค่คำศัพท์ 1 คำเท่านั้น";
-        }
+        if (gameType === "spy") { promptText = "สุ่มคำศัพท์ภาษาไทย 1 คำ (เป็นหมวดของกิน, ของใช้, สัตว์ หรือสถานที่) สำหรับเล่นเกม Spyfall ขอคำที่คนทั่วไปรู้จักดี ห้ามมีคำอธิบาย ห้ามมีเครื่องหมายใดๆ ขอแค่คำศัพท์ 1 คำเท่านั้น"; }
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], generationConfig: { temperature: 1.5 } }) });
         const data = await res.json(); return data.candidates[0].content.parts[0].text.replace(/[\r\n.]/g, "").trim();
     } catch (err) { const backup = ["ไดโนเสาร์", "ชาบู", "มนุษย์ต่างดาว", "แฮมเบอร์เกอร์", "หมูกระทะ", "โรงหนัง"]; return backup[Math.floor(Math.random() * backup.length)]; }
@@ -51,13 +48,9 @@ window.openLightbox = (url) => { document.getElementById('lightbox-img').src = u
 lightbox.onclick = () => { lightbox.classList.add('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-100', 'scale-95'); setTimeout(() => lightbox.classList.add('hidden'), 300); };
 window.sendWave = () => { const input = document.getElementById('chat-input'); input.value = '👋 โบกมือทักทาย!'; document.getElementById('send-btn').click(); };
 
-// 🌟 ระบบกันหลับ (Silent Audio Anti-Sleep)
 let bgAudio = null; let wakeLock = null;
 async function startBackgroundAudioMode() {
-    if (!bgAudio) {
-        bgAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
-        bgAudio.loop = true; bgAudio.volume = 0.01;
-    }
+    if (!bgAudio) { bgAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA'); bgAudio.loop = true; bgAudio.volume = 0.01; }
     try { await bgAudio.play(); } catch(e) {}
     try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (e) {}
 }
@@ -81,9 +74,17 @@ function initOrUpdatePlayer(vid, time, state, host) { if (!amIInVoice) return; i
 onSnapshot(doc(db, "appData", "watchParty"), (d) => { if(d.exists()) { const wp = d.data(); latestWPData = wp; if(wp.videoId) { if (amIInVoice) { initOrUpdatePlayer(wp.videoId, wp.time, wp.state, wp.updatedBy); } } else { document.getElementById('watch-party-stage').classList.add('hidden'); document.getElementById('watch-party-stage').classList.remove('flex'); if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; } document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; pendingVideoData = null; latestWPData = null; } } });
 
 // ==========================================
-// 🗺️ 5. ระบบ Navigation
+// 🗺️ 5. ระบบ Navigation (🌟 V17: แก้ไขบั๊กหน้าจอค้าง)
 // ==========================================
-const views = { chat: document.getElementById('view-chat'), board: document.getElementById('view-board'), voice: document.getElementById('view-voice'), whiteboard: document.getElementById('view-whiteboard'), 'game-draw': document.getElementById('view-game-draw'), 'game-spy': document.getElementById('view-game-spy') };
+const views = { 
+    chat: document.getElementById('view-chat'), 
+    board: document.getElementById('view-board'), 
+    voice: document.getElementById('view-voice'), 
+    whiteboard: document.getElementById('view-whiteboard'), 
+    'game-draw': document.getElementById('view-game-draw'),
+    'game-spy': document.getElementById('view-game-spy') // 🌟 เพิ่มบรรทัดนี้แล้ว!
+};
+
 const membersSidebar = document.getElementById('members-sidebar'), sidebar = document.getElementById('sidebar'), overlay = document.getElementById('overlay');
 document.querySelectorAll('.open-menu, #open-members-voice').forEach(btn => btn.onclick = () => { sidebar.classList.add('open'); overlay.classList.add('active'); }); document.getElementById('close-menu').onclick = () => { sidebar.classList.remove('open'); overlay.classList.remove('active'); }; document.getElementById('open-members').onclick = () => { membersSidebar.classList.remove('translate-x-full'); overlay.classList.add('active'); }; document.getElementById('close-members').onclick = () => { membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); }; overlay.onclick = () => { sidebar.classList.remove('open'); membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); };
 function updateUnreadBadge(channel) { const btn = document.querySelector(`.nav-btn[data-channel="${channel}"]`); if (!btn) return; let badge = btn.querySelector('.unread-badge'); if (unreadCounts[channel] > 0) { if (!badge) { badge = document.createElement('span'); badge.className = 'unread-badge bg-[#da373c] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-auto animate-[fadeIn_0.2s_ease-out] shadow-sm'; btn.appendChild(badge); } badge.textContent = unreadCounts[channel] > 99 ? '99+' : unreadCounts[channel]; } else { if (badge) badge.remove(); } }
@@ -178,8 +179,7 @@ onSnapshot(collection(db, "users"), (snapshot) => {
 // 🎨 7. โปรไฟล์ Settings & ✂️ ระบบ Cropper + GIF Support
 // ==========================================
 const settingsModal = document.getElementById('settings-modal'), avatarInput = document.getElementById('settings-avatar-input'), bannerInput = document.getElementById('settings-banner-input');
-let cropper = null;
-let currentCropType = ''; 
+let cropper = null; let currentCropType = ''; 
 
 document.getElementById('open-settings-btn').onclick = document.getElementById('mini-profile-btn').onclick = (e) => { 
     e.preventDefault(); 
@@ -197,9 +197,7 @@ function handleImageSelect(e, type) {
 
     if (file.type === 'image/gif') {
         showToast("ว้าว! ตรวจพบรูปเคลื่อนไหว (GIF) กำลังอัปโหลดแบบ VIP!", "info");
-        uploadImage(file, type);
-        e.target.value = "";
-        return;
+        uploadImage(file, type); e.target.value = ""; return;
     }
 
     const reader = new FileReader();
@@ -207,20 +205,11 @@ function handleImageSelect(e, type) {
         document.getElementById('crop-image-target').src = event.target.result;
         document.getElementById('crop-modal').classList.remove('hidden');
         currentCropType = type;
-
         if (cropper) { cropper.destroy(); }
-        
         const aspectRatio = type === 'avatar' ? 1 / 1 : 16 / 5; 
-
-        cropper = new Cropper(document.getElementById('crop-image-target'), {
-            aspectRatio: aspectRatio,
-            viewMode: 2,
-            dragMode: 'move',
-            background: false,
-        });
+        cropper = new Cropper(document.getElementById('crop-image-target'), { aspectRatio: aspectRatio, viewMode: 2, dragMode: 'move', background: false });
     };
-    reader.readAsDataURL(file);
-    e.target.value = ""; 
+    reader.readAsDataURL(file); e.target.value = ""; 
 }
 
 avatarInput.onchange = (e) => handleImageSelect(e, 'avatar');
@@ -228,26 +217,15 @@ bannerInput.onchange = (e) => handleImageSelect(e, 'banner');
 
 document.getElementById('confirm-crop-btn').onclick = () => {
     if (!cropper) return;
-    
-    const canvas = cropper.getCroppedCanvas({
-        width: currentCropType === 'avatar' ? 400 : 1200,
-        height: currentCropType === 'avatar' ? 400 : 375,
-        fillColor: '#1e1f22' 
-    });
-
+    const canvas = cropper.getCroppedCanvas({ width: currentCropType === 'avatar' ? 400 : 1200, height: currentCropType === 'avatar' ? 400 : 375, fillColor: '#1e1f22' });
     canvas.toBlob((blob) => {
         const croppedFile = new File([blob], `hive_${currentCropType}_${Date.now()}.png`, { type: 'image/png' });
-        closeCropModal();
-        uploadImage(croppedFile, currentCropType);
+        closeCropModal(); uploadImage(croppedFile, currentCropType);
     }, 'image/png');
 };
 
-const closeCropModal = () => {
-    document.getElementById('crop-modal').classList.add('hidden');
-    if (cropper) { cropper.destroy(); cropper = null; }
-};
-document.getElementById('close-crop-btn').onclick = closeCropModal;
-document.getElementById('cancel-crop-btn').onclick = closeCropModal;
+const closeCropModal = () => { document.getElementById('crop-modal').classList.add('hidden'); if (cropper) { cropper.destroy(); cropper = null; } };
+document.getElementById('close-crop-btn').onclick = closeCropModal; document.getElementById('cancel-crop-btn').onclick = closeCropModal;
 
 async function uploadImage(file, type) { 
     showToast(`กำลังอัปโหลด${type === 'avatar' ? 'โปรไฟล์' : 'ภาพปก'}... ⏳`, "info"); 
@@ -260,20 +238,15 @@ async function uploadImage(file, type) {
             if(type === 'avatar') { 
                 await updateProfile(auth.currentUser, { photoURL: r.data.url }); 
                 await updateDoc(doc(db, "users", currentUserId), { photoURL: r.data.url }); 
-                document.getElementById('settings-avatar-preview').src = r.data.url; 
-                document.getElementById('current-user-avatar').src = r.data.url; 
+                document.getElementById('settings-avatar-preview').src = r.data.url; document.getElementById('current-user-avatar').src = r.data.url; 
             } else { 
                 await updateDoc(doc(db, "users", currentUserId), { bannerURL: r.data.url }); 
-                document.getElementById('settings-banner-preview').src = r.data.url; 
-                document.getElementById('settings-banner-preview').classList.remove('hidden'); 
+                document.getElementById('settings-banner-preview').src = r.data.url; document.getElementById('settings-banner-preview').classList.remove('hidden'); 
             } 
             showToast("อัปโหลดสำเร็จ!", "success"); 
         } 
-    } catch(err) { 
-        showToast("เกิดข้อผิดพลาดในการอัปโหลด", "error"); 
-    } finally { 
-        document.getElementById(`settings-${type}-wrapper`).classList.remove('opacity-50', 'pointer-events-none'); 
-    } 
+    } catch(err) { showToast("เกิดข้อผิดพลาดในการอัปโหลด", "error"); } 
+    finally { document.getElementById(`settings-${type}-wrapper`).classList.remove('opacity-50', 'pointer-events-none'); } 
 }
 
 document.getElementById('save-settings-btn').onclick = async () => { const newName = document.getElementById('settings-username-input').value.trim() || currentUsername; const newStatus = document.getElementById('settings-custom-status').value.trim(); try { await updateProfile(auth.currentUser, { displayName: newName }); await updateDoc(doc(db, "users", currentUserId), { username: newName, customStatus: newStatus }); currentUsername = newName; document.getElementById('current-user-name').textContent = currentUsername; showToast("บันทึกการตั้งค่าโปรไฟล์สำเร็จ!", "success"); settingsModal.classList.add('hidden'); } catch(e) { showToast("เกิดข้อผิดพลาดในการบันทึก", "error"); } };
@@ -305,32 +278,24 @@ mentionPopup.id = 'mention-popup';
 mentionPopup.className = 'hidden absolute bg-[#2b2d31] border border-[#1e1f22] rounded-lg shadow-2xl z-[100] w-48 max-h-40 overflow-y-auto py-1 animate-[slideUpFade_0.1s_ease-out]';
 document.body.appendChild(mentionPopup);
 
-let currentActiveInput = null;
-let mentionQuery = '';
+let currentActiveInput = null; let mentionQuery = '';
 
 function handleMentionInput(e) {
     const input = e.target; currentActiveInput = input;
     const val = input.value; const cursorPos = input.selectionStart;
     const textBeforeCursor = val.substring(0, cursorPos);
     const match = textBeforeCursor.match(/@([a-zA-Z0-9_ก-๙]*)$/);
-    if (match) {
-        mentionQuery = match[1].toLowerCase();
-        showMentionPopup(input, match[0]);
-    } else { mentionPopup.classList.add('hidden'); }
+    if (match) { mentionQuery = match[1].toLowerCase(); showMentionPopup(input, match[0]); } else { mentionPopup.classList.add('hidden'); }
 }
 
 function showMentionPopup(inputEl, fullMatch) {
-    mentionPopup.innerHTML = '';
-    const rect = inputEl.getBoundingClientRect();
-    mentionPopup.style.left = `${rect.left}px`;
-    mentionPopup.style.top = `${rect.top - 160}px`; 
+    mentionPopup.innerHTML = ''; const rect = inputEl.getBoundingClientRect();
+    mentionPopup.style.left = `${rect.left}px`; mentionPopup.style.top = `${rect.top - 160}px`; 
     const matchedUsers = Object.keys(usersData).filter(name => name.toLowerCase().includes(mentionQuery));
     if (matchedUsers.length === 0) { mentionPopup.classList.add('hidden'); return; }
     mentionPopup.classList.remove('hidden');
     matchedUsers.forEach(name => {
-        const u = usersData[name]; const item = document.createElement('div');
-        item.className = 'flex items-center px-3 py-2 hover:bg-[#35373c] cursor-pointer transition';
-        item.innerHTML = `<img src="${u.avatar}" class="w-6 h-6 rounded-full mr-2 object-cover opacity-90"><span class="text-[13px] font-bold text-[#dbdee1]">${name}</span>`;
+        const u = usersData[name]; const item = document.createElement('div'); item.className = 'flex items-center px-3 py-2 hover:bg-[#35373c] cursor-pointer transition'; item.innerHTML = `<img src="${u.avatar}" class="w-6 h-6 rounded-full mr-2 object-cover opacity-90"><span class="text-[13px] font-bold text-[#dbdee1]">${name}</span>`;
         item.onclick = () => {
             const val = inputEl.value; const cursorPos = inputEl.selectionStart;
             const textBeforeCursor = val.substring(0, cursorPos); const textAfterCursor = val.substring(cursorPos);
@@ -343,9 +308,7 @@ function showMentionPopup(inputEl, fullMatch) {
     });
 }
 
-chatInput.addEventListener('input', handleMentionInput);
-gameChatInput.addEventListener('input', handleMentionInput);
-document.addEventListener('click', (e) => { if (!mentionPopup.contains(e.target) && e.target !== chatInput && e.target !== gameChatInput) mentionPopup.classList.add('hidden'); });
+chatInput.addEventListener('input', handleMentionInput); gameChatInput.addEventListener('input', handleMentionInput); document.addEventListener('click', (e) => { if (!mentionPopup.contains(e.target) && e.target !== chatInput && e.target !== gameChatInput) mentionPopup.classList.add('hidden'); });
 
 chatInput.addEventListener('input', () => { if (!currentUserId) return; if (!isTyping) { isTyping = true; updateDoc(doc(db, "users", currentUserId), { isTyping: true, typingChannel: activeChannel }); } clearTimeout(typingTimeout); typingTimeout = setTimeout(() => { isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); }, 2000); });
 const deleteModal = document.getElementById('delete-confirm-modal'); window.deleteChatMsg = (msgId) => { messageToDelete = msgId; deleteModal.classList.remove('hidden'); }; document.getElementById('cancel-delete-btn').onclick = () => { messageToDelete = null; deleteModal.classList.add('hidden'); }; document.getElementById('confirm-delete-btn').onclick = async () => { if (messageToDelete) { try { await deleteDoc(doc(db, "messages", messageToDelete)); showToast("ลบข้อความสำเร็จ", "success"); } catch (err) { showToast("เกิดข้อผิดพลาดในการลบ", "error"); } messageToDelete = null; deleteModal.classList.add('hidden'); } };
@@ -353,25 +316,15 @@ window.setReply = (msgId, senderName, rawText) => { replyingTo = { msgId, sender
 
 function scrollToBottom(containerId) {
     const container = document.getElementById(containerId);
-    if (!container) return;
-    const images = container.querySelectorAll('img');
-    let loadedCount = 0;
-    if (images.length > 0) {
-        images.forEach(img => {
-            if (img.complete) { loadedCount++; } 
-            else { img.onload = () => { loadedCount++; if (loadedCount === images.length) container.scrollTop = container.scrollHeight; }; }
-        });
-    }
+    if (!container) return; const images = container.querySelectorAll('img'); let loadedCount = 0;
+    if (images.length > 0) { images.forEach(img => { if (img.complete) { loadedCount++; } else { img.onload = () => { loadedCount++; if (loadedCount === images.length) container.scrollTop = container.scrollHeight; }; } }); }
     container.scrollTop = container.scrollHeight;
 }
 
 let isInitialLoad = true;
 onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => { 
     allMessages = []; snapshot.forEach((docSnap) => { allMessages.push({ id: docSnap.id, ...docSnap.data() }); }); renderMessages(); 
-    
-    if (activeChannel === 'game_draw') scrollToBottom('game-chat-container');
-    else scrollToBottom('chat-container');
-
+    if (activeChannel === 'game_draw') scrollToBottom('game-chat-container'); else scrollToBottom('chat-container');
     if (!isInitialLoad) { 
         snapshot.docChanges().forEach((change) => { 
             if (change.type === "added") { 
@@ -392,10 +345,7 @@ window.toggleReaction = async (msgId, emoji) => { if (!currentUserId) return; co
 function renderMessages() {
     let chatContainer = (activeChannel === 'game_draw') ? document.getElementById('game-chat-container') : document.getElementById('chat-container');
     if (!chatContainer) return;
-    
-    chatContainer.innerHTML = ''; 
-    const filteredMessages = allMessages.filter(msg => msg.channel === activeChannel);
-    let lastSender = null; 
+    chatContainer.innerHTML = ''; const filteredMessages = allMessages.filter(msg => msg.channel === activeChannel); let lastSender = null; 
     
     filteredMessages.forEach((m) => {
         let timeString = m.timestamp ? m.timestamp.toDate().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : "...";
@@ -403,13 +353,7 @@ function renderMessages() {
 
         let isMentioned = false;
         formattedText = formattedText.replace(/@([a-zA-Z0-9_ก-๙]+)/g, (match, username) => {
-            if (username === currentUsername) {
-                isMentioned = true;
-                return `<span class="bg-[#5865F2]/40 text-[#dbdee1] font-bold px-1.5 py-0.5 rounded-md border border-[#5865F2]/50">@${username}</span>`;
-            } else if (usersData[username]) {
-                return `<span class="text-[#5865F2] font-bold hover:underline cursor-pointer" onclick="showUserProfile('${username}')">@${username}</span>`;
-            }
-            return match;
+            if (username === currentUsername) { isMentioned = true; return `<span class="bg-[#5865F2]/40 text-[#dbdee1] font-bold px-1.5 py-0.5 rounded-md border border-[#5865F2]/50">@${username}</span>`; } else if (usersData[username]) { return `<span class="text-[#5865F2] font-bold hover:underline cursor-pointer" onclick="showUserProfile('${username}')">@${username}</span>`; } return match;
         });
 
         const rowHighlight = isMentioned ? "bg-[#5865F2]/10 border-l-[3px] border-[#5865F2] hover:bg-[#5865F2]/20" : "hover:bg-[#2b2d31]/50 border-l-[3px] border-transparent";
@@ -419,16 +363,13 @@ function renderMessages() {
                 let cleanName = formattedText.split('**')[1] || "ใครบางคน";
                 chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 hover:bg-[#2b2d31]/50 border-l-[3px] border-transparent px-2 md:px-4 py-2.5 mt-2 -mx-2 md:-mx-4 group transition duration-150 items-start"><div class="w-8 md:w-10 flex justify-center mt-1"><i class="ph-bold ph-arrow-right text-[#23a559] text-[18px]"></i></div><div class="min-w-0 flex-1"><p class="text-[#949ba4] text-[14px] leading-relaxed"><span class="text-[#dbdee1] font-bold">${cleanName}</span> เพิ่งสไลด์เข้ามาในเซิร์ฟเวอร์! <span class="text-[10px] text-[#5c6069] ml-2 font-medium">${timeString}</span></p><button onclick="sendWave()" class="mt-2.5 flex items-center space-x-2 bg-[#2b2d31] hover:bg-[#35373c] text-[#dbdee1] px-3 py-1.5 rounded-md text-[13px] font-bold transition shadow-sm"><span class="text-[16px]">👋</span> <span>โบกมือทักทาย!</span></button></div></div>`);
                 lastSender = "system_bot_join"; return;
-            } else if (formattedText.includes("กระโดดเข้ามา") || formattedText.includes("ออกจากห้องนั่งเล่น")) {
-                return;
-            }
+            } else if (formattedText.includes("กระโดดเข้ามา") || formattedText.includes("ออกจากห้องนั่งเล่น")) { return; }
             chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#2b2d31]/50 px-2 md:px-4 py-3 mt-4 -mx-2 md:-mx-4 group transition duration-150 relative items-center border-l-[3px] border-transparent hover:border-[#5865F2]"><div class="w-8 md:w-10 h-8 md:h-10 rounded-full bg-[#5865F2] flex items-center justify-center flex-shrink-0 shadow-lg"><i class="ph-fill ph-robot text-white text-[20px]"></i></div><div class="min-w-0 flex-1 pb-1"><div class="flex items-baseline space-x-2"><span class="font-extrabold text-[12px] text-[#5865F2] uppercase tracking-wider">System</span><span class="text-[10px] md:text-[11px] text-[#6d717a] font-medium">${timeString}</span></div><p class="text-[#949ba4] mt-1 text-[13px] md:text-[14px] leading-relaxed">${formattedText}</p></div></div>`);
             lastSender = "system_bot"; return; 
         }
 
         let msgAvatarUrl = usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}&background=5865F2&color=fff&rounded=true&bold=true`;
         let contentHTML = formattedText ? `<p class="text-[#dbdee1] mt-0.5 leading-relaxed text-[14px] md:text-[15px]">${formattedText}</p>` : '';
-        
         if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" onload="const c = this.closest('.overflow-y-auto'); if(c) c.scrollTop = c.scrollHeight;" onclick="openLightbox('${m.imageUrl}')" class="mt-2 rounded-lg max-w-[80%] md:max-w-sm shadow-sm cursor-zoom-in border border-[#2b2d31]">`;
         
         let reactsHTML = '';
@@ -701,12 +642,9 @@ startSpyBtn.onclick = async () => {
     startSpyBtn.innerHTML = `<i class="ph-fill ph-spinner animate-spin"></i> กำลังสุ่มคำ...`;
     startSpyBtn.disabled = true;
     
-    // AI สร้างคำศัพท์หมวดทั่วไป
     const word = await getWordFromAI("spy"); 
-    
     const pList = currentSpyData.players || {};
     const uids = Object.keys(pList);
-    // สุ่มสปาย 1 คน
     const spyIndex = Math.floor(Math.random() * uids.length);
     
     uids.forEach((uid, idx) => {
@@ -923,7 +861,9 @@ document.getElementById('add-task-btn').addEventListener('click', () => { docume
 if ('serviceWorker' in navigator) { 
     window.addEventListener('load', () => { 
         navigator.serviceWorker.register('sw.js').then(r => console.log('✅ HIVE SW Active')).catch(e => console.log('❌ SW Fail:', e)); 
-        navigator.serviceWorker.addEventListener('message', event => { if (event.data && event.data.command === 'leave_voice') { leaveVoice(); } });
+        navigator.serviceWorker.addEventListener('message', event => {
+            if (event.data && event.data.command === 'leave_voice') { leaveVoice(); }
+        });
     }); 
 }
 
