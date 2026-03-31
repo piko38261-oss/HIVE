@@ -24,7 +24,7 @@ async function getWordFromAI(gameType = "draw") {
 // ==========================================
 const rtcClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 let localTracks = { audioTrack: null, videoTrack: null }, screenTrack = null, screenAudioTrack = null;
-let isMuted = false, isSharingScreen = false, isVideoOn = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general", currentUserRole = "Member"; 
+let isMuted = false, isDeafened = false, isSharingScreen = false, isVideoOn = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general", currentUserRole = "Member"; 
 let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false, unreadCounts = { general: 0, project: 0, game_draw: 0 };
 let replyingTo = null; let messageToDelete = null;
 
@@ -168,16 +168,24 @@ onSnapshot(collection(db, "users"), (snapshot) => {
 });
 
 // ==========================================
-// 🎨 7. โปรไฟล์ Settings & ✂️ ระบบ Cropper + GIF Support
+// 🎨 7. โปรไฟล์ Settings (🌟 เปิดผ่าน 2 ปุ่มได้แล้ว)
 // ==========================================
 const settingsModal = document.getElementById('settings-modal'), avatarInput = document.getElementById('settings-avatar-input'), bannerInput = document.getElementById('settings-banner-input');
 let cropper = null; let currentCropType = ''; 
 
-document.getElementById('open-settings-btn').onclick = document.getElementById('mini-profile-btn').onclick = (e) => { 
+const openSettingsHandler = (e) => { 
     e.preventDefault(); 
     document.getElementById('settings-avatar-preview').src = document.getElementById('current-user-avatar').src; 
     settingsModal.classList.remove('hidden'); sidebar.classList.remove('open'); overlay.classList.remove('active'); 
-}; 
+};
+const btnOpenSettings = document.getElementById('open-settings-btn');
+const btnBottomSettings = document.getElementById('bottom-settings-btn');
+const btnMiniProfile = document.getElementById('mini-profile-btn');
+
+if (btnOpenSettings) btnOpenSettings.onclick = openSettingsHandler;
+if (btnBottomSettings) btnBottomSettings.onclick = openSettingsHandler;
+if (btnMiniProfile) btnMiniProfile.onclick = openSettingsHandler;
+
 document.getElementById('close-settings-btn').onclick = () => { settingsModal.classList.add('hidden'); }; 
 
 document.getElementById('settings-avatar-wrapper').onclick = () => avatarInput.click(); 
@@ -554,12 +562,12 @@ onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => {
 });
 
 // ==========================================
-// 🕵️‍♂️ 11.5 เกมจับสปาย (🌟 V21: เพิ่มระบบโหวตลับ!)
+// 🕵️‍♂️ 11.5 เกมจับสปาย (Who is the Spy?)
 // ==========================================
 let currentSpyData = { status: 'waiting', players: {}, votes: {} };
 const lobbyUI = document.getElementById('spy-lobby-ui');
 const playUI = document.getElementById('spy-play-ui');
-const voteUI = document.getElementById('spy-vote-ui'); // 🌟 UI ใหม่
+const voteUI = document.getElementById('spy-vote-ui'); 
 const playersListUI = document.getElementById('spy-players-list');
 const joinSpyBtn = document.getElementById('spy-join-btn');
 const startSpyBtn = document.getElementById('spy-start-btn');
@@ -587,49 +595,35 @@ function renderSpyGame() {
     }
 
     if (currentSpyData.status === 'waiting' || !currentSpyData.status) {
-        lobbyUI.classList.remove('hidden'); 
-        playUI.classList.add('hidden');
-        voteUI.classList.add('hidden');
-        
+        lobbyUI.classList.remove('hidden'); playUI.classList.add('hidden'); voteUI.classList.add('hidden');
         if (amIJoined) {
             joinSpyBtn.innerHTML = "ออกจากการรอ";
             joinSpyBtn.className = "flex-1 bg-gradient-to-r from-[#da373c] to-[#b52a2e] hover:from-[#b52a2e] hover:to-[#961c1f] text-white px-6 py-3.5 rounded-xl font-bold shadow-[0_4px_15px_rgba(218,55,60,0.4)] transition-transform transform hover:-translate-y-0.5 text-[15px]";
-            if (playerIds.length >= 3) startSpyBtn.classList.remove('hidden'); 
-            else startSpyBtn.classList.add('hidden');
+            if (playerIds.length >= 3) startSpyBtn.classList.remove('hidden'); else startSpyBtn.classList.add('hidden');
         } else {
             joinSpyBtn.innerHTML = "✋ เข้าร่วมวง";
             joinSpyBtn.className = "flex-1 bg-gradient-to-r from-[#5865F2] to-[#4752C4] hover:from-[#4752C4] hover:to-[#3b44a8] text-white px-6 py-3.5 rounded-xl font-bold shadow-[0_4px_15px_rgba(88,101,242,0.4)] transition-transform transform hover:-translate-y-0.5 text-[15px]";
             startSpyBtn.classList.add('hidden');
         }
-
     } else if (currentSpyData.status === 'playing') {
-        lobbyUI.classList.add('hidden'); 
-        voteUI.classList.add('hidden');
-        
+        lobbyUI.classList.add('hidden'); voteUI.classList.add('hidden');
         if (amIJoined) {
             playUI.classList.remove('hidden');
             const myRole = currentSpyData.players[currentUserId].role;
             if (myRole === 'spy') {
-                secretWordUI.textContent = "🕵️‍♂️ คุณคือสปาย!";
-                secretWordUI.className = "text-3xl font-extrabold text-[#da373c] tracking-wide drop-shadow-md";
+                secretWordUI.textContent = "🕵️‍♂️ คุณคือสปาย!"; secretWordUI.className = "text-3xl font-extrabold text-[#da373c] tracking-wide drop-shadow-md";
             } else {
-                secretWordUI.textContent = currentSpyData.normalWord;
-                secretWordUI.className = "text-3xl font-extrabold text-[#23a559] tracking-wide drop-shadow-md";
+                secretWordUI.textContent = currentSpyData.normalWord; secretWordUI.className = "text-3xl font-extrabold text-[#23a559] tracking-wide drop-shadow-md";
             }
         } else {
             lobbyUI.classList.remove('hidden');
             lobbyUI.innerHTML = `<h3 class="text-white font-bold mt-4 text-xl">⏳ เกมกำลังดำเนินอยู่...</h3><p class="text-[#80848e] text-[14px] mt-2">รอผู้เล่นรอบนี้โหวตให้เสร็จก่อนนะครับ</p>`;
             joinSpyBtn.classList.add('hidden'); startSpyBtn.classList.add('hidden');
         }
-
-    // 🌟 ระบบหน้าจอการโหวตลับ
     } else if (currentSpyData.status === 'voting') {
-        lobbyUI.classList.add('hidden'); 
-        playUI.classList.add('hidden');
-        
+        lobbyUI.classList.add('hidden'); playUI.classList.add('hidden');
         if (amIJoined) {
-            voteUI.classList.remove('hidden');
-            renderVoteUI();
+            voteUI.classList.remove('hidden'); renderVoteUI();
         } else {
             lobbyUI.classList.remove('hidden');
             lobbyUI.innerHTML = `<h3 class="text-white font-bold mt-4 text-xl">🚨 กำลังโหวตจับสปาย...</h3><p class="text-[#80848e] text-[14px] mt-2">ลุ้นระทึก! ไปรอดูผลในช่องแชทได้เลย</p>`;
@@ -638,36 +632,26 @@ function renderSpyGame() {
     }
 }
 
-// 🌟 ฟังก์ชันจัดการปุ่มโหวต
 function renderVoteUI() {
     const voteListUI = document.getElementById('spy-vote-list');
     const voteStatusUI = document.getElementById('spy-vote-status');
-    
     voteListUI.innerHTML = '';
-    const players = currentSpyData.players || {};
-    const votes = currentSpyData.votes || {};
-    const playerIds = Object.keys(players);
-    const voteCount = Object.keys(votes).length;
-    const playerTotal = playerIds.length;
+    const players = currentSpyData.players || {}; const votes = currentSpyData.votes || {};
+    const playerIds = Object.keys(players); const voteCount = Object.keys(votes).length; const playerTotal = playerIds.length;
 
     voteStatusUI.textContent = `โหวตไปแล้ว ${voteCount} / ${playerTotal} คน`;
-
-    // เช็คว่าเราโหวตไปหรือยัง
     const haveIVoted = !!votes[currentUserId];
 
     playerIds.forEach(uid => {
         const p = players[uid];
-        // ไม่ให้กดโหวตตัวเอง
         if (uid === currentUserId) return; 
         
         let btnHTML = '';
         if (haveIVoted) {
-            // ถ้าโหวตแล้ว ปุ่มจะกลายเป็นสีเทากดไม่ได้
             btnHTML = `<button disabled class="flex items-center p-3 rounded-xl bg-[#111214] border border-[#1e1f22] opacity-50 cursor-not-allowed">
                         <img src="${p.avatar}" class="w-8 h-8 rounded-full mr-3 grayscale"><span class="text-[14px] font-bold text-gray-500">${p.name}</span>
                        </button>`;
         } else {
-            // ถ้ายังไม่โหวต ปุ่มพร้อมให้กด
             btnHTML = `<button onclick="voteSpy('${uid}')" class="flex items-center p-3 rounded-xl bg-[#1e1f22] border border-[#35373c] hover:border-[#da373c] hover:bg-[#da373c]/10 transition-all group shadow-sm transform hover:-translate-y-0.5">
                         <img src="${p.avatar}" class="w-8 h-8 rounded-full mr-3"><span class="text-[14px] font-bold text-[#dbdee1] group-hover:text-white">${p.name}</span>
                        </button>`;
@@ -675,26 +659,19 @@ function renderVoteUI() {
         voteListUI.insertAdjacentHTML('beforeend', btnHTML);
     });
 
-    // 🌟 ถ้ายอดโหวตครบทุกคน ให้ระบบคำนวณผู้ชนะและประกาศผล!
     if (voteCount === playerTotal && voteCount > 0) {
-        if (currentSpyData.host === currentUsername) { // ให้โฮสต์เป็นคนสั่งประกาศคนเดียว แชทจะได้ไม่เด้งซ้ำ
-            calculateSpyResult(votes, players);
-        }
+        if (currentSpyData.host === currentUsername) { calculateSpyResult(votes, players); }
     }
 }
 
-// 🌟 ฟังก์ชันส่งผลโหวตลับ
 window.voteSpy = async (targetUid) => {
-    if (currentSpyData.votes && currentSpyData.votes[currentUserId]) return; // กันคนกดโหวตเบิ้ล
-    
+    if (currentSpyData.votes && currentSpyData.votes[currentUserId]) return; 
     const newVotes = JSON.parse(JSON.stringify(currentSpyData.votes || {}));
     newVotes[currentUserId] = targetUid;
-    
     await setDoc(doc(db, "appData", "spyGame"), { votes: newVotes }, { merge: true });
     showToast("ส่งโหวตลับเรียบร้อย รอลุ้นผล!", "success");
 };
 
-// 🌟 ฟังก์ชันคำนวณและประหารสปาย
 async function calculateSpyResult(votes, players) {
     let counts = {};
     for(let voterUid in votes) {
@@ -702,49 +679,33 @@ async function calculateSpyResult(votes, players) {
         counts[targetUid] = (counts[targetUid] || 0) + 1;
     }
 
-    let maxVotes = 0;
-    let votedOutUids = [];
-    
-    // หาคนที่ได้โหวตเยอะสุด
+    let maxVotes = 0; let votedOutUids = [];
     for(let uid in counts) {
-        if (counts[uid] > maxVotes) {
-            maxVotes = counts[uid];
-            votedOutUids = [uid];
-        } else if (counts[uid] === maxVotes) {
-            votedOutUids.push(uid); // กรณีโหวตเท่ากัน (เสียงแตก)
-        }
+        if (counts[uid] > maxVotes) { maxVotes = counts[uid]; votedOutUids = [uid]; } 
+        else if (counts[uid] === maxVotes) { votedOutUids.push(uid); }
     }
 
-    let spyName = "ไม่มี";
-    let spyUid = null;
-    for(let uid in players) { 
-        if(players[uid].role === 'spy') { spyName = players[uid].name; spyUid = uid; }
-    }
+    let spyName = "ไม่มี"; let spyUid = null;
+    for(let uid in players) { if(players[uid].role === 'spy') { spyName = players[uid].name; spyUid = uid; } }
 
     let resultMsg = "";
-    
     if (votedOutUids.length > 1) {
-        // กรณีเสียงแตก สปายรอด
         resultMsg = `💥 **สปายชนะ!** เสียงโหวตแตก! ชาวบ้านทะเลาะกันเอง สปายรอดตัวไปได้! สปายตัวจริงคือ **${spyName}** 🕵️‍♂️ (คำศัพท์คือ: ${currentSpyData.normalWord})`;
     } else {
         const votedOutUid = votedOutUids[0];
         if (votedOutUid === spyUid) {
-            // จับสปายได้
             resultMsg = `🎉 **ชาวบ้านชนะ!** ทุกคนโหวตจับสปายถูกตัว! สปายตัวจริงคือ **${spyName}** 🕵️‍♂️ (คำศัพท์คือ: ${currentSpyData.normalWord})`;
         } else {
-            // จับแพะ (จับผิดตัว)
             const votedName = players[votedOutUid] ? players[votedOutUid].name : "แพะรับบาป";
             resultMsg = `💥 **สปายชนะ!** ชาวบ้านโหวตพลาดไปประหาร **${votedName}**! สปายตัวจริงที่แอบเนียนอยู่คือ **${spyName}** 🕵️‍♂️ (คำศัพท์คือ: ${currentSpyData.normalWord})`;
         }
     }
 
-    // ดีเลย์ 2 วินาทีให้ทุกคนได้ตื่นเต้นหน้าจอโหวต ก่อนจะรีเซ็ตห้องและประกาศลงแชท
     setTimeout(async () => {
         await setDoc(doc(db, "appData", "spyGame"), { status: 'waiting', players: {}, votes: {} }, { merge: true });
         await addDoc(collection(db, "messages"), { text: resultMsg, senderName: "🤖 System Bot", channel: "general", timestamp: serverTimestamp() });
     }, 2000);
 }
-
 
 joinSpyBtn.onclick = async () => {
     const pList = JSON.parse(JSON.stringify(currentSpyData.players || {}));
@@ -764,7 +725,6 @@ startSpyBtn.onclick = async () => {
     startSpyBtn.disabled = false; startSpyBtn.innerHTML = `🚀 เริ่มเกมเลย!`;
 };
 
-// 🌟 เปลี่ยนปุ่มจบเกม เป็นปุ่มเปิดโหวตแทน!
 document.getElementById('spy-end-btn').onclick = async () => {
     if(confirm("เปิดโหวตลับจับสปายเลยใช่ไหม? (ห้ามแอบคุยกันนะ!)")) {
         await setDoc(doc(db, "appData", "spyGame"), { status: 'voting', votes: {} }, { merge: true });
@@ -773,10 +733,16 @@ document.getElementById('spy-end-btn').onclick = async () => {
 };
 
 // ==========================================
-// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora)
+// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) + 🌟 V24 ปรับปรุงปุ่มใหม่
 // ==========================================
 const joinBtn = document.getElementById('join-voice-btn'), leaveBtn = document.getElementById('leave-voice-btn'), muteBtn = document.getElementById('mute-btn'), ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
 const camBtn = document.getElementById('camera-btn'), camIcon = document.getElementById('camera-icon');
+
+// ดึงปุ่มจากแถบ User Bar ด้านล่างมาใช้งาน
+const bottomMicBtn = document.getElementById('bottom-mic-btn');
+const bottomMicIcon = document.getElementById('bottom-mic-icon');
+const bottomDeafenBtn = document.getElementById('bottom-deafen-btn');
+const bottomDeafenIcon = document.getElementById('bottom-deafen-icon');
 
 async function showCallNotification() {
     if ("Notification" in window && navigator.serviceWorker) {
@@ -814,9 +780,15 @@ async function joinVoice() {
             if (t === "audio") {
                 u.audioTrack.play(); 
                 remoteAudioTracks[u.uid] = u.audioTrack; 
-                let matchedUserId = null;
-                for(let k in usersData) { if(usersData[k].agoraUid === u.uid) { matchedUserId = usersData[k].id; break; } }
-                if(matchedUserId && userVolumes[matchedUserId] !== undefined) { u.audioTrack.setVolume(parseInt(userVolumes[matchedUserId])); }
+                
+                // 🌟 ระบบเช็ค Deafen (หูหนวก) ตอนคนใหม่เข้ามา
+                if (isDeafened) {
+                    u.audioTrack.setVolume(0);
+                } else {
+                    let matchedUserId = null;
+                    for(let k in usersData) { if(usersData[k].agoraUid === u.uid) { matchedUserId = usersData[k].id; break; } }
+                    if(matchedUserId && userVolumes[matchedUserId] !== undefined) { u.audioTrack.setVolume(parseInt(userVolumes[matchedUserId])); }
+                }
             }
             if (t === "video") { 
                 remoteVideoTracks[u.uid] = u.videoTrack;
@@ -855,7 +827,13 @@ async function joinVoice() {
         await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid); 
         localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true }); 
         await rtcClient.publish(localTracks.audioTrack); 
+        
+        // 🌟 รีเซ็ตปุ่มทั้งหมดตอนเข้าห้อง
         isMuted = false; 
+        isDeafened = false;
+        if(bottomMicIcon) bottomMicIcon.className = "ph-fill ph-microphone text-[18px]";
+        if(bottomDeafenIcon) bottomDeafenIcon.className = "ph-fill ph-headphones text-[18px]";
+        
         await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false, isSharingScreen: false, isVideoOn: false }); 
         localStorage.setItem('dosh_active_voice', 'true'); 
         joinBtn.classList.add('hidden'); document.getElementById('active-voice-ui').classList.remove('hidden'); muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]"; 
@@ -944,13 +922,55 @@ async function leaveVoice() {
 }
 
 window.leaveVoice = leaveVoice; joinBtn.onclick = joinVoice; leaveBtn.onclick = leaveVoice;
-muteBtn.onclick = async () => { 
+
+// 🌟 ระบบเปิด/ปิดไมค์รวม (รองรับทั้งปุ่มในห้องเสียง และปุ่มที่แถบด้านล่าง)
+async function toggleMute() {
     isMuted = !isMuted; 
     if (localTracks.audioTrack) { await localTracks.audioTrack.setMuted(isMuted); }
     await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); 
+    
     const muteIcon = document.getElementById('mute-icon'); 
-    if (isMuted) { muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; } else { muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; } 
-};
+    if (isMuted) { 
+        muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); 
+        if(muteIcon) muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; 
+        if(bottomMicIcon) bottomMicIcon.className = "ph-fill ph-microphone-slash text-[18px] text-[#da373c]";
+    } else { 
+        muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); 
+        if(muteIcon) muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; 
+        if(bottomMicIcon) bottomMicIcon.className = "ph-fill ph-microphone text-[18px] text-[#dbdee1]";
+    } 
+}
+muteBtn.onclick = toggleMute;
+if (bottomMicBtn) bottomMicBtn.onclick = toggleMute;
+
+// 🌟 ระบบหูฟัง (Deafen) ปิดเสียงเพื่อนทุกคน!
+function toggleDeafen() {
+    isDeafened = !isDeafened;
+    
+    // สั่งหรี่เสียง หรือคืนค่าเสียงเพื่อนทุกคนในห้อง
+    for (let uid in remoteAudioTracks) {
+        if (remoteAudioTracks[uid]) {
+            if (isDeafened) {
+                remoteAudioTracks[uid].setVolume(0);
+            } else {
+                let matchedUserId = null;
+                for(let k in usersData) { if(usersData[k].agoraUid == uid) { matchedUserId = usersData[k].id; break; } }
+                let vol = 100;
+                if(matchedUserId && userVolumes[matchedUserId] !== undefined) vol = parseInt(userVolumes[matchedUserId]);
+                remoteAudioTracks[uid].setVolume(vol);
+            }
+        }
+    }
+
+    if (isDeafened) {
+        bottomDeafenIcon.className = "ph-fill ph-speaker-slash text-[18px] text-[#da373c]";
+        showToast("ปิดเสียงเข้า (หูหนวก) แล้ว", "info");
+    } else {
+        bottomDeafenIcon.className = "ph-fill ph-headphones text-[18px] text-[#dbdee1]";
+        showToast("เปิดเสียงหูฟังตามปกติ", "success");
+    }
+}
+if (bottomDeafenBtn) bottomDeafenBtn.onclick = toggleDeafen;
 
 // ==========================================
 // 📋 13. Task Board & Tour

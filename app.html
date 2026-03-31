@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>HIVE Workspace - HIVE Server</title>
     
-    <link rel="manifest" href="manifest.json?v=23">
+    <link rel="manifest" href="manifest.json?v=24">
     <meta name="theme-color" content="#1e1f22">
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=H&background=5865F2&color=fff&size=192">
 
@@ -73,12 +73,9 @@
     <nav class="hidden md:flex w-[72px] bg-[#1e1f22] flex-col items-center py-3 space-y-2 flex-shrink-0 z-50 overflow-y-auto">
         <div class="server-btn active relative flex items-center justify-center w-full cursor-pointer group">
             <div class="server-pill absolute left-0 w-1 bg-white rounded-r-full"></div>
-            <div class="server-icon active w-12 h-12 bg-[#313338] text-[#dbdee1] flex items-center justify-center text-[20px] font-extrabold shadow-sm">
-                H
-            </div>
+            <div class="server-icon active w-12 h-12 bg-[#313338] text-[#dbdee1] flex items-center justify-center text-[20px] font-extrabold shadow-sm">H</div>
         </div>
         <div class="w-8 h-[2px] bg-[#35373c] rounded-full my-1"></div>
-        
         <div class="server-btn relative flex items-center justify-center w-full cursor-pointer group">
             <div class="server-pill absolute left-0 w-1 bg-white rounded-r-full"></div>
             <div class="server-icon w-12 h-12 bg-[#313338] text-[#dbdee1] flex items-center justify-center text-[24px]">
@@ -151,9 +148,9 @@
                 </div>
             </div>
             <div class="flex items-center space-x-0.5">
-                <button class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="เปิด/ปิดไมค์"><i class="ph-fill ph-microphone text-[18px]"></i></button>
-                <button class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="หูฟัง"><i class="ph-fill ph-headphones text-[18px]"></i></button>
-                <button id="open-settings-btn" class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="ตั้งค่าผู้ใช้"><i class="ph-fill ph-gear text-[18px]"></i></button>
+                <button id="bottom-mic-btn" class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="เปิด/ปิดไมค์"><i id="bottom-mic-icon" class="ph-fill ph-microphone text-[18px]"></i></button>
+                <button id="bottom-deafen-btn" class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="หูหนวก/หูฟัง"><i id="bottom-deafen-icon" class="ph-fill ph-headphones text-[18px]"></i></button>
+                <button id="bottom-settings-btn" class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="ตั้งค่าผู้ใช้"><i class="ph-fill ph-gear text-[18px]"></i></button>
             </div>
         </div>
     </nav>
@@ -302,8 +299,7 @@
                         <h3 class="text-white font-extrabold text-2xl mb-2 tracking-wide">ห้องรอเริ่มเกม</h3>
                         <p class="text-[#949ba4] text-[14px] mb-8 font-medium">รอผู้เล่นเข้าห้อง (ต้องการอย่างน้อย 3 คน)</p>
                         
-                        <div id="spy-players-list" class="flex flex-wrap justify-center gap-3 mb-8 min-h-[60px] bg-[#111214] p-4 rounded-xl border border-[#1e1f22]">
-                            </div>
+                        <div id="spy-players-list" class="flex flex-wrap justify-center gap-3 mb-8 min-h-[60px] bg-[#111214] p-4 rounded-xl border border-[#1e1f22]"></div>
                         
                         <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4 justify-center">
                             <button id="spy-join-btn" class="flex-1 bg-gradient-to-r from-[#5865F2] to-[#4752C4] hover:from-[#4752C4] hover:to-[#3b44a8] text-white px-6 py-3.5 rounded-xl font-bold shadow-[0_4px_15px_rgba(88,101,242,0.4)] transition-transform transform hover:-translate-y-0.5 text-[15px]">✋ เข้าร่วมวง</button>
@@ -338,8 +334,7 @@
                         <p id="spy-vote-status" class="text-[#949ba4] text-[13px] mb-6 font-medium bg-[#1e1f22] py-1.5 px-4 rounded-full inline-block">รอคนโหวต 0/0 คน</p>
                         
                         <p class="text-[#dbdee1] text-[14px] mb-4 font-bold">คุณคิดว่าใครคือสปาย? (เลือกได้คนเดียว)</p>
-                        <div id="spy-vote-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
-                            </div>
+                        <div id="spy-vote-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2"></div>
                     </div>
 
                 </div>
@@ -348,7 +343,7 @@
         </div>
     </main>
 
-    <aside id="members-sidebar" class="fixed md:static inset-y-0 right-0 w-[240px] bg-[#2b2d31] flex flex-col z-30 transform translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out hidden md:flex flex-shrink-0">
+    <aside id="members-sidebar" class="fixed md:static inset-y-0 right-0 w-[240px] bg-[#2b2d31] border-l border-[#1e1f22] flex flex-col z-30 transform translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out hidden md:flex flex-shrink-0">
         <div class="h-12 flex items-center px-4 shadow-sm border-b border-[#1e1f22] flex-shrink-0">
             <button id="close-members" class="md:hidden text-[#949ba4] hover:text-white mr-3 transition"><i class="ph ph-arrow-right text-[20px]"></i></button>
             <h2 class="font-bold text-[13px] text-[#dbdee1] uppercase tracking-wider">ออนไลน์ — <span id="member-count">0</span></h2>
