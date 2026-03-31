@@ -402,7 +402,7 @@ chatInput.addEventListener('keyup', (e) => { if(chatInput.value.startsWith('/'))
 document.querySelectorAll('#command-list li').forEach(li => { li.onclick = () => { chatInput.value = li.getAttribute('data-cmd') + " "; chatInput.focus(); cmdMenu.classList.add('hidden'); } });
 
 // ==========================================
-// 🎨 10. เกมทายภาพ (Draw & Guess) + AI Word
+// 🎨 10. เกมทายภาพ (Draw & Guess)
 // ==========================================
 let currentDrawGame = { isActive: false };
 onSnapshot(doc(db, "appData", "drawGame"), (d) => {
@@ -554,11 +554,12 @@ onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => {
 });
 
 // ==========================================
-// 🕵️‍♂️ 11.5 เกมจับสปาย (Who is the Spy?) - 🌟 V20: แก้บั๊กติดห้องรอ
+// 🕵️‍♂️ 11.5 เกมจับสปาย (🌟 V21: เพิ่มระบบโหวตลับ!)
 // ==========================================
-let currentSpyData = { status: 'waiting', players: {} };
+let currentSpyData = { status: 'waiting', players: {}, votes: {} };
 const lobbyUI = document.getElementById('spy-lobby-ui');
 const playUI = document.getElementById('spy-play-ui');
+const voteUI = document.getElementById('spy-vote-ui'); // 🌟 UI ใหม่
 const playersListUI = document.getElementById('spy-players-list');
 const joinSpyBtn = document.getElementById('spy-join-btn');
 const startSpyBtn = document.getElementById('spy-start-btn');
@@ -588,6 +589,7 @@ function renderSpyGame() {
     if (currentSpyData.status === 'waiting' || !currentSpyData.status) {
         lobbyUI.classList.remove('hidden'); 
         playUI.classList.add('hidden');
+        voteUI.classList.add('hidden');
         
         if (amIJoined) {
             joinSpyBtn.innerHTML = "ออกจากการรอ";
@@ -599,8 +601,11 @@ function renderSpyGame() {
             joinSpyBtn.className = "flex-1 bg-gradient-to-r from-[#5865F2] to-[#4752C4] hover:from-[#4752C4] hover:to-[#3b44a8] text-white px-6 py-3.5 rounded-xl font-bold shadow-[0_4px_15px_rgba(88,101,242,0.4)] transition-transform transform hover:-translate-y-0.5 text-[15px]";
             startSpyBtn.classList.add('hidden');
         }
+
     } else if (currentSpyData.status === 'playing') {
         lobbyUI.classList.add('hidden'); 
+        voteUI.classList.add('hidden');
+        
         if (amIJoined) {
             playUI.classList.remove('hidden');
             const myRole = currentSpyData.players[currentUserId].role;
@@ -614,65 +619,156 @@ function renderSpyGame() {
         } else {
             lobbyUI.classList.remove('hidden');
             lobbyUI.innerHTML = `<h3 class="text-white font-bold mt-4 text-xl">⏳ เกมกำลังดำเนินอยู่...</h3><p class="text-[#80848e] text-[14px] mt-2">รอผู้เล่นรอบนี้โหวตให้เสร็จก่อนนะครับ</p>`;
-            joinSpyBtn.classList.add('hidden');
-            startSpyBtn.classList.add('hidden');
+            joinSpyBtn.classList.add('hidden'); startSpyBtn.classList.add('hidden');
+        }
+
+    // 🌟 ระบบหน้าจอการโหวตลับ
+    } else if (currentSpyData.status === 'voting') {
+        lobbyUI.classList.add('hidden'); 
+        playUI.classList.add('hidden');
+        
+        if (amIJoined) {
+            voteUI.classList.remove('hidden');
+            renderVoteUI();
+        } else {
+            lobbyUI.classList.remove('hidden');
+            lobbyUI.innerHTML = `<h3 class="text-white font-bold mt-4 text-xl">🚨 กำลังโหวตจับสปาย...</h3><p class="text-[#80848e] text-[14px] mt-2">ลุ้นระทึก! ไปรอดูผลในช่องแชทได้เลย</p>`;
+            joinSpyBtn.classList.add('hidden'); startSpyBtn.classList.add('hidden');
         }
     }
 }
 
-// 🌟 แก้ไขบั๊กอมตะ: ลบผู้เล่นออกแบบ Overwrite ทับ 100%
-joinSpyBtn.onclick = async () => {
-    // 1. จำลองร่างโคลนของรายชื่อผู้เล่นทั้งหมด (ห้ามแก้ของจริงโดยตรง)
-    const pList = JSON.parse(JSON.stringify(currentSpyData.players || {}));
+// 🌟 ฟังก์ชันจัดการปุ่มโหวต
+function renderVoteUI() {
+    const voteListUI = document.getElementById('spy-vote-list');
+    const voteStatusUI = document.getElementById('spy-vote-status');
     
-    if (pList[currentUserId]) {
-        // ถ้ามีชื่อเราอยู่ -> ลบทิ้งซะ
-        delete pList[currentUserId];
-    } else {
-        // ถ้าไม่มี -> ใส่ชื่อเราเข้าไป
-        pList[currentUserId] = { name: currentUsername, avatar: document.getElementById('current-user-avatar').src, role: 'normal' };
-    }
-    
-    // 2. เซฟทับตู้มลงไปที่ Database เลย (ไม่ใช้ merge)
-    await setDoc(doc(db, "appData", "spyGame"), { 
-        ...currentSpyData, 
-        players: pList, 
-        status: 'waiting' 
+    voteListUI.innerHTML = '';
+    const players = currentSpyData.players || {};
+    const votes = currentSpyData.votes || {};
+    const playerIds = Object.keys(players);
+    const voteCount = Object.keys(votes).length;
+    const playerTotal = playerIds.length;
+
+    voteStatusUI.textContent = `โหวตไปแล้ว ${voteCount} / ${playerTotal} คน`;
+
+    // เช็คว่าเราโหวตไปหรือยัง
+    const haveIVoted = !!votes[currentUserId];
+
+    playerIds.forEach(uid => {
+        const p = players[uid];
+        // ไม่ให้กดโหวตตัวเอง
+        if (uid === currentUserId) return; 
+        
+        let btnHTML = '';
+        if (haveIVoted) {
+            // ถ้าโหวตแล้ว ปุ่มจะกลายเป็นสีเทากดไม่ได้
+            btnHTML = `<button disabled class="flex items-center p-3 rounded-xl bg-[#111214] border border-[#1e1f22] opacity-50 cursor-not-allowed">
+                        <img src="${p.avatar}" class="w-8 h-8 rounded-full mr-3 grayscale"><span class="text-[14px] font-bold text-gray-500">${p.name}</span>
+                       </button>`;
+        } else {
+            // ถ้ายังไม่โหวต ปุ่มพร้อมให้กด
+            btnHTML = `<button onclick="voteSpy('${uid}')" class="flex items-center p-3 rounded-xl bg-[#1e1f22] border border-[#35373c] hover:border-[#da373c] hover:bg-[#da373c]/10 transition-all group shadow-sm transform hover:-translate-y-0.5">
+                        <img src="${p.avatar}" class="w-8 h-8 rounded-full mr-3"><span class="text-[14px] font-bold text-[#dbdee1] group-hover:text-white">${p.name}</span>
+                       </button>`;
+        }
+        voteListUI.insertAdjacentHTML('beforeend', btnHTML);
     });
+
+    // 🌟 ถ้ายอดโหวตครบทุกคน ให้ระบบคำนวณผู้ชนะและประกาศผล!
+    if (voteCount === playerTotal && voteCount > 0) {
+        if (currentSpyData.host === currentUsername) { // ให้โฮสต์เป็นคนสั่งประกาศคนเดียว แชทจะได้ไม่เด้งซ้ำ
+            calculateSpyResult(votes, players);
+        }
+    }
+}
+
+// 🌟 ฟังก์ชันส่งผลโหวตลับ
+window.voteSpy = async (targetUid) => {
+    if (currentSpyData.votes && currentSpyData.votes[currentUserId]) return; // กันคนกดโหวตเบิ้ล
+    
+    const newVotes = JSON.parse(JSON.stringify(currentSpyData.votes || {}));
+    newVotes[currentUserId] = targetUid;
+    
+    await setDoc(doc(db, "appData", "spyGame"), { votes: newVotes }, { merge: true });
+    showToast("ส่งโหวตลับเรียบร้อย รอลุ้นผล!", "success");
+};
+
+// 🌟 ฟังก์ชันคำนวณและประหารสปาย
+async function calculateSpyResult(votes, players) {
+    let counts = {};
+    for(let voterUid in votes) {
+        const targetUid = votes[voterUid];
+        counts[targetUid] = (counts[targetUid] || 0) + 1;
+    }
+
+    let maxVotes = 0;
+    let votedOutUids = [];
+    
+    // หาคนที่ได้โหวตเยอะสุด
+    for(let uid in counts) {
+        if (counts[uid] > maxVotes) {
+            maxVotes = counts[uid];
+            votedOutUids = [uid];
+        } else if (counts[uid] === maxVotes) {
+            votedOutUids.push(uid); // กรณีโหวตเท่ากัน (เสียงแตก)
+        }
+    }
+
+    let spyName = "ไม่มี";
+    let spyUid = null;
+    for(let uid in players) { 
+        if(players[uid].role === 'spy') { spyName = players[uid].name; spyUid = uid; }
+    }
+
+    let resultMsg = "";
+    
+    if (votedOutUids.length > 1) {
+        // กรณีเสียงแตก สปายรอด
+        resultMsg = `💥 **สปายชนะ!** เสียงโหวตแตก! ชาวบ้านทะเลาะกันเอง สปายรอดตัวไปได้! สปายตัวจริงคือ **${spyName}** 🕵️‍♂️ (คำศัพท์คือ: ${currentSpyData.normalWord})`;
+    } else {
+        const votedOutUid = votedOutUids[0];
+        if (votedOutUid === spyUid) {
+            // จับสปายได้
+            resultMsg = `🎉 **ชาวบ้านชนะ!** ทุกคนโหวตจับสปายถูกตัว! สปายตัวจริงคือ **${spyName}** 🕵️‍♂️ (คำศัพท์คือ: ${currentSpyData.normalWord})`;
+        } else {
+            // จับแพะ (จับผิดตัว)
+            const votedName = players[votedOutUid] ? players[votedOutUid].name : "แพะรับบาป";
+            resultMsg = `💥 **สปายชนะ!** ชาวบ้านโหวตพลาดไปประหาร **${votedName}**! สปายตัวจริงที่แอบเนียนอยู่คือ **${spyName}** 🕵️‍♂️ (คำศัพท์คือ: ${currentSpyData.normalWord})`;
+        }
+    }
+
+    // ดีเลย์ 2 วินาทีให้ทุกคนได้ตื่นเต้นหน้าจอโหวต ก่อนจะรีเซ็ตห้องและประกาศลงแชท
+    setTimeout(async () => {
+        await setDoc(doc(db, "appData", "spyGame"), { status: 'waiting', players: {}, votes: {} }, { merge: true });
+        await addDoc(collection(db, "messages"), { text: resultMsg, senderName: "🤖 System Bot", channel: "general", timestamp: serverTimestamp() });
+    }, 2000);
+}
+
+
+joinSpyBtn.onclick = async () => {
+    const pList = JSON.parse(JSON.stringify(currentSpyData.players || {}));
+    if (pList[currentUserId]) { delete pList[currentUserId]; } 
+    else { pList[currentUserId] = { name: currentUsername, avatar: document.getElementById('current-user-avatar').src, role: 'normal' }; }
+    await setDoc(doc(db, "appData", "spyGame"), { ...currentSpyData, players: pList, status: 'waiting' });
 };
 
 startSpyBtn.onclick = async () => {
-    startSpyBtn.innerHTML = `<i class="ph-fill ph-spinner animate-spin"></i> กำลังสุ่มคำ...`;
-    startSpyBtn.disabled = true;
-    
+    startSpyBtn.innerHTML = `<i class="ph-fill ph-spinner animate-spin"></i> กำลังสุ่มคำ...`; startSpyBtn.disabled = true;
     const word = await getWordFromAI("spy"); 
-    
-    // โคลนรายชื่อผู้เล่นมาแจกบทบาท
     const pList = JSON.parse(JSON.stringify(currentSpyData.players || {}));
-    const uids = Object.keys(pList);
-    const spyIndex = Math.floor(Math.random() * uids.length);
-    
-    uids.forEach((uid, idx) => {
-        pList[uid].role = (idx === spyIndex) ? 'spy' : 'normal';
-    });
-
-    // บันทึกเกมเริ่มและแจกบทบาท
-    await setDoc(doc(db, "appData", "spyGame"), { status: 'playing', players: pList, normalWord: word, host: currentUsername, timestamp: serverTimestamp() });
+    const uids = Object.keys(pList); const spyIndex = Math.floor(Math.random() * uids.length);
+    uids.forEach((uid, idx) => { pList[uid].role = (idx === spyIndex) ? 'spy' : 'normal'; });
+    await setDoc(doc(db, "appData", "spyGame"), { status: 'playing', players: pList, normalWord: word, host: currentUsername, votes: {}, timestamp: serverTimestamp() });
     await addDoc(collection(db, "messages"), { text: `🕵️‍♂️ **${currentUsername}** เริ่มเกมจับสปายแล้ว! (AI แจกคำศัพท์ให้ทุกคนเรียบร้อย) ใครเป็นสปายเนียนๆ ไว้ล่ะ!`, senderName: "🤖 System Bot", channel: "general", timestamp: serverTimestamp() });
-    
-    startSpyBtn.disabled = false;
-    startSpyBtn.innerHTML = `🚀 เริ่มเกมเลย!`;
+    startSpyBtn.disabled = false; startSpyBtn.innerHTML = `🚀 เริ่มเกมเลย!`;
 };
 
+// 🌟 เปลี่ยนปุ่มจบเกม เป็นปุ่มเปิดโหวตแทน!
 document.getElementById('spy-end-btn').onclick = async () => {
-    if(confirm("ต้องการจบเกมนี้และเฉลยใช่ไหม?")) {
-        let spyName = "ไม่มี";
-        for(let uid in currentSpyData.players) { if(currentSpyData.players[uid].role === 'spy') spyName = currentSpyData.players[uid].name; }
-        
-        // เซฟทับล้างห้องแบบเกลี้ยงๆ
-        await setDoc(doc(db, "appData", "spyGame"), { status: 'waiting', players: {}, timestamp: serverTimestamp() });
-        await addDoc(collection(db, "messages"), { text: `🏁 จบเกมจับสปาย! สปายในรอบนี้คือ **${spyName}** 🕵️‍♂️ (คำศัพท์ของชาวบ้านคือ: ${currentSpyData.normalWord})`, senderName: "🤖 System Bot", channel: "general", timestamp: serverTimestamp() });
-        showToast("เฉลยแล้ว! ไปดูผลในช่องประกาศทั่วไป", "info");
+    if(confirm("เปิดโหวตลับจับสปายเลยใช่ไหม? (ห้ามแอบคุยกันนะ!)")) {
+        await setDoc(doc(db, "appData", "spyGame"), { status: 'voting', votes: {} }, { merge: true });
+        await addDoc(collection(db, "messages"), { text: `🚨 **หมดเวลาคุย!** ถึงเวลาโหวตลับแล้ว รีบไปกดโหวตในหน้าเกมเลยว่าใครน่าสงสัยที่สุด!`, senderName: "🤖 System Bot", channel: "general", timestamp: serverTimestamp() });
     }
 };
 

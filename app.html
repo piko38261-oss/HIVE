@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>HIVE Workspace - HIVE Server</title>
     
-    <link rel="manifest" href="manifest.json?v=20">
+    <link rel="manifest" href="manifest.json?v=21">
     <meta name="theme-color" content="#1e1f22">
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=H&background=5865F2&color=fff&size=192">
 
@@ -93,10 +93,7 @@
                     <a href="#" class="nav-btn channel-inactive group flex items-center px-2 py-1.5 rounded-md text-[#80848e] hover:bg-[#35373c] hover:text-[#dbdee1] transition" data-view="board"><i class="ph ph-kanban text-[18px] text-[#80848e] mr-1.5 group-hover:text-[#dbdee1] transition"></i><span class="font-medium text-[14px] truncate">Task Board</span></a>
                     <a href="#" class="nav-btn channel-inactive group flex items-center px-2 py-1.5 rounded-md text-[#80848e] hover:bg-[#35373c] hover:text-[#dbdee1] transition" data-view="whiteboard"><i class="ph ph-palette text-[18px] text-[#80848e] mr-1.5 group-hover:text-[#dbdee1] transition"></i><span class="font-medium text-[14px] truncate">กระดานไอเดีย</span></a>
                     <a href="#" class="nav-btn channel-inactive group flex items-center px-2 py-1.5 rounded-md text-[#eab308] hover:bg-[#35373c] hover:text-yellow-400 transition" data-view="game-draw"><i class="ph-fill ph-game-controller text-[18px] mr-1.5"></i><span class="font-bold text-[14px] truncate">ทายคำจากภาพ</span></a>
-                    
-                    <a href="#" class="nav-btn channel-inactive group flex items-center px-2 py-1.5 rounded-md text-[#da373c] hover:bg-[#35373c] hover:text-red-400 transition mt-2" data-view="game-spy">
-                        <i class="ph-fill ph-detective text-[18px] mr-1.5 animate-pulse"></i><span class="font-bold text-[14px] truncate">จับสปาย (Spy Game)</span>
-                    </a>
+                    <a href="#" class="nav-btn channel-inactive group flex items-center px-2 py-1.5 rounded-md text-[#da373c] hover:bg-[#35373c] hover:text-red-400 transition mt-2" data-view="game-spy"><i class="ph-fill ph-detective text-[18px] mr-1.5 animate-pulse"></i><span class="font-bold text-[14px] truncate">จับสปาย (Spy Game)</span></a>
                 </div>
             </div>
             <div class="pt-4 border-t border-[#1e1f22]">
@@ -236,8 +233,8 @@
             </div>
 
             <div id="view-game-spy" class="absolute inset-0 hidden flex flex-col bg-[#1e1f22] overflow-y-auto">
-                <div class="h-14 bg-[#2b2d31] border-b border-[#1e1f22] flex items-center px-6 shadow-sm flex-shrink-0">
-                    <h2 class="font-bold text-[15px] text-white flex items-center"><i class="ph-fill ph-detective mr-2 text-[#da373c] text-[22px]"></i> ห้องจับสปาย (Who is the Spy?)</h2>
+                <div class="h-14 bg-[#2b2d31] border-b border-[#1e1f22] flex items-center justify-between px-6 shadow-sm flex-shrink-0">
+                    <h2 class="font-bold text-[15px] text-white flex items-center"><i class="ph-fill ph-detective mr-2 text-[#da373c] text-[22px]"></i> จับสปาย (Spyfall)</h2>
                 </div>
                 <div class="flex-1 p-4 md:p-8 flex flex-col items-center justify-center min-h-[500px]">
                     
@@ -272,9 +269,22 @@
                         </div>
 
                         <div class="mt-10 pt-6 border-t border-[#1e1f22]">
-                            <button id="spy-end-btn" class="text-[#da373c] hover:text-white hover:bg-[#da373c]/20 px-6 py-2.5 rounded-xl font-bold text-[14px] transition border border-transparent hover:border-[#da373c]/50">🛑 จบเกม / เปิดโหวตสปาย</button>
+                            <button id="spy-end-btn" class="bg-gradient-to-r from-[#da373c] to-[#b52a2e] hover:from-[#b52a2e] hover:to-[#961c1f] text-white px-6 py-3.5 rounded-xl font-bold text-[14px] shadow-[0_4px_15px_rgba(218,55,60,0.4)] transition-transform transform hover:-translate-y-0.5 w-full">🚨 เปิดโหวตจับสปาย (ลับ)</button>
                         </div>
                     </div>
+                    
+                    <div id="spy-vote-ui" class="w-full max-w-lg bg-[#2b2d31] rounded-3xl border border-[#1e1f22] p-6 md:p-8 shadow-2xl text-center hidden animate-[fadeIn_0.3s_ease-out]">
+                        <div class="w-16 h-16 bg-[#f59e0b]/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#f59e0b]/30 shadow-inner">
+                            <i class="ph-fill ph-warning-octagon text-4xl text-[#f59e0b] animate-pulse"></i>
+                        </div>
+                        <h3 class="text-white font-extrabold text-2xl mb-1 tracking-wide">ได้เวลาโหวตลับ!</h3>
+                        <p id="spy-vote-status" class="text-[#949ba4] text-[13px] mb-6 font-medium bg-[#1e1f22] py-1.5 px-4 rounded-full inline-block">รอคนโหวต 0/0 คน</p>
+                        
+                        <p class="text-[#dbdee1] text-[14px] mb-4 font-bold">คุณคิดว่าใครคือสปาย? (เลือกได้คนเดียว)</p>
+                        <div id="spy-vote-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+                            </div>
+                    </div>
+
                 </div>
             </div>
 
