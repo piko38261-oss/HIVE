@@ -2,119 +2,201 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>HIVE Workspace - Login</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <link rel="manifest" href="manifest.json?v=17">
-    <meta name="theme-color" content="#0e0f11">
+    <link rel="manifest" href="manifest.json?v=18">
+    <meta name="theme-color" content="#1e1f22">
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=H&background=5865F2&color=fff&size=192">
 
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'Noto Sans Thai', 'sans-serif'], } } } }
+    </script>
     <style>
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #0e0f11; 
-            background-image: radial-gradient(#2b2d31 1.5px, transparent 1.5px); 
-            background-size: 25px 25px; 
-        }
+        body { background-color: #1e1f22; color: #dbdee1; }
+        .glass-panel { background: rgba(17, 18, 20, 0.8); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .input-field { background: #1e1f22; border: 1px solid #35373c; color: #dbdee1; transition: all 0.2s ease; }
+        .input-field:focus { border-color: #5865F2; box-shadow: 0 0 0 1px #5865F2; outline: none; }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(10px) translateX(-50%); } to { opacity: 1; transform: translateY(0) translateX(-50%); } }
     </style>
 </head>
-<body class="h-[100dvh] flex items-center justify-center text-gray-300 px-4">
+<body class="flex items-center justify-center min-h-screen relative overflow-hidden selection:bg-[#5865F2] selection:text-white px-4">
+    
+    <div class="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-[#5865F2] rounded-full mix-blend-screen filter blur-[128px] opacity-20 animate-pulse"></div>
+    <div class="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-[#23a559] rounded-full mix-blend-screen filter blur-[128px] opacity-10 animate-pulse" style="animation-delay: 2s;"></div>
 
-    <div class="bg-[#1e1f22] p-8 rounded-2xl shadow-2xl w-full max-w-[400px] border border-[#2b2d31] relative animate-[slideUpFade_0.3s_ease-out]">
-        
+    <div id="toast-container" class="fixed top-5 left-1/2 z-[9999] flex flex-col items-center space-y-2 pointer-events-none"></div>
+
+    <div class="glass-panel w-full max-w-md p-8 rounded-3xl shadow-2xl relative z-10 transform transition-all">
         <div class="text-center mb-8">
-            <div class="w-16 h-16 bg-[#5865F2] rounded-2xl mx-auto flex items-center justify-center text-3xl font-extrabold text-white mb-5 shadow-lg">H</div>
-            <h1 class="text-2xl font-bold text-white">ยินดีต้อนรับกลับมา!</h1>
-            <p class="text-[#949ba4] text-[13px] mt-1.5">เข้าสู่ระบบเพื่อทำงานกับทีมของคุณใน HIVE</p>
+            <div class="w-16 h-16 bg-[#5865F2] rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-4 transform hover:scale-105 transition-transform">
+                <span class="text-white text-4xl font-extrabold">H</span>
+            </div>
+            <h1 class="text-2xl font-extrabold text-white tracking-wide">HIVE Workspace</h1>
+            <p class="text-[#949ba4] text-sm mt-2 font-medium" id="header-desc">ยินดีต้อนรับกลับมา! กรุณาเข้าสู่ระบบ</p>
         </div>
 
-        <div class="space-y-4">
-            <div>
-                <label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">อีเมล (EMAIL)</label>
-                <input type="email" id="login-email" class="w-full bg-[#111214] border border-[#2b2d31] focus:border-[#5865F2] rounded-md px-3 py-2.5 text-[14px] text-[#dbdee1] focus:outline-none transition shadow-inner">
-            </div>
-            <div>
-                <label class="block text-[11px] font-bold text-[#80848e] uppercase tracking-wider mb-1.5">รหัสผ่าน (PASSWORD)</label>
-                <input type="password" id="login-password" class="w-full bg-[#111214] border border-[#2b2d31] focus:border-[#5865F2] rounded-md px-3 py-2.5 text-[14px] text-[#dbdee1] focus:outline-none transition shadow-inner">
-            </div>
-            
-            <button id="login-btn" class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-2.5 rounded-md transition shadow-md mt-4 text-[14px]">เข้าสู่ระบบ</button>
-            <button id="register-btn" class="w-full bg-[#2b2d31] hover:bg-[#35373c] text-white font-bold py-2.5 rounded-md transition shadow-sm text-[14px]">สมัครสมาชิกใหม่</button>
+        <div class="flex p-1 bg-[#111214] rounded-xl mb-6 border border-[#2b2d31]">
+            <button id="tab-login" class="flex-1 py-2.5 text-sm font-bold rounded-lg bg-[#35373c] text-white shadow transition-all">เข้าสู่ระบบ</button>
+            <button id="tab-register" class="flex-1 py-2.5 text-sm font-bold rounded-lg text-[#949ba4] hover:text-white transition-all">สมัครสมาชิก</button>
+        </div>
 
-            <div class="relative flex items-center py-2">
-                <div class="flex-grow border-t border-[#35373c]"></div>
-                <span class="flex-shrink-0 mx-4 text-[#80848e] text-[11px] uppercase tracking-widest">หรือ</span>
-                <div class="flex-grow border-t border-[#35373c]"></div>
+        <form id="login-form" class="space-y-4">
+            <div>
+                <label class="block text-[11px] font-bold text-[#949ba4] uppercase mb-1.5 tracking-wider">อีเมล</label>
+                <input type="email" id="login-email" required class="input-field w-full px-4 py-3 rounded-xl text-[14px]" placeholder="name@example.com">
             </div>
-
-            <button id="google-login-btn" class="w-full bg-white hover:bg-gray-100 text-gray-800 font-bold py-2.5 rounded-md transition shadow-md flex items-center justify-center text-[14px]">
-                <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-5 h-5 mr-2" alt="Google"> เข้าสู่ระบบด้วย Google
+            <div>
+                <label class="block text-[11px] font-bold text-[#949ba4] uppercase mb-1.5 tracking-wider">รหัสผ่าน</label>
+                <input type="password" id="login-password" required class="input-field w-full px-4 py-3 rounded-xl text-[14px]" placeholder="••••••••">
+            </div>
+            <button type="submit" id="btn-login" class="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold py-3.5 rounded-xl mt-4 transition-transform transform hover:-translate-y-0.5 shadow-[0_4px_15px_rgba(88,101,242,0.4)] flex justify-center items-center">
+                เข้าสู่ระบบ
             </button>
-        </div>
+        </form>
+
+        <form id="register-form" class="space-y-4 hidden">
+            <div>
+                <label class="block text-[11px] font-bold text-[#949ba4] uppercase mb-1.5 tracking-wider">ชื่อที่ใช้แสดง (Username)</label>
+                <input type="text" id="reg-username" required class="input-field w-full px-4 py-3 rounded-xl text-[14px]" placeholder="เช่น: Guy Samo">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-[#949ba4] uppercase mb-1.5 tracking-wider">อีเมล</label>
+                <input type="email" id="reg-email" required class="input-field w-full px-4 py-3 rounded-xl text-[14px]" placeholder="name@example.com">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-[#949ba4] uppercase mb-1.5 tracking-wider">รหัสผ่าน (ขั้นต่ำ 6 ตัว)</label>
+                <input type="password" id="reg-password" required class="input-field w-full px-4 py-3 rounded-xl text-[14px]" placeholder="••••••••">
+            </div>
+            <button type="submit" id="btn-register" class="w-full bg-[#23a559] hover:bg-[#1e8a49] text-white font-bold py-3.5 rounded-xl mt-4 transition-transform transform hover:-translate-y-0.5 shadow-[0_4px_15px_rgba(35,165,89,0.4)] flex justify-center items-center">
+                สมัครสมาชิก HIVE
+            </button>
+        </form>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        const firebaseConfig = { apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I", authDomain: "apoko-hq.firebaseapp.com", projectId: "apoko-hq", storageBucket: "apoko-hq.firebasestorage.app", messagingSenderId: "122632343459", appId: "1:122632343459:web:c225aaff8464f1b0c35416" };
+        // รหัสเชื่อมต่อ Firebase ของทีมมัลติมีเดียเราครับ!
+        const firebaseConfig = { 
+            apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I", 
+            authDomain: "apoko-hq.firebaseapp.com", 
+            projectId: "apoko-hq", 
+            storageBucket: "apoko-hq.firebasestorage.app", 
+            messagingSenderId: "122632343459", 
+            appId: "1:122632343459:web:c225aaff8464f1b0c35416" 
+        };
         
-        const app = initializeApp(firebaseConfig); 
+        const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // ระบบโชว์แจ้งเตือน
+        const showToast = (msg, type = "success") => {
+            const toast = document.createElement("div");
+            const icon = type === "success" ? `<i class="ph-fill ph-check-circle text-[#23a559] text-[22px]"></i>` : `<i class="ph-fill ph-warning-circle text-[#da373c] text-[22px]"></i>`;
+            toast.className = `flex items-center gap-3 bg-[#1e1f22] border border-[#2b2d31] text-[#dbdee1] px-5 py-3.5 rounded-xl shadow-2xl animate-[slideUpFade_0.3s_ease-out]`;
+            toast.innerHTML = `${icon} <span class="text-[14px] font-bold">${msg}</span>`;
+            document.getElementById("toast-container").appendChild(toast);
+            setTimeout(() => { toast.classList.add("opacity-0", "transition-all", "duration-300"); setTimeout(() => toast.remove(), 300); }, 3000);
+        };
+
+        // ถ้ามีคนล็อกอินค้างไว้ ให้เด้งเข้าแอปเลยไม่ต้องล็อกอินซ้ำ
         onAuthStateChanged(auth, (user) => {
-            if (user) { window.location.replace("app.html"); }
+            if (user) { window.location.href = "app.html"; }
         });
 
-        const loginBtn = document.getElementById('login-btn');
-        const googleBtn = document.getElementById('google-login-btn');
-        const emailInput = document.getElementById('login-email');
-        const passwordInput = document.getElementById('login-password');
+        // ระบบสลับแท็บ Login / Register
+        const tabLogin = document.getElementById('tab-login');
+        const tabRegister = document.getElementById('tab-register');
+        const formLogin = document.getElementById('login-form');
+        const formRegister = document.getElementById('register-form');
+        const headerDesc = document.getElementById('header-desc');
 
-        loginBtn.addEventListener('click', async () => {
-            const email = emailInput.value.trim();
-            const password = passwordInput.value;
-            if(!email || !password) { alert("กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วนครับ!"); return; }
+        tabLogin.onclick = () => {
+            tabLogin.className = "flex-1 py-2.5 text-sm font-bold rounded-lg bg-[#35373c] text-white shadow transition-all";
+            tabRegister.className = "flex-1 py-2.5 text-sm font-bold rounded-lg text-[#949ba4] hover:text-white transition-all";
+            formLogin.classList.remove('hidden');
+            formRegister.classList.add('hidden');
+            headerDesc.textContent = "ยินดีต้อนรับกลับมา! กรุณาเข้าสู่ระบบ";
+        };
+
+        tabRegister.onclick = () => {
+            tabRegister.className = "flex-1 py-2.5 text-sm font-bold rounded-lg bg-[#35373c] text-white shadow transition-all";
+            tabLogin.className = "flex-1 py-2.5 text-sm font-bold rounded-lg text-[#949ba4] hover:text-white transition-all";
+            formRegister.classList.remove('hidden');
+            formLogin.classList.add('hidden');
+            headerDesc.textContent = "สร้างบัญชีใหม่เพื่อเข้าสู่ Workspace";
+        };
+
+        // กดปุ่มเข้าสู่ระบบ
+        formLogin.onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            const btn = document.getElementById('btn-login');
+            
+            btn.innerHTML = `<i class="ph-fill ph-spinner animate-spin mr-2"></i> กำลังเข้าสู่ระบบ...`;
+            btn.disabled = true;
+            
             try {
-                loginBtn.innerHTML = `<span class="flex items-center justify-center"><svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> กำลังเข้าสู่ระบบ...</span>`;
-                loginBtn.disabled = true;
-                await signInWithEmailAndPassword(auth, email, password);
+                await signInWithEmailAndPassword(auth, email, pass);
+                showToast("เข้าสู่ระบบสำเร็จ!", "success");
             } catch (error) {
-                alert("เข้าสู่ระบบไม่สำเร็จ: " + error.message);
-                loginBtn.innerHTML = "เข้าสู่ระบบ";
-                loginBtn.disabled = false;
+                showToast("อีเมลหรือรหัสผ่านไม่ถูกต้องครับ", "error");
+                btn.innerHTML = "เข้าสู่ระบบ";
+                btn.disabled = false;
             }
-        });
+        };
 
-        passwordInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') loginBtn.click();
-        });
-
-        googleBtn.addEventListener('click', async () => {
-            const provider = new GoogleAuthProvider();
+        // กดปุ่มสมัครสมาชิก
+        formRegister.onsubmit = async (e) => {
+            e.preventDefault();
+            const user = document.getElementById('reg-username').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const pass = document.getElementById('reg-password').value;
+            const btn = document.getElementById('btn-register');
+            
+            if (pass.length < 6) { showToast("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษรครับ", "error"); return; }
+            if (user === "") { showToast("กรุณากรอกชื่อด้วยครับ", "error"); return; }
+            
+            btn.innerHTML = `<i class="ph-fill ph-spinner animate-spin mr-2"></i> กำลังสร้างบัญชี...`;
+            btn.disabled = true;
+            
             try {
-                const result = await signInWithPopup(auth, provider);
-                const user = result.user;
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                if (!userDoc.exists()) {
-                    await setDoc(doc(db, "users", user.uid), {
-                        username: user.displayName || user.email.split('@')[0],
-                        email: user.email,
-                        photoURL: user.photoURL,
-                        role: "Member",
-                        status: "online"
-                    });
+                // 1. สร้างบัญชี Firebase
+                const userCred = await createUserWithEmailAndPassword(auth, email, pass);
+                
+                // 2. อัปเดตชื่อโปรไฟล์
+                await updateProfile(userCred.user, { displayName: user });
+                
+                // 3. สร้างข้อมูลลง Database ให้เพื่อนเห็น
+                await setDoc(doc(db, "users", userCred.user.uid), {
+                    username: user,
+                    email: email,
+                    role: "Member",
+                    status: "online",
+                    photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user)}&background=5865F2&color=fff&rounded=true&bold=true`,
+                    createdAt: serverTimestamp()
+                });
+                
+                showToast("สมัครสมาชิกสำเร็จ! ยินดีต้อนรับสู่ HIVE", "success");
+            } catch (error) {
+                if (error.code === 'auth/email-already-in-use') {
+                    showToast("อีเมลนี้ถูกใช้งานไปแล้วครับ", "error");
+                } else {
+                    showToast("เกิดข้อผิดพลาด: " + error.message, "error");
                 }
-            } catch (error) { alert("เข้าสู่ระบบด้วย Google ไม่สำเร็จ: " + error.message); }
-        });
-
-        document.getElementById('register-btn').addEventListener('click', () => {
-            alert("สามารถเชื่อมโยงปุ่มนี้ไปที่หน้า สมัครสมาชิก (register.html) ได้เลยครับ!");
-        });
+                btn.innerHTML = "สมัครสมาชิก HIVE";
+                btn.disabled = false;
+            }
+        };
     </script>
 </body>
 </html>
