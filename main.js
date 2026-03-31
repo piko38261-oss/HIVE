@@ -74,17 +74,9 @@ function initOrUpdatePlayer(vid, time, state, host) { if (!amIInVoice) return; i
 onSnapshot(doc(db, "appData", "watchParty"), (d) => { if(d.exists()) { const wp = d.data(); latestWPData = wp; if(wp.videoId) { if (amIInVoice) { initOrUpdatePlayer(wp.videoId, wp.time, wp.state, wp.updatedBy); } } else { document.getElementById('watch-party-stage').classList.add('hidden'); document.getElementById('watch-party-stage').classList.remove('flex'); if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; } document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; pendingVideoData = null; latestWPData = null; } } });
 
 // ==========================================
-// 🗺️ 5. ระบบ Navigation (🌟 V17: แก้ไขบั๊กหน้าจอค้าง)
+// 🗺️ 5. ระบบ Navigation
 // ==========================================
-const views = { 
-    chat: document.getElementById('view-chat'), 
-    board: document.getElementById('view-board'), 
-    voice: document.getElementById('view-voice'), 
-    whiteboard: document.getElementById('view-whiteboard'), 
-    'game-draw': document.getElementById('view-game-draw'),
-    'game-spy': document.getElementById('view-game-spy') // 🌟 เพิ่มบรรทัดนี้แล้ว!
-};
-
+const views = { chat: document.getElementById('view-chat'), board: document.getElementById('view-board'), voice: document.getElementById('view-voice'), whiteboard: document.getElementById('view-whiteboard'), 'game-draw': document.getElementById('view-game-draw'), 'game-spy': document.getElementById('view-game-spy') };
 const membersSidebar = document.getElementById('members-sidebar'), sidebar = document.getElementById('sidebar'), overlay = document.getElementById('overlay');
 document.querySelectorAll('.open-menu, #open-members-voice').forEach(btn => btn.onclick = () => { sidebar.classList.add('open'); overlay.classList.add('active'); }); document.getElementById('close-menu').onclick = () => { sidebar.classList.remove('open'); overlay.classList.remove('active'); }; document.getElementById('open-members').onclick = () => { membersSidebar.classList.remove('translate-x-full'); overlay.classList.add('active'); }; document.getElementById('close-members').onclick = () => { membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); }; overlay.onclick = () => { sidebar.classList.remove('open'); membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); };
 function updateUnreadBadge(channel) { const btn = document.querySelector(`.nav-btn[data-channel="${channel}"]`); if (!btn) return; let badge = btn.querySelector('.unread-badge'); if (unreadCounts[channel] > 0) { if (!badge) { badge = document.createElement('span'); badge.className = 'unread-badge bg-[#da373c] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-auto animate-[fadeIn_0.2s_ease-out] shadow-sm'; btn.appendChild(badge); } badge.textContent = unreadCounts[channel] > 99 ? '99+' : unreadCounts[channel]; } else { if (badge) badge.remove(); } }
@@ -562,7 +554,7 @@ onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => {
 });
 
 // ==========================================
-// 🕵️‍♂️ 11.5 เกมจับสปาย (Who is the Spy?) - ระบบ Lobby & Real-time
+// 🕵️‍♂️ 11.5 เกมจับสปาย (Who is the Spy?) - 🌟 V20: แก้บั๊กติดห้องรอ
 // ==========================================
 let currentSpyData = { status: 'waiting', players: {} };
 const lobbyUI = document.getElementById('spy-lobby-ui');
@@ -628,14 +620,25 @@ function renderSpyGame() {
     }
 }
 
+// 🌟 แก้ไขบั๊กอมตะ: ลบผู้เล่นออกแบบ Overwrite ทับ 100%
 joinSpyBtn.onclick = async () => {
-    const pList = currentSpyData.players || {};
+    // 1. จำลองร่างโคลนของรายชื่อผู้เล่นทั้งหมด (ห้ามแก้ของจริงโดยตรง)
+    const pList = JSON.parse(JSON.stringify(currentSpyData.players || {}));
+    
     if (pList[currentUserId]) {
+        // ถ้ามีชื่อเราอยู่ -> ลบทิ้งซะ
         delete pList[currentUserId];
     } else {
+        // ถ้าไม่มี -> ใส่ชื่อเราเข้าไป
         pList[currentUserId] = { name: currentUsername, avatar: document.getElementById('current-user-avatar').src, role: 'normal' };
     }
-    await setDoc(doc(db, "appData", "spyGame"), { players: pList, status: 'waiting' }, { merge: true });
+    
+    // 2. เซฟทับตู้มลงไปที่ Database เลย (ไม่ใช้ merge)
+    await setDoc(doc(db, "appData", "spyGame"), { 
+        ...currentSpyData, 
+        players: pList, 
+        status: 'waiting' 
+    });
 };
 
 startSpyBtn.onclick = async () => {
@@ -643,7 +646,9 @@ startSpyBtn.onclick = async () => {
     startSpyBtn.disabled = true;
     
     const word = await getWordFromAI("spy"); 
-    const pList = currentSpyData.players || {};
+    
+    // โคลนรายชื่อผู้เล่นมาแจกบทบาท
+    const pList = JSON.parse(JSON.stringify(currentSpyData.players || {}));
     const uids = Object.keys(pList);
     const spyIndex = Math.floor(Math.random() * uids.length);
     
@@ -651,6 +656,7 @@ startSpyBtn.onclick = async () => {
         pList[uid].role = (idx === spyIndex) ? 'spy' : 'normal';
     });
 
+    // บันทึกเกมเริ่มและแจกบทบาท
     await setDoc(doc(db, "appData", "spyGame"), { status: 'playing', players: pList, normalWord: word, host: currentUsername, timestamp: serverTimestamp() });
     await addDoc(collection(db, "messages"), { text: `🕵️‍♂️ **${currentUsername}** เริ่มเกมจับสปายแล้ว! (AI แจกคำศัพท์ให้ทุกคนเรียบร้อย) ใครเป็นสปายเนียนๆ ไว้ล่ะ!`, senderName: "🤖 System Bot", channel: "general", timestamp: serverTimestamp() });
     
@@ -662,6 +668,8 @@ document.getElementById('spy-end-btn').onclick = async () => {
     if(confirm("ต้องการจบเกมนี้และเฉลยใช่ไหม?")) {
         let spyName = "ไม่มี";
         for(let uid in currentSpyData.players) { if(currentSpyData.players[uid].role === 'spy') spyName = currentSpyData.players[uid].name; }
+        
+        // เซฟทับล้างห้องแบบเกลี้ยงๆ
         await setDoc(doc(db, "appData", "spyGame"), { status: 'waiting', players: {}, timestamp: serverTimestamp() });
         await addDoc(collection(db, "messages"), { text: `🏁 จบเกมจับสปาย! สปายในรอบนี้คือ **${spyName}** 🕵️‍♂️ (คำศัพท์ของชาวบ้านคือ: ${currentSpyData.normalWord})`, senderName: "🤖 System Bot", channel: "general", timestamp: serverTimestamp() });
         showToast("เฉลยแล้ว! ไปดูผลในช่องประกาศทั่วไป", "info");
