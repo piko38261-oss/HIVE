@@ -213,7 +213,7 @@ onSnapshot(collection(db, "users"), (snapshot) => {
 });
 
 // ==========================================
-// 🎨 7. โปรไฟล์ Settings (+ 🌟 V26: แก้บั๊กร้านค้ากรอบรูป)
+// 🎨 7. โปรไฟล์ Settings (+ 🌟 V27: แก้บั๊กร้านค้ากรอบรูป)
 // ==========================================
 const settingsModal = document.getElementById('settings-modal'), avatarInput = document.getElementById('settings-avatar-input'), bannerInput = document.getElementById('settings-banner-input');
 let cropper = null; let currentCropType = ''; 
@@ -225,7 +225,6 @@ const frameOptions = [
     { id: 'cow', name: 'ลายวัว (ชั่วคราว)', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='none' stroke='%23ffffff' stroke-width='8'/><circle cx='50' cy='50' r='46' fill='none' stroke='%23111111' stroke-width='8' stroke-dasharray='15 20'/></svg>" }
 ];
 
-// 🌟 สร้างปุ่มแบบใหม่ ปลอดภัยไร้บั๊ก HTML
 window.renderFrameOptions = (currentUrl) => {
     const container = document.getElementById('frame-selector');
     if(!container) return;
@@ -245,7 +244,6 @@ window.renderFrameOptions = (currentUrl) => {
             </div>
             <span class="text-[10px] ${isSelected ? 'text-[#dbdee1]' : 'text-gray-500 group-hover:text-gray-300'} font-bold">${f.name}</span>
         `;
-        // 🌟 ใส่ฟังก์ชันคลิกที่นี่โดยตรง จะไม่มีปัญหาเรื่องเครื่องหมายฟันหนูใน HTML อีกต่อไป!
         div.onclick = () => {
             document.getElementById('settings-selected-frame').value = f.url;
             renderFrameOptions(f.url);
@@ -630,17 +628,17 @@ startSpyBtn.onclick = async () => { startSpyBtn.innerHTML = `<i class="ph-fill p
 document.getElementById('spy-end-btn').onclick = async () => { if(confirm("เปิดโหวตลับจับสปายเลยใช่ไหม? (ห้ามแอบคุยกันนะ!)")) { await setDoc(doc(db, "appData", "spyGame"), { status: 'voting', votes: {} }, { merge: true }); await addDoc(collection(db, "messages"), { text: `🚨 **หมดเวลาคุย!** ถึงเวลาโหวตลับแล้ว รีบไปกดโหวตในหน้าเกมเลยว่าใครน่าสงสัยที่สุด!`, senderName: "🤖 System Bot", channel: "general", timestamp: serverTimestamp() }); } };
 
 // ==========================================
-// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) + 🌟 V26: แก้บั๊กออกเสียงไม่ได้
+// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) + 🌟 V27: Listen Only Mode
 // ==========================================
 const joinBtn = document.getElementById('join-voice-btn');
-const leaveBtn = document.getElementById('leave-voice-btn'); // ปุ่มเก่ากลางห้อง
-const bottomLeaveBtn = document.getElementById('bottom-leave-btn'); // 🌟 ปุ่มใหม่ด้านล่าง
+const leaveBtn = document.getElementById('leave-voice-btn'); 
+const bottomLeaveBtn = document.getElementById('bottom-leave-btn'); 
 
-const muteBtn = document.getElementById('mute-btn'); // ปุ่มเก่า
-const bottomMicBtn = document.getElementById('bottom-mic-btn'); // 🌟 ปุ่มใหม่
+const muteBtn = document.getElementById('mute-btn'); 
+const bottomMicBtn = document.getElementById('bottom-mic-btn'); 
 const bottomMicIcon = document.getElementById('bottom-mic-icon');
 
-const bottomDeafenBtn = document.getElementById('bottom-deafen-btn'); // 🌟 ปุ่มหูฟัง
+const bottomDeafenBtn = document.getElementById('bottom-deafen-btn'); 
 const bottomDeafenIcon = document.getElementById('bottom-deafen-icon');
 
 const ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
@@ -715,19 +713,39 @@ async function joinVoice() {
             } 
         }); 
         rtcClient.enableAudioVolumeIndicator(); rtcClient.on("volume-indicator", vs => { document.querySelectorAll('.speaking-ring').forEach(i => i.classList.remove('speaking-ring')); vs.forEach(v => { if (v.level > 10) { let sId = null; if (v.uid === myNumericUid || v.uid === 0) { sId = currentUserId; } else { for (const k in usersData) { if (usersData[k].agoraUid === v.uid) { sId = usersData[k].id; break; } } } if (sId) { const a1 = document.getElementById(`img-avatar-${sId}`), a2 = document.getElementById(`img-sidebar-voice-${sId}`), a3 = document.getElementById(`img-grid-voice-${sId}`); if(a1) a1.classList.add('speaking-ring'); if(a2) a2.classList.add('speaking-ring'); if(a3) a3.classList.add('speaking-ring'); } } }); }); 
+        
         await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid); 
-        localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true }); 
-        await rtcClient.publish(localTracks.audioTrack); 
         
-        isMuted = false; isDeafened = false;
-        if(bottomMicIcon) bottomMicIcon.className = "ph-fill ph-microphone text-[18px]";
-        if(bottomDeafenIcon) bottomDeafenIcon.className = "ph-fill ph-headphones text-[18px]";
+        // 🌟 V27: ลองต่อไมค์ ถ้าพังก็ให้เข้าไปฟังอย่างเดียว
+        let micConnected = false;
+        try {
+            localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true }); 
+            await rtcClient.publish(localTracks.audioTrack); 
+            micConnected = true;
+        } catch (micErr) {
+            console.warn("ไม่สามารถเข้าถึงไมค์ได้", micErr);
+        }
         
-        await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: false, isSharingScreen: false, isVideoOn: false }); 
+        isMuted = !micConnected; 
+        isDeafened = false;
+        
+        const muteIcon = document.getElementById('mute-icon'); 
+        if (micConnected) {
+            if(bottomMicIcon) bottomMicIcon.className = "ph-fill ph-microphone text-[18px] text-[#dbdee1]";
+            if(bottomDeafenIcon) bottomDeafenIcon.className = "ph-fill ph-headphones text-[18px] text-[#dbdee1]";
+            if(muteBtn) { muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); }
+            if(muteIcon) muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; 
+        } else {
+            if(bottomMicIcon) bottomMicIcon.className = "ph-fill ph-microphone-slash text-[18px] text-[#da373c]";
+            if(muteBtn) { muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); }
+            if(muteIcon) muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; 
+            showToast("เข้าร่วมแบบ 'ฟังอย่างเดียว' (ไม่พบไมโครโฟน)", "info");
+        }
+        
+        await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: isMuted, isSharingScreen: false, isVideoOn: false }); 
         localStorage.setItem('dosh_active_voice', 'true'); 
-        joinBtn.classList.add('hidden'); document.getElementById('active-voice-ui').classList.remove('hidden'); muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); document.getElementById('mute-icon').className = "ph ph-microphone text-[20px] md:text-[24px]"; 
         
-        // 🌟 โชว์ปุ่มวางสายด้านล่างเมื่อเข้าห้องสำเร็จ
+        joinBtn.classList.add('hidden'); document.getElementById('active-voice-ui').classList.remove('hidden'); 
         if(bottomLeaveBtn) bottomLeaveBtn.classList.remove('hidden');
 
         amIInVoice = true; startBackgroundAudioMode(); 
@@ -735,9 +753,8 @@ async function joinVoice() {
         showCallNotification();
 
     } catch (err) { 
-        // 🌟 แก้บั๊กวิญญาณหลอน! ถ้า error จะลบชื่อออกทันที
         console.error(err); localStorage.removeItem('dosh_active_voice'); 
-        showToast("เชื่อมต่อไมค์ไม่สำเร็จ", "error"); 
+        showToast("เชื่อมต่อห้องเสียงไม่สำเร็จ", "error"); 
         if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, agoraUid: null }); }
         joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
         joinBtn.classList.remove('hidden');
@@ -817,7 +834,6 @@ async function leaveVoice() {
     joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
     document.getElementById('active-voice-ui').classList.add('hidden'); 
     
-    // 🌟 ซ่อนปุ่มวางสายด้านล่างเมื่อออก
     if(bottomLeaveBtn) bottomLeaveBtn.classList.add('hidden');
     
     if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; } amIInVoice = false;
@@ -827,10 +843,14 @@ async function leaveVoice() {
 
 window.leaveVoice = leaveVoice; 
 
-// 🌟 ระบบเปิด/ปิดไมค์รวม
+// 🌟 ระบบเปิด/ปิดไมค์รวม (เช็คก่อนว่ามีไมค์ให้เปิดไหม)
 async function toggleMute() {
+    if (!localTracks.audioTrack) {
+        showToast("ไม่พบไมโครโฟน! คุณอยู่ในโหมดฟังอย่างเดียว", "error");
+        return; 
+    }
     isMuted = !isMuted; 
-    if (localTracks.audioTrack) { await localTracks.audioTrack.setMuted(isMuted); }
+    await localTracks.audioTrack.setMuted(isMuted);
     await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); 
     const muteIcon = document.getElementById('mute-icon'); 
     if (isMuted) { 
@@ -846,7 +866,6 @@ async function toggleMute() {
 if(muteBtn) muteBtn.onclick = toggleMute;
 if(bottomMicBtn) bottomMicBtn.onclick = toggleMute;
 
-// 🌟 ระบบหูฟัง (Deafen) ดับเสียงทุกคน
 function toggleDeafen() {
     isDeafened = !isDeafened;
     for (let uid in remoteAudioTracks) {
@@ -865,7 +884,6 @@ function toggleDeafen() {
 }
 if(bottomDeafenBtn) bottomDeafenBtn.onclick = toggleDeafen;
 
-// 🌟 ผูกปุ่มเข้า-ออก ห้องเสียง
 if(joinBtn) joinBtn.onclick = joinVoice; 
 if(leaveBtn) leaveBtn.onclick = leaveVoice;
 if(bottomLeaveBtn) bottomLeaveBtn.onclick = leaveVoice;
@@ -888,19 +906,6 @@ if ('serviceWorker' in navigator) {
         });
     }); 
 }
-
-document.addEventListener("visibilitychange", async () => {
-    if (amIInVoice) {
-        if (document.visibilityState === 'hidden') { console.log("App suspended by Mobile OS"); } 
-        else if (document.visibilityState === 'visible') {
-            showToast("🔄 กลับสู่แอป... กำลังเชื่อมต่อเสียงใหม่", "info");
-            for (let uid in remoteAudioTracks) { try { remoteAudioTracks[uid].play(); } catch(e) {} }
-            if (localTracks.audioTrack && !isMuted) { try { await localTracks.audioTrack.setEnabled(false); await localTracks.audioTrack.setEnabled(true); } catch(e) {} }
-            if (bgAudio) bgAudio.play().catch(e=>{});
-            try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (e) {}
-        }
-    }
-});
 
 const tourOverlay = document.getElementById('tour-overlay'); const tourTooltip = document.getElementById('tour-tooltip'); const tourTitle = document.getElementById('tour-title'); const tourDesc = document.getElementById('tour-desc'); const tourStepCount = document.getElementById('tour-step-count'); const tourNextBtn = document.getElementById('tour-next-btn'); const tourSkipBtn = document.getElementById('tour-skip-btn');
 const tourSteps = [ { target: null, title: "ยินดีต้อนรับสู่ HIVE! 🎉", desc: "Super App สำหรับทีมครีเอทีฟและมัลติมีเดีย จบครบทุกงานในเว็บเดียว! เดี๋ยวเราจะพาไปดูว่ามีเครื่องมืออะไรให้ใช้บ้าง", pos: "center" }, { target: ".nav-btn[data-view='chat']", title: "1. ห้องแชทอัจฉริยะ 💬", desc: "คุยงาน ส่งไฟล์ ซูมรูปภาพ พิมพ์คำสั่ง / บอท หรือแม้แต่ 'ตอบกลับข้อความ' ก็ทำได้ครบจบที่นี่!", pos: "right" }, { target: ".nav-btn[data-view='voice']", title: "2. ห้องนั่งเล่น (Voice Lounge) 🎙️", desc: "เปิดไมค์คุยงาน แชร์หน้าจอ (Screen Share) หรือจะเปิดคลิป YouTube รัน Watch Party ดูพร้อมกันทั้งแก๊งก็ยังได้!", pos: "right" }, { target: ".nav-btn[data-view='board']", title: "3. ระบบกระดานงาน (Task Board) 📋", desc: "สร้างงาน จัดหมวดหมู่ แล้วลากแปะ (Drag & Drop) เพื่ออัปเดตสถานะงานให้เพื่อนๆ ในทีมรู้ความคืบหน้าแบบ Real-time", pos: "right" }, { target: "#mini-profile-btn", title: "4. ปรับแต่งโปรไฟล์ 🪪", desc: "กดตรงนี้เพื่อตั้งค่า 'รูปภาพปก (Banner)' เปลี่ยนสีชื่อ และตั้งสถานะ (Custom Status) โชว์ความเท่ให้เพื่อนในทีมเห็น!", pos: "top" } ];
