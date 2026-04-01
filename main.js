@@ -213,7 +213,7 @@ onSnapshot(collection(db, "users"), (snapshot) => {
 });
 
 // ==========================================
-// 🎨 7. โปรไฟล์ Settings (+ 🌟 V27: แก้บั๊กร้านค้ากรอบรูป)
+// 🎨 7. โปรไฟล์ Settings 
 // ==========================================
 const settingsModal = document.getElementById('settings-modal'), avatarInput = document.getElementById('settings-avatar-input'), bannerInput = document.getElementById('settings-banner-input');
 let cropper = null; let currentCropType = ''; 
@@ -263,11 +263,9 @@ const openSettingsHandler = (e) => {
     settingsModal.classList.remove('hidden'); sidebar.classList.remove('open'); overlay.classList.remove('active'); 
 };
 const btnOpenSettings = document.getElementById('open-settings-btn');
-const btnBottomSettings = document.getElementById('bottom-settings-btn');
 const btnMiniProfile = document.getElementById('mini-profile-btn');
 
 if (btnOpenSettings) btnOpenSettings.onclick = openSettingsHandler;
-if (btnBottomSettings) btnBottomSettings.onclick = openSettingsHandler;
 if (btnMiniProfile) btnMiniProfile.onclick = openSettingsHandler;
 
 document.getElementById('close-settings-btn').onclick = () => { settingsModal.classList.add('hidden'); }; 
@@ -628,21 +626,19 @@ startSpyBtn.onclick = async () => { startSpyBtn.innerHTML = `<i class="ph-fill p
 document.getElementById('spy-end-btn').onclick = async () => { if(confirm("เปิดโหวตลับจับสปายเลยใช่ไหม? (ห้ามแอบคุยกันนะ!)")) { await setDoc(doc(db, "appData", "spyGame"), { status: 'voting', votes: {} }, { merge: true }); await addDoc(collection(db, "messages"), { text: `🚨 **หมดเวลาคุย!** ถึงเวลาโหวตลับแล้ว รีบไปกดโหวตในหน้าเกมเลยว่าใครน่าสงสัยที่สุด!`, senderName: "🤖 System Bot", channel: "general", timestamp: serverTimestamp() }); } };
 
 // ==========================================
-// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) + 🌟 V27: Listen Only Mode
+// 🎙️ 12. ระบบเสียง & แชร์จอ (Agora) + 🌟 V28: Sync Mic/Deafen
 // ==========================================
 const joinBtn = document.getElementById('join-voice-btn');
-const leaveBtn = document.getElementById('leave-voice-btn'); 
-const bottomLeaveBtn = document.getElementById('bottom-leave-btn'); 
-
-const muteBtn = document.getElementById('mute-btn'); 
-const bottomMicBtn = document.getElementById('bottom-mic-btn'); 
-const bottomMicIcon = document.getElementById('bottom-mic-icon');
-
-const bottomDeafenBtn = document.getElementById('bottom-deafen-btn'); 
-const bottomDeafenIcon = document.getElementById('bottom-deafen-icon');
-
+const leaveBtn = document.getElementById('leave-voice-btn'); // 🌟 กลับมาใช้ปุ่มนี้
+const muteBtn = document.getElementById('mute-btn'); // 🌟 กลับมาใช้ปุ่มนี้
 const ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
 const camBtn = document.getElementById('camera-btn'), camIcon = document.getElementById('camera-icon');
+
+// แถบควบคุมด้านล่างซ้าย (เอาไว้กดก่อนเข้าห้องได้)
+const bottomMicBtn = document.getElementById('bottom-mic-btn'); 
+const bottomMicIcon = document.getElementById('bottom-mic-icon');
+const bottomDeafenBtn = document.getElementById('bottom-deafen-btn'); 
+const bottomDeafenIcon = document.getElementById('bottom-deafen-icon');
 
 async function showCallNotification() {
     if ("Notification" in window && navigator.serviceWorker) {
@@ -716,37 +712,39 @@ async function joinVoice() {
         
         await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid); 
         
-        // 🌟 V27: ลองต่อไมค์ ถ้าพังก็ให้เข้าไปฟังอย่างเดียว
         let micConnected = false;
         try {
             localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true }); 
             await rtcClient.publish(localTracks.audioTrack); 
             micConnected = true;
+            
+            // 🌟 สำคัญ! ซิงค์สเตตัสไมค์ที่ตั้งค่าไว้ตอนอยู่ข้างนอก
+            await localTracks.audioTrack.setMuted(isMuted);
         } catch (micErr) {
             console.warn("ไม่สามารถเข้าถึงไมค์ได้", micErr);
         }
         
-        isMuted = !micConnected; 
-        isDeafened = false;
+        if (!micConnected) {
+            isMuted = true; // Force mute
+            showToast("เข้าร่วมแบบ 'ฟังอย่างเดียว' (เบราว์เซอร์บล็อกไมค์ / ไม่พบไมค์)", "info");
+        }
         
+        // อัปเดต UI ปุ่มต่างๆ
         const muteIcon = document.getElementById('mute-icon'); 
-        if (micConnected) {
-            if(bottomMicIcon) bottomMicIcon.className = "ph-fill ph-microphone text-[18px] text-[#dbdee1]";
-            if(bottomDeafenIcon) bottomDeafenIcon.className = "ph-fill ph-headphones text-[18px] text-[#dbdee1]";
-            if(muteBtn) { muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); }
-            if(muteIcon) muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; 
-        } else {
+        if (isMuted) {
             if(bottomMicIcon) bottomMicIcon.className = "ph-fill ph-microphone-slash text-[18px] text-[#da373c]";
             if(muteBtn) { muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); }
             if(muteIcon) muteIcon.className = "ph-fill ph-microphone-slash text-[20px] md:text-[24px]"; 
-            showToast("เข้าร่วมแบบ 'ฟังอย่างเดียว' (ไม่พบไมโครโฟน)", "info");
+        } else {
+            if(bottomMicIcon) bottomMicIcon.className = "ph-fill ph-microphone text-[18px] text-[#dbdee1]";
+            if(muteBtn) { muteBtn.classList.add('bg-[#2b2d31]'); muteBtn.classList.remove('bg-[#da373c]/20', 'text-[#da373c]'); }
+            if(muteIcon) muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; 
         }
         
         await updateDoc(doc(db, "users", currentUserId), { inVoice: true, agoraUid: myNumericUid, isMuted: isMuted, isSharingScreen: false, isVideoOn: false }); 
         localStorage.setItem('dosh_active_voice', 'true'); 
         
         joinBtn.classList.add('hidden'); document.getElementById('active-voice-ui').classList.remove('hidden'); 
-        if(bottomLeaveBtn) bottomLeaveBtn.classList.remove('hidden');
 
         amIInVoice = true; startBackgroundAudioMode(); 
         if(latestWPData && latestWPData.videoId) { initOrUpdatePlayer(latestWPData.videoId, latestWPData.time, latestWPData.state, latestWPData.updatedBy); }
@@ -834,8 +832,6 @@ async function leaveVoice() {
     joinBtn.classList.remove('hidden'); joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; 
     document.getElementById('active-voice-ui').classList.add('hidden'); 
     
-    if(bottomLeaveBtn) bottomLeaveBtn.classList.add('hidden');
-    
     if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; } amIInVoice = false;
     if(ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; } document.getElementById('yt-wrapper').innerHTML = '<div id="yt-player-container"></div>'; document.getElementById('watch-party-stage').classList.add('hidden'); document.getElementById('watch-party-stage').classList.remove('flex');
     amIInVoice = false; stopBackgroundAudioMode(); hideCallNotification();
@@ -843,15 +839,21 @@ async function leaveVoice() {
 
 window.leaveVoice = leaveVoice; 
 
-// 🌟 ระบบเปิด/ปิดไมค์รวม (เช็คก่อนว่ามีไมค์ให้เปิดไหม)
+// 🌟 ระบบเปิด/ปิดไมค์รวม (แก้บั๊กกดไม่ได้ตอนอยู่ข้างนอก)
 async function toggleMute() {
-    if (!localTracks.audioTrack) {
-        showToast("ไม่พบไมโครโฟน! คุณอยู่ในโหมดฟังอย่างเดียว", "error");
-        return; 
-    }
     isMuted = !isMuted; 
-    await localTracks.audioTrack.setMuted(isMuted);
-    await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); 
+    
+    // ถ้าอยู่ในห้องเสียง ค่อยสั่งปิด/เปิดไมค์
+    if (localTracks.audioTrack) { 
+        await localTracks.audioTrack.setMuted(isMuted); 
+    }
+    
+    // อัปเดตฐานข้อมูลเสมอ
+    if(currentUserId) {
+        await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); 
+    }
+    
+    // อัปเดตหน้าตา UI ทั้งคู่
     const muteIcon = document.getElementById('mute-icon'); 
     if (isMuted) { 
         if(muteBtn) { muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); }
@@ -886,7 +888,6 @@ if(bottomDeafenBtn) bottomDeafenBtn.onclick = toggleDeafen;
 
 if(joinBtn) joinBtn.onclick = joinVoice; 
 if(leaveBtn) leaveBtn.onclick = leaveVoice;
-if(bottomLeaveBtn) bottomLeaveBtn.onclick = leaveVoice;
 
 // ==========================================
 // 📋 13. Task Board & Tour
@@ -906,6 +907,19 @@ if ('serviceWorker' in navigator) {
         });
     }); 
 }
+
+document.addEventListener("visibilitychange", async () => {
+    if (amIInVoice) {
+        if (document.visibilityState === 'hidden') { console.log("App suspended by Mobile OS"); } 
+        else if (document.visibilityState === 'visible') {
+            showToast("🔄 กลับสู่แอป... กำลังเชื่อมต่อเสียงใหม่", "info");
+            for (let uid in remoteAudioTracks) { try { remoteAudioTracks[uid].play(); } catch(e) {} }
+            if (localTracks.audioTrack && !isMuted) { try { await localTracks.audioTrack.setEnabled(false); await localTracks.audioTrack.setEnabled(true); } catch(e) {} }
+            if (bgAudio) bgAudio.play().catch(e=>{});
+            try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (e) {}
+        }
+    }
+});
 
 const tourOverlay = document.getElementById('tour-overlay'); const tourTooltip = document.getElementById('tour-tooltip'); const tourTitle = document.getElementById('tour-title'); const tourDesc = document.getElementById('tour-desc'); const tourStepCount = document.getElementById('tour-step-count'); const tourNextBtn = document.getElementById('tour-next-btn'); const tourSkipBtn = document.getElementById('tour-skip-btn');
 const tourSteps = [ { target: null, title: "ยินดีต้อนรับสู่ HIVE! 🎉", desc: "Super App สำหรับทีมครีเอทีฟและมัลติมีเดีย จบครบทุกงานในเว็บเดียว! เดี๋ยวเราจะพาไปดูว่ามีเครื่องมืออะไรให้ใช้บ้าง", pos: "center" }, { target: ".nav-btn[data-view='chat']", title: "1. ห้องแชทอัจฉริยะ 💬", desc: "คุยงาน ส่งไฟล์ ซูมรูปภาพ พิมพ์คำสั่ง / บอท หรือแม้แต่ 'ตอบกลับข้อความ' ก็ทำได้ครบจบที่นี่!", pos: "right" }, { target: ".nav-btn[data-view='voice']", title: "2. ห้องนั่งเล่น (Voice Lounge) 🎙️", desc: "เปิดไมค์คุยงาน แชร์หน้าจอ (Screen Share) หรือจะเปิดคลิป YouTube รัน Watch Party ดูพร้อมกันทั้งแก๊งก็ยังได้!", pos: "right" }, { target: ".nav-btn[data-view='board']", title: "3. ระบบกระดานงาน (Task Board) 📋", desc: "สร้างงาน จัดหมวดหมู่ แล้วลากแปะ (Drag & Drop) เพื่ออัปเดตสถานะงานให้เพื่อนๆ ในทีมรู้ความคืบหน้าแบบ Real-time", pos: "right" }, { target: "#mini-profile-btn", title: "4. ปรับแต่งโปรไฟล์ 🪪", desc: "กดตรงนี้เพื่อตั้งค่า 'รูปภาพปก (Banner)' เปลี่ยนสีชื่อ และตั้งสถานะ (Custom Status) โชว์ความเท่ให้เพื่อนในทีมเห็น!", pos: "top" } ];
