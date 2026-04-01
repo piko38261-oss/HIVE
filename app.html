@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>HIVE Workspace - HIVE Server</title>
     
-    <link rel="manifest" href="manifest.json?v=25">
+    <link rel="manifest" href="manifest.json?v=26">
     <meta name="theme-color" content="#1e1f22">
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=H&background=5865F2&color=fff&size=192">
 
@@ -32,7 +32,6 @@
         @keyframes hivePulse { 0% { transform: scale(0.8); opacity: 0; box-shadow: 0 0 0 rgba(88, 101, 242, 0); } 50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 40px rgba(88, 101, 242, 0.6); } 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 20px rgba(88, 101, 242, 0.3); } }
         .hive-logo-anim { animation: hivePulse 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         
-        /* สไตล์ปุ่มเซิร์ฟเวอร์แบบดิสคอร์ด */
         .server-icon { transition: all 0.2s ease; border-radius: 24px; }
         .server-icon:hover { border-radius: 12px; background-color: #5865F2; color: white; }
         .server-icon.active { border-radius: 12px; background-color: #5865F2; color: white; }
@@ -152,6 +151,7 @@
             <div class="flex items-center space-x-0.5">
                 <button id="bottom-mic-btn" class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="เปิด/ปิดไมค์"><i id="bottom-mic-icon" class="ph-fill ph-microphone text-[18px]"></i></button>
                 <button id="bottom-deafen-btn" class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="หูหนวก/หูฟัง"><i id="bottom-deafen-icon" class="ph-fill ph-headphones text-[18px]"></i></button>
+                <button id="bottom-leave-btn" class="text-[#da373c] hover:bg-[#da373c]/20 p-1.5 rounded-md transition hidden" title="วางสาย"><i class="ph-fill ph-phone-disconnect text-[18px]"></i></button>
                 <button id="open-settings-btn" class="text-[#b5bac1] hover:bg-[#35373c] hover:text-[#dbdee1] p-1.5 rounded-md transition" title="ตั้งค่าผู้ใช้"><i class="ph-fill ph-gear text-[18px]"></i></button>
             </div>
         </div>
@@ -228,7 +228,6 @@
                 </button>
 
                 <div id="active-voice-ui" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#111214]/90 backdrop-blur-md px-6 py-3 md:py-4 rounded-full shadow-2xl border border-[#2b2d31] flex items-center space-x-4 md:space-x-6 z-50">
-                    <div class="flex flex-col items-center group tooltip"><button id="mute-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#2b2d31] text-[#dbdee1] rounded-full flex items-center justify-center hover:bg-[#35373c] transition-all duration-200 shadow-md"><i id="mute-icon" class="ph ph-microphone text-[20px] md:text-[24px]"></i></button></div>
                     <div class="flex flex-col items-center group tooltip"><button id="camera-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#2b2d31] text-[#dbdee1] rounded-full flex items-center justify-center hover:bg-[#35373c] transition-all duration-200 shadow-md"><i id="camera-icon" class="ph ph-video-camera text-[20px] md:text-[24px]"></i></button></div>
                     <div class="flex flex-col items-center group tooltip relative">
                         <div id="screen-share-wrapper" class="flex items-center bg-[#2b2d31] rounded-full shadow-md transition-all duration-200 border border-transparent">
@@ -237,7 +236,6 @@
                             <button id="screen-share-btn" class="w-10 h-12 md:w-12 md:h-14 text-[#dbdee1] hover:text-white rounded-r-full flex items-center justify-center transition"><i id="screen-icon" class="ph ph-screencast text-[20px] md:text-[24px]"></i></button>
                         </div>
                     </div>
-                    <div class="flex flex-col items-center group tooltip"><button id="leave-voice-btn" class="w-12 h-12 md:w-14 md:h-14 bg-[#da373c] text-white rounded-full flex items-center justify-center hover:bg-[#c92b2f] transition-all duration-200 shadow-md"><i class="ph-fill ph-phone-disconnect text-[20px] md:text-[24px]"></i></button></div>
                 </div>
             </div>
 
@@ -381,8 +379,7 @@
                     
                     <div class="group mt-2 border-t border-white/5 pt-4">
                         <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">กรอบรูปโปรไฟล์ (Avatar Frame)</label>
-                        <div id="frame-selector" class="flex space-x-3 overflow-x-auto pb-2 custom-scrollbar">
-                            </div>
+                        <div id="frame-selector" class="flex space-x-3 overflow-x-auto pb-2 custom-scrollbar"></div>
                         <input type="hidden" id="settings-selected-frame" value="">
                     </div>
                 </div>
