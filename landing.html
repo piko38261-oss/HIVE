@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="th" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIVE Workspace</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- AOS Animation CSS -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'Noto Sans Thai', 'sans-serif'] },
+                    colors: {
+                        hive: { bg: '#0e0f11', card: '#1e1f22', text: '#dbdee1', blurple: '#5865F2', green: '#23a559', red: '#da373c' }
+                    },
+                    animation: { 
+                        'float': 'float 6s ease-in-out infinite',
+                        'shine': 'shine 1.5s ease-in-out infinite',
+                        'wiggle': 'wiggle 0.3s ease-in-out infinite',
+                        'scroll': 'scroll 25s linear infinite'
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        shine: {
+                            '100%': { left: '125%' },
+                        },
+                        wiggle: {
+                            '0%, 100%': { transform: 'rotate(-3deg)' },
+                            '50%': { transform: 'rotate(3deg)' },
+                        },
+                        scroll: {
+                            '0%': { transform: 'translateX(0)' },
+                            '100%': { transform: 'translateX(-50%)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0e0f11; color: #dbdee1; overflow-x: hidden; }
+        
+        /* ลายพื้นหลังตาราง */
+        .bg-pattern {
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-position: center center;
+        }
+
+        .glass-nav { background: rgba(14, 15, 17, 0.6); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass-card { background: rgba(30, 31, 34, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .gradient-text { background: linear-gradient(135deg, #5865F2, #a1a9fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .glow-bg { position: absolute; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(88,101,242,0.2) 0%, rgba(14,15,17,0) 70%); top: -10vw; right: -10vw; z-index: -1; border-radius: 50%; filter: blur(40px); }
+        .glow-bg-2 { position: absolute; width: 40vw; height: 40vw; background: radial-gradient(circle, rgba(35,165,89,0.15) 0%, rgba(14,15,17,0) 70%); bottom: 10vw; left: -10vw; z-index: -1; border-radius: 50%; filter: blur(40px); }
+
+        /* แถบวิ่งให้หยุดตอนเอาเมาส์ชี้ */
+        .animate-scroll:hover { animation-play-state: paused; }
+
+        /* ระบบแปลภาษา CSS (ซ่อนภาษาที่ไม่ใช่ออก) */
+        html[lang="th"] .lang-en { display: none !important; }
+        html[lang="en"] .lang-th { display: none !important; }
+    </style>
+</head>
+<body class="relative antialiased bg-pattern">
+
+    <!-- แสง Background เรืองรอง -->
+    <div class="glow-bg"></div>
+    <div class="glow-bg-2"></div>
+
+    <!-- Navbar -->
+    <nav class="fixed w-full z-50 glass-nav transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex-shrink-0 flex items-center gap-3 cursor-pointer" data-aos="fade-right">
+                    <div class="w-10 h-10 bg-hive-blurple rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-[0_0_20px_rgba(88,101,242,0.6)]">H</div>
+                    <span class="font-extrabold text-2xl tracking-wide text-white">HIVE</span>
+                </div>
+                
+                <div class="flex items-center gap-3 md:gap-4" data-aos="fade-left">
+                    <!-- ปุ่มสลับภาษา -->
+                    <button id="lang-toggle" class="group flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 hover:border-hive-blurple/50 bg-white/5 hover:bg-hive-blurple/10 text-gray-300 hover:text-white transition-all duration-300 text-xs font-bold tracking-wider">
+                        <i class="ph ph-globe text-base group-hover:animate-spin transition-transform"></i>
+                        <span id="lang-text" class="w-5 text-center">TH</span>
+                    </button>
+
+                    <a href="./login.html" class="hidden md:block px-4 py-2.5 text-sm font-semibold text-hive-text hover:text-white transition-colors relative group">
+                        <span class="lang-th">เข้าสู่ระบบ</span><span class="lang-en">Login</span>
+                        <span class="absolute bottom-1 left-1/2 w-0 h-0.5 bg-hive-blurple group-hover:w-full group-hover:left-0 transition-all duration-300"></span>
+                    </a>
+                    
+                    <a href="./login.html" class="relative overflow-hidden px-5 py-2.5 text-sm font-semibold bg-hive-blurple text-white rounded-xl shadow-[0_4px_15px_rgba(88,101,242,0.4)] hover:shadow-[0_8px_25px_rgba(88,101,242,0.6)] transition-all transform hover:-translate-y-1 group">
+                        <span class="relative z-10 lang-th">เปิดใช้งาน HIVE</span>
+                        <span class="relative z-10 lang-en">Get Started</span>
+                        <div class="absolute top-0 -left-[100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[ -20deg] group-hover:animate-shine z-0"></div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <main class="relative pt-32 pb-20 lg:pt-40 lg:pb-16 px-6 flex flex-col items-center justify-center min-h-screen">
+        <div class="max-w-4xl mx-auto text-center relative z-10">
+            
+            <!-- Badge -->
+            <div data-aos="fade-down" class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card text-sm font-semibold text-gray-300 mb-8 shadow-lg">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-hive-green opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-hive-green"></span>
+                </span>
+                <span class="lang-th">HIVE Workspace V1.0 พร้อมสำหรับทีมของคุณแล้ว!</span>
+                <span class="lang-en">HIVE Workspace V1.0 is now live for your team!</span>
+            </div>
+            
+            <!-- Headline -->
+            <h1 data-aos="zoom-in" data-aos-delay="100" class="text-5xl lg:text-7xl font-extrabold text-white tracking-tight mb-6 leading-[1.1]">
+                <span class="lang-th">จบทุกงานครีเอทีฟในที่เดียว <br class="hidden md:block" />ด้วย <span class="gradient-text">HIVE Workspace</span></span>
+                <span class="lang-en">The Ultimate Super App <br class="hidden md:block" />for <span class="gradient-text">Creative Teams</span></span>
+            </h1>
+            
+            <!-- Description -->
+            <p data-aos="fade-up" data-aos-delay="200" class="mt-6 text-lg lg:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
+                <span class="lang-th">เปลี่ยนวิธีการทำงานร่วมกันของทีมมัลติมีเดีย แชท โทรคุย วางแผนโปรเจกต์ วาดรูป หรือปาร์ตี้มินิเกม ครบจบโดยไม่ต้องสลับแอปให้วุ่นวาย</span>
+                <span class="lang-en">Transform how your multimedia team collaborates. Chat, voice calls, task management, drawing, and mini-games—all in one place.</span>
+            </p>
+            
+            <!-- Buttons -->
+            <div data-aos="fade-up" data-aos-delay="300" class="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="./login.html" class="px-8 py-4 text-base font-bold bg-white text-hive-bg rounded-xl hover:bg-gray-200 transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] transform hover:scale-105">
+                    <span class="lang-th">เข้าสู่ระบบ Workspace</span><span class="lang-en">Enter Workspace</span>
+                </a>
+                <a href="#features" class="px-8 py-4 text-base font-bold glass-card text-white rounded-xl hover:bg-white/10 transition-all flex items-center justify-center gap-2 transform hover:scale-105">
+                    <i class="ph ph-sparkle text-xl text-[#facc15]"></i> 
+                    <span class="lang-th">สำรวจฟีเจอร์</span><span class="lang-en">Explore Features</span>
+                </a>
+            </div>
+
+            <!-- Social Proof (คนใช้งานจริง) -->
+            <div data-aos="fade-up" data-aos-delay="400" class="mt-10 flex flex-col items-center gap-3">
+                <div class="flex -space-x-3">
+                    <img class="w-10 h-10 rounded-full border-2 border-[#0e0f11] object-cover" src="https://ui-avatars.com/api/?name=P&background=5865F2&color=fff" alt="User">
+                    <img class="w-10 h-10 rounded-full border-2 border-[#0e0f11] object-cover" src="https://ui-avatars.com/api/?name=M&background=23a559&color=fff" alt="User">
+                    <img class="w-10 h-10 rounded-full border-2 border-[#0e0f11] object-cover" src="https://ui-avatars.com/api/?name=D&background=facc15&color=fff" alt="User">
+                    <img class="w-10 h-10 rounded-full border-2 border-[#0e0f11] object-cover" src="https://ui-avatars.com/api/?name=K&background=da373c&color=fff" alt="User">
+                    <div class="w-10 h-10 rounded-full border-2 border-[#0e0f11] bg-[#1e1f22] flex items-center justify-center text-xs font-bold text-white">+500</div>
+                </div>
+                <p class="text-sm text-gray-500 font-medium tracking-wide">
+                    <span class="lang-th">ไว้วางใจโดยทีมครีเอทีฟกว่า 500+ คน</span>
+                    <span class="lang-en">Trusted by 500+ creative professionals</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- ภาพถ่ายหน้าจอแอปจริง -->
+        <div data-aos="fade-up" data-aos-delay="600" class="mt-16 w-full max-w-5xl mx-auto relative hidden md:block z-10">
+            <div class="glass-card rounded-2xl p-2 md:p-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 border-t-white/20 overflow-hidden relative group">
+                <div class="absolute top-5 left-5 flex gap-1.5 z-10">
+                    <div class="w-3 h-3 rounded-full bg-hive-red/80 shadow-sm"></div>
+                    <div class="w-3 h-3 rounded-full bg-[#facc15]/80 shadow-sm"></div>
+                    <div class="w-3 h-3 rounded-full bg-hive-green/80 shadow-sm"></div>
+                </div>
+                <!-- 📸 รูปภาพ Screenshot ของคุณ -->
+                <img src="./screenshot.png" alt="HIVE Workspace Interface" class="w-full h-auto rounded-xl object-cover border border-[#1e1f22] opacity-90 group-hover:opacity-100 transition-opacity duration-300">
+                <div class="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 pointer-events-none rounded-2xl"></div>
+            </div>
+        </div>
+        
+        <!-- Infinite Scrolling Marquee (แถบวิ่ง) -->
+        <div class="mt-16 md:mt-24 w-[100vw] overflow-hidden border-y border-white/5 bg-hive-blurple/5 py-4 relative z-10 -mx-6">
+            <div class="absolute inset-y-0 left-0 w-16 md:w-32 bg-gradient-to-r from-[#0e0f11] to-transparent z-10 pointer-events-none"></div>
+            <div class="absolute inset-y-0 right-0 w-16 md:w-32 bg-gradient-to-l from-[#0e0f11] to-transparent z-10 pointer-events-none"></div>
+            
+            <div class="animate-scroll w-max flex items-center gap-12 px-6">
+                <!-- ชุดที่ 1 -->
+                <div class="flex items-center gap-12 text-gray-400 font-bold tracking-widest uppercase text-sm">
+                    <span class="flex items-center gap-2"><i class="ph-fill ph-lightning text-hive-blurple text-xl"></i> Real-time Sync</span>
+                    <span class="flex items-center gap-2"><i class="ph-fill ph-paint-brush text-hive-green text-xl"></i> Creative Tools</span>
+                    <span class="flex items-center gap-2"><i class="ph-fill ph-users-three text-[#facc15] text-xl"></i> Team Collab</span>
+                    <span class="flex items-center gap-2"><i class="ph-fill ph-lock-key text-hive-red text-xl"></i> Secure Data</span>
+                    <span class="flex items-center gap-2"><i class="ph-fill ph-rocket-launch text-white text-xl"></i> Super Fast</span>
+                </div>
+                <!-- ชุดที่ 2 (เพื่อให้วิ่งวนลูปเนียนๆ) -->
+                <div class="flex items-center gap-12 text-gray-400 font-bold tracking-widest uppercase text-sm">
+                    <span class="flex items-center gap-2"><i class="ph-fill ph-lightning text-hive-blurple text-xl"></i> Real-time Sync</span>
+                    <span class="flex items-center gap-2"><i class="ph-fill ph-paint-brush text-hive-green text-xl"></i> Creative Tools</span>
+                    <span class="flex items-center gap-2"><i class="ph-fill ph-users-three text-[#facc15] text-xl"></i> Team Collab</span>
+                    <span class="flex items-center gap-2"><i class="ph-fill ph-lock-key text-hive-red text-xl"></i> Secure Data</span>
+                    <span class="flex items-center gap-2"><i class="ph-fill ph-rocket-launch text-white text-xl"></i> Super Fast</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Features Section -->
+    <section id="features" class="py-24 relative bg-[#0a0a0c]/80 backdrop-blur-sm z-20">
+        <div class="max-w-7xl mx-auto px-6 lg:px-8">
+            <div class="text-center mb-16" data-aos="fade-up">
+                <h2 class="text-3xl lg:text-4xl font-bold text-white mb-4">
+                    <span class="lang-th">ปลดล็อกขีดจำกัดของทีมคุณ</span><span class="lang-en">Unlock Your Team's Potential</span>
+                </h2>
+                <p class="text-gray-400">
+                    <span class="lang-th">ทุกเครื่องมือที่คุณต้องการ สร้างสรรค์ผลงานระดับมาสเตอร์พีซได้อย่างไร้รอยต่อ</span>
+                    <span class="lang-en">Every tool you need to create masterpieces seamlessly without boundaries.</span>
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+                <!-- Card 1 -->
+                <div data-aos="fade-up" data-aos-delay="100" class="glass-card rounded-3xl p-8 hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(88,101,242,0.15)] hover:border-hive-blurple/50 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-hive-blurple/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-hive-blurple/20 group-hover:scale-110 transition-all duration-300 shadow-inner">
+                        <i class="ph-fill ph-chat-circle-text text-3xl text-hive-blurple drop-shadow-[0_0_8px_rgba(88,101,242,0.5)] group-hover:animate-wiggle"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Smart Chat & Mentions</h3>
+                    <p class="text-gray-400 leading-relaxed lang-th">คุยงานลื่นไหล ส่งไฟล์รูปภาพ โค้ด หรือเอกสารได้ทันที พร้อมระบบ Mention (@) ที่ช่วยให้คุณไม่พลาดทุกข้อความสำคัญจากทีม</p>
+                    <p class="text-gray-400 leading-relaxed lang-en">Seamless communication. Send files, code, or documents instantly. Never miss important messages with the robust @mention system.</p>
+                </div>
+
+                <!-- Card 2 -->
+                <div data-aos="fade-up" data-aos-delay="200" class="glass-card rounded-3xl p-8 hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(35,165,89,0.15)] hover:border-hive-green/50 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-hive-green/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-hive-green/20 group-hover:scale-110 transition-all duration-300 shadow-inner">
+                        <i class="ph-fill ph-headphones text-3xl text-hive-green drop-shadow-[0_0_8px_rgba(35,165,89,0.5)] group-hover:animate-wiggle"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Voice Lounge & Watch Party</h3>
+                    <p class="text-gray-400 leading-relaxed lang-th">กระโดดเข้าห้องเสียงเพื่อประชุมด่วน แชร์หน้าจอความละเอียดสูง หรือเปิด YouTube รัน Watch Party ดูไปพร้อมกับเพื่อนแบบเรียลไทม์</p>
+                    <p class="text-gray-400 leading-relaxed lang-en">Jump into voice channels for quick meetings, high-res screen sharing, or host a real-time YouTube Watch Party with your team.</p>
+                </div>
+
+                <!-- Card 3 -->
+                <div data-aos="fade-up" data-aos-delay="300" class="glass-card rounded-3xl p-8 hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(250,204,21,0.15)] hover:border-[#facc15]/50 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-[#facc15]/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-[#facc15]/20 group-hover:scale-110 transition-all duration-300 shadow-inner">
+                        <i class="ph-fill ph-kanban text-3xl text-[#facc15] drop-shadow-[0_0_8px_rgba(250,204,21,0.5)] group-hover:animate-wiggle"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Kanban Task Board</h3>
+                    <p class="text-gray-400 leading-relaxed lang-th">จัดการโปรเจกต์ให้อยู่หมัดด้วยกระดานแบบลากวาง ติดตามสถานะงาน (To Do, In Progress, Done) ให้ทุกคนเห็นภาพรวมตรงกัน</p>
+                    <p class="text-gray-400 leading-relaxed lang-en">Master project management with drag-and-drop boards. Track task status (To Do, In Progress, Done) so everyone stays on the same page.</p>
+                </div>
+
+                <!-- Card 4 -->
+                <div data-aos="fade-up" data-aos-delay="400" class="glass-card rounded-3xl p-8 hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(218,55,60,0.15)] hover:border-hive-red/50 transition-all duration-300 group">
+                    <div class="w-14 h-14 bg-hive-red/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-hive-red/20 group-hover:scale-110 transition-all duration-300 shadow-inner">
+                        <i class="ph-fill ph-game-controller text-3xl text-hive-red drop-shadow-[0_0_8px_rgba(218,55,60,0.5)] group-hover:animate-wiggle"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Creative Tools & Mini Games</h3>
+                    <p class="text-gray-400 leading-relaxed lang-th">ระดมสมองผ่านกระดานวาดรูปออนไลน์ หรือพักเบรกด้วยมินิเกมในแอป เช่น ทายคำจากภาพ (Draw & Guess) และเกมจับสปายสุดปั่น</p>
+                    <p class="text-gray-400 leading-relaxed lang-en">Brainstorm on online whiteboards or take a break with built-in mini-games like Draw & Guess and Spyfall.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section (คำถามที่พบบ่อย) -->
+    <section class="py-24 relative border-t border-white/5 z-20">
+        <div class="max-w-3xl mx-auto px-6 lg:px-8">
+            <div class="text-center mb-12" data-aos="fade-up">
+                <h2 class="text-3xl font-bold text-white mb-4">
+                    <span class="lang-th">คำถามที่พบบ่อย</span><span class="lang-en">Frequently Asked Questions</span>
+                </h2>
+                <p class="text-gray-400">
+                    <span class="lang-th">ข้อสงสัยยอดฮิตก่อนเริ่มต้นใช้งาน HIVE Workspace</span>
+                    <span class="lang-en">Everything you need to know about HIVE Workspace.</span>
+                </p>
+            </div>
+
+            <div class="space-y-4" data-aos="fade-up" data-aos-delay="100">
+                <!-- FAQ 1 -->
+                <div class="glass-card rounded-2xl border border-white/5 overflow-hidden faq-item">
+                    <button class="faq-btn w-full px-6 py-5 flex items-center justify-between text-left hover:bg-white/5 transition-colors">
+                        <span class="font-semibold text-white">
+                            <span class="lang-th">HIVE Workspace ใช้งานฟรีไหม?</span>
+                            <span class="lang-en">Is HIVE Workspace free to use?</span>
+                        </span>
+                        <i class="ph-bold ph-caret-down text-gray-400 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 opacity-0 overflow-hidden transition-all duration-300">
+                        <div class="px-6 pb-5 text-gray-400 text-sm leading-relaxed">
+                            <span class="lang-th">ใช่ครับ! HIVE Workspace ออกแบบมาเพื่อทีมครีเอทีฟ สามารถใช้งานฟีเจอร์หลักๆ เช่น แชท ห้องเสียง และ Kanban Board ได้ฟรีโดยไม่มีค่าใช้จ่ายแอบแฝง</span>
+                            <span class="lang-en">Yes! HIVE is designed for creative teams. Core features like chat, voice lounges, and Kanban boards are completely free with no hidden fees.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ 2 -->
+                <div class="glass-card rounded-2xl border border-white/5 overflow-hidden faq-item">
+                    <button class="faq-btn w-full px-6 py-5 flex items-center justify-between text-left hover:bg-white/5 transition-colors">
+                        <span class="font-semibold text-white">
+                            <span class="lang-th">รองรับการใช้งานบนอุปกรณ์ไหนบ้าง?</span>
+                            <span class="lang-en">Which devices are supported?</span>
+                        </span>
+                        <i class="ph-bold ph-caret-down text-gray-400 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 opacity-0 overflow-hidden transition-all duration-300">
+                        <div class="px-6 pb-5 text-gray-400 text-sm leading-relaxed">
+                            <span class="lang-th">HIVE เป็น Web Application ทำให้สามารถใช้งานได้ทุกอุปกรณ์ (PC, Mac, แท็บเล็ต และสมาร์ทโฟน) เพียงแค่เปิดผ่าน Web Browser โดยไม่ต้องดาวน์โหลดแอปให้หนักเครื่องครับ</span>
+                            <span class="lang-en">HIVE is a Web Application, making it fully accessible on any device (PC, Mac, tablets, and smartphones) via your web browser without downloading any hefty apps.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FAQ 3 -->
+                <div class="glass-card rounded-2xl border border-white/5 overflow-hidden faq-item">
+                    <button class="faq-btn w-full px-6 py-5 flex items-center justify-between text-left hover:bg-white/5 transition-colors">
+                        <span class="font-semibold text-white">
+                            <span class="lang-th">จำกัดจำนวนคนในห้องเสียงหรือเปล่า?</span>
+                            <span class="lang-en">Is there a user limit in the voice lounge?</span>
+                        </span>
+                        <i class="ph-bold ph-caret-down text-gray-400 transition-transform duration-300"></i>
+                    </button>
+                    <div class="faq-content max-h-0 opacity-0 overflow-hidden transition-all duration-300">
+                        <div class="px-6 pb-5 text-gray-400 text-sm leading-relaxed">
+                            <span class="lang-th">ระบบห้องเสียง (Voice Lounge) ของเราใช้เทคโนโลยีที่มีความเสถียรสูง ปัจจุบันรองรับผู้ใช้งานในห้องเดียวกันได้มากสูงสุดถึง 20 คน พร้อมระบบแชร์หน้าจอความละเอียดสูงครับ</span>
+                            <span class="lang-en">Our Voice Lounge uses highly stable technology, currently supporting up to 20 users simultaneously in the same room, complete with high-res screen sharing.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA Section (ปิดท้ายแบบสวยงาม) -->
+    <section class="py-20 relative z-20">
+        <div class="max-w-5xl mx-auto px-6 lg:px-8">
+            <div data-aos="zoom-in" class="relative rounded-3xl overflow-hidden glass-card p-10 md:p-16 text-center border border-hive-blurple/30 shadow-[0_0_50px_rgba(88,101,242,0.15)] group">
+                
+                <div class="absolute inset-0 bg-gradient-to-b from-hive-blurple/10 to-transparent"></div>
+                <div class="absolute -top-24 -right-24 w-48 h-48 bg-hive-blurple/30 rounded-full blur-[50px] group-hover:bg-hive-blurple/40 transition-colors"></div>
+                <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-hive-green/20 rounded-full blur-[50px] group-hover:bg-hive-green/30 transition-colors"></div>
+                
+                <div class="relative z-10">
+                    <h2 class="text-3xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">
+                        <span class="lang-th">พร้อมที่จะยกระดับทีมของคุณหรือยัง?</span>
+                        <span class="lang-en">Ready to level up your team?</span>
+                    </h2>
+                    <p class="text-gray-400 mb-10 max-w-2xl mx-auto text-lg leading-relaxed">
+                        <span class="lang-th">เข้าร่วม HIVE Workspace วันนี้ ใช้งานฟรี ไม่มีค่าใช้จ่ายแอบแฝง เริ่มต้นเชื่อมต่อทีมของคุณได้ในไม่กี่คลิก</span>
+                        <span class="lang-en">Join HIVE Workspace today. Free to use, no hidden fees. Start connecting your team in just a few clicks.</span>
+                    </p>
+                    <a href="./login.html" class="inline-block relative overflow-hidden px-8 py-4 text-base font-bold bg-white text-hive-bg rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] transition-all transform hover:scale-105 group/btn">
+                        <span class="relative z-10 lang-th">สร้างพื้นที่ทำงานของคุณเลย <i class="ph-bold ph-arrow-right ml-1"></i></span>
+                        <span class="relative z-10 lang-en">Create Your Workspace <i class="ph-bold ph-arrow-right ml-1"></i></span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 border-t border-white/5 relative z-10 bg-[#0e0f11] text-center">
+        <div class="flex flex-col items-center justify-center mb-6">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="w-8 h-8 bg-hive-blurple rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-[0_0_10px_rgba(88,101,242,0.5)]">H</div>
+                <span class="font-bold text-white text-lg tracking-wider">HIVE</span>
+            </div>
+            <p class="text-gray-500 text-sm max-w-xs mx-auto">Built for Creatives & Multimedia Teams.</p>
+        </div>
+        <p class="text-gray-600 text-xs font-medium">&copy; 2026 HIVE Workspace. All rights reserved.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        // เริ่มแอนิเมชันตอนเลื่อนจอ
+        AOS.init({ duration: 800, once: true, offset: 100 });
+
+        // ระบบแปลภาษา (สลับ Class ลื่นๆ)
+        const langToggle = document.getElementById('lang-toggle');
+        const langText = document.getElementById('lang-text');
+        
+        langToggle.addEventListener('click', () => {
+            langToggle.style.transform = 'scale(0.9)';
+            setTimeout(() => { langToggle.style.transform = 'scale(1)'; }, 150);
+
+            const currentLang = document.documentElement.lang;
+            if (currentLang === 'th') {
+                document.documentElement.lang = 'en'; 
+                langText.innerText = 'EN';
+            } else {
+                document.documentElement.lang = 'th'; 
+                langText.innerText = 'TH';
+            }
+        });
+
+        // ระบบเปิด-ปิด FAQ (Accordion)
+        const faqBtns = document.querySelectorAll('.faq-btn');
+        faqBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const content = this.nextElementSibling;
+                const icon = this.querySelector('i');
+                
+                // ถ้าย่ออยู่ให้ขยายออก
+                if (content.style.maxHeight) {
+                    content.style.maxHeight = null;
+                    content.classList.remove('opacity-100', 'mt-2');
+                    icon.style.transform = 'rotate(0deg)';
+                } else {
+                    // ปิดอันอื่นก่อน (ถ้าอยากให้เปิดได้ทีละอัน)
+                    document.querySelectorAll('.faq-content').forEach(c => {
+                        c.style.maxHeight = null;
+                        c.classList.remove('opacity-100', 'mt-2');
+                    });
+                    document.querySelectorAll('.faq-btn i').forEach(i => i.style.transform = 'rotate(0deg)');
+                    
+                    // เปิดอันที่คลิก
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    content.classList.add('opacity-100', 'mt-2');
+                    icon.style.transform = 'rotate(180deg)';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
