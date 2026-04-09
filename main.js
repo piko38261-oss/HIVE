@@ -28,7 +28,6 @@ let amIInVoice = false;
 let remoteAudioTracks = {}; let remoteVideoTracks = {}; 
 let userVolumes = JSON.parse(localStorage.getItem('dosh_volumes')) || {};
 
-// 🌟 ตัวแปรสำหรับเกมทายภาพ (ที่ผมเผลอลบไป!) และคลังวิดีโอ
 let currentDrawGame = { isActive: false, drawerId: null, drawerName: "", word: "" };
 const activeVideos = new Map(); 
 
@@ -196,6 +195,11 @@ window.switchChannel = (view, channelId, channelName) => {
         if(voiceTitle) voiceTitle.textContent = channelName; 
         renderUsersUI(); 
         updateVoiceUI(); 
+    } else if (view === 'game-draw') {
+        // 🌟 V36.1: กำหนดให้ activeChannel เป็น 'game-draw' แบบมีขีดกลาง เพื่อให้ตรงกับแชทเกม
+        activeChannel = 'game-draw';
+        unreadCounts[activeChannel] = 0; 
+        renderMessages();
     }
     
     renderChannelsUI(); 
@@ -215,7 +219,6 @@ window.switchChannel = (view, channelId, channelName) => {
     if (view === 'game-draw') { setTimeout(initGameCanvasSize, 100); }
     if (view === 'whiteboard') setTimeout(initCanvasSize, 100); 
 
-    // 🌟 จัดเรียงวิดีโอใหม่ทุกครั้งที่สลับหน้าต่าง
     if(typeof window.renderAllVideos === 'function') window.renderAllVideos();
 };
 
@@ -724,7 +727,8 @@ function scrollToBottom(containerId) {
 let isInitialLoad = true;
 onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => { 
     allMessages = []; snapshot.forEach((docSnap) => { allMessages.push({ id: docSnap.id, ...docSnap.data() }); }); renderMessages(); 
-    if (activeChannel === 'game_draw') scrollToBottom('game-chat-container'); else scrollToBottom('chat-container');
+    // 🌟 V36.1: แชทเกมใช้รหัส `game-draw`
+    if (activeChannel === 'game-draw') scrollToBottom('game-chat-container'); else scrollToBottom('chat-container');
     if (!isInitialLoad) { 
         snapshot.docChanges().forEach((change) => { 
             if (change.type === "added") { 
@@ -743,7 +747,8 @@ onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snap
 window.toggleReaction = async (msgId, emoji) => { if (!currentUserId) return; const msgRef = doc(db, "messages", msgId); const msgDoc = await getDoc(msgRef); if (!msgDoc.exists()) return; const data = msgDoc.data(); let reactions = data.reactions || {}; let usersReacted = reactions[emoji] || []; if (usersReacted.includes(currentUserId)) { usersReacted = usersReacted.filter(id => id !== currentUserId); } else { usersReacted.push(currentUserId); } if (usersReacted.length === 0) { delete reactions[emoji]; } else { reactions[emoji] = usersReacted; } await updateDoc(msgRef, { reactions: reactions }); };
 
 function renderMessages() {
-    let chatContainer = (activeChannel === 'game_draw') ? document.getElementById('game-chat-container') : document.getElementById('chat-container');
+    // 🌟 V36.1: แชทเกมใช้รหัส `game-draw`
+    let chatContainer = (activeChannel === 'game-draw') ? document.getElementById('game-chat-container') : document.getElementById('chat-container');
     if (!chatContainer) return;
     chatContainer.innerHTML = ''; const filteredMessages = allMessages.filter(msg => msg.channel === activeChannel); let lastSender = null; 
     
@@ -838,7 +843,8 @@ async function sendAnyMessage(inputEl, channelStr) {
     if(cmdMenu) cmdMenu.classList.add('hidden'); 
     if(mentionPopup) mentionPopup.classList.add('hidden');
     
-    if(txt.startsWith('/') && channelStr !== 'game_draw') {
+    // 🌟 V36.1: แชทเกมใช้รหัส `game-draw`
+    if(txt.startsWith('/') && channelStr !== 'game-draw') {
         let botReply = "";
         if(txt === '/roll') { const roll = Math.floor(Math.random() * 100) + 1; botReply = `🎲 **${currentUsername}** ทอยลูกเต๋าได้แต้ม **${roll}** (จาก 100)`; } 
         else if(txt === '/coin') { const coin = Math.random() < 0.5 ? "หัว" : "ก้อย"; botReply = `🪙 **${currentUsername}** โยนเหรียญออก **${coin}**`; } 
@@ -848,14 +854,16 @@ async function sendAnyMessage(inputEl, channelStr) {
             const randomWord = await getWordFromAI("draw");
             if(gameCanvas && gameCtx) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
             await setDoc(doc(db, "appData", "gameWhiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
-            await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: "game_draw", timestamp: serverTimestamp() });
+            // 🌟 V36.1: แชทเกมใช้รหัส `game-draw`
+            await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: "game-draw", timestamp: serverTimestamp() });
             botReply = `🎨 **${currentUsername}** ท้าประลองเกมทายภาพ!\nรีบสลับหน้าจอไปดูที่แท็บ **"🎮 ทายคำจากภาพ"** แล้วพิมพ์คำตอบเลย! (AI เป็นคนคิดคำนะรอบนี้)`; 
         } else { showToast("ไม่รู้จักคำสั่งนี้", "error"); return; }
         await addDoc(collection(db, "messages"), { text: botReply, senderName: "🤖 System Bot", channel: channelStr, timestamp: serverTimestamp() }); return;
     }
     
     let isCorrect = false; let isAlmost = false;
-    if (channelStr === 'game_draw' && currentDrawGame && currentDrawGame.isActive && currentDrawGame.drawerId !== currentUserId) {
+    // 🌟 V36.1: แชทเกมใช้รหัส `game-draw`
+    if (channelStr === 'game-draw' && currentDrawGame && currentDrawGame.isActive && currentDrawGame.drawerId !== currentUserId) {
         const guess = txt.toLowerCase(); 
         const answer = currentDrawGame.word ? currentDrawGame.word.toLowerCase() : "";
         if (guess === answer) { isCorrect = true; } 
@@ -880,8 +888,9 @@ if(btnSend) btnSend.onclick = () => { if(chatInput) sendAnyMessage(chatInput, ac
 if(chatInput) chatInput.onkeypress = (e) => { if (e.key === 'Enter' && chatInput) sendAnyMessage(chatInput, activeChannel); }; 
 
 const btnGameSend = document.getElementById('game-send-btn');
-if(btnGameSend) btnGameSend.onclick = () => { if(gameChatInput) sendAnyMessage(gameChatInput, 'game_draw'); }; 
-if(gameChatInput) gameChatInput.onkeypress = (e) => { if (e.key === 'Enter' && gameChatInput) sendAnyMessage(gameChatInput, 'game_draw'); }; 
+// 🌟 V36.1: แชทเกมใช้รหัส `game-draw`
+if(btnGameSend) btnGameSend.onclick = () => { if(gameChatInput) sendAnyMessage(gameChatInput, 'game-draw'); }; 
+if(gameChatInput) gameChatInput.onkeypress = (e) => { if (e.key === 'Enter' && gameChatInput) sendAnyMessage(gameChatInput, 'game-draw'); }; 
 
 const btnAttach = document.getElementById('attach-btn');
 const fileInput = document.getElementById('file-input');
@@ -943,8 +952,9 @@ if(btnStartGameDraw) {
         if(gameCtx && gameCanvas) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); 
         
         await setDoc(doc(db, "appData", "gameWhiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
-        await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: "game_draw", timestamp: serverTimestamp() });
-        await addDoc(collection(db, "messages"), { text: `🎨 **${currentUsername}** เริ่มเกมทายภาพแล้ว! (คำศัพท์รอบนี้สุ่มโดย AI 🧠)`, senderName: "🤖 System Bot", channel: "game_draw", timestamp: serverTimestamp() });
+        // 🌟 V36.1: แชทเกมใช้รหัส `game-draw`
+        await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: "game-draw", timestamp: serverTimestamp() });
+        await addDoc(collection(db, "messages"), { text: `🎨 **${currentUsername}** เริ่มเกมทายภาพแล้ว! (คำศัพท์รอบนี้สุ่มโดย AI 🧠)`, senderName: "🤖 System Bot", channel: "game-draw", timestamp: serverTimestamp() });
         
         btnStartGameDraw.innerHTML = originalText; 
         btnStartGameDraw.disabled = false;
