@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hive-pwa-cache-v27';
+const CACHE_NAME = 'hive-pwa-cache-v35';
 
 const urlsToCache = [
   './',
@@ -12,7 +12,7 @@ const urlsToCache = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-        console.log('เปิดใช้งาน Cache HIVE V15 สำเร็จ');
+        console.log('✅ เปิดใช้งาน Cache HIVE V35 สำเร็จ');
         return cache.addAll(urlsToCache);
     })
   );
