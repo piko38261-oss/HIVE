@@ -28,7 +28,8 @@ let amIInVoice = false;
 let remoteAudioTracks = {}; let remoteVideoTracks = {}; 
 let userVolumes = JSON.parse(localStorage.getItem('dosh_volumes')) || {};
 
-// 🌟 V35: คลังเก็บวิดีโอที่กำลังเปิดกล้องอยู่
+// 🌟 ตัวแปรสำหรับเกมทายภาพ (ที่ผมเผลอลบไป!) และคลังวิดีโอ
+let currentDrawGame = { isActive: false, drawerId: null, drawerName: "", word: "" };
 const activeVideos = new Map(); 
 
 const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); sfxMsg.volume = 0.5;
@@ -214,8 +215,8 @@ window.switchChannel = (view, channelId, channelName) => {
     if (view === 'game-draw') { setTimeout(initGameCanvasSize, 100); }
     if (view === 'whiteboard') setTimeout(initCanvasSize, 100); 
 
-    // 🌟 ย้ายวิดีโออัตโนมัติตามหน้าจอที่เปิด
-    renderAllVideos();
+    // 🌟 จัดเรียงวิดีโอใหม่ทุกครั้งที่สลับหน้าต่าง
+    if(typeof window.renderAllVideos === 'function') window.renderAllVideos();
 };
 
 window.openChannelModal = (type, editDocId = null, currentName = "") => {
@@ -845,18 +846,22 @@ async function sendAnyMessage(inputEl, channelStr) {
         else if(txt === '/draw') { 
             await addDoc(collection(db, "messages"), { text: `⏳ บอทกำลังปลุก AI ให้หาคำศัพท์ยากๆ แป๊บนึงนะ...`, senderName: "🤖 System Bot", channel: activeChannel, timestamp: serverTimestamp() });
             const randomWord = await getWordFromAI("draw");
-            if(canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-            await setDoc(doc(db, "appData", "whiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
-            await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: activeChannel, timestamp: serverTimestamp() });
+            if(gameCanvas && gameCtx) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
+            await setDoc(doc(db, "appData", "gameWhiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
+            await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: "game_draw", timestamp: serverTimestamp() });
             botReply = `🎨 **${currentUsername}** ท้าประลองเกมทายภาพ!\nรีบสลับหน้าจอไปดูที่แท็บ **"🎮 ทายคำจากภาพ"** แล้วพิมพ์คำตอบเลย! (AI เป็นคนคิดคำนะรอบนี้)`; 
         } else { showToast("ไม่รู้จักคำสั่งนี้", "error"); return; }
         await addDoc(collection(db, "messages"), { text: botReply, senderName: "🤖 System Bot", channel: channelStr, timestamp: serverTimestamp() }); return;
     }
+    
     let isCorrect = false; let isAlmost = false;
-    if (channelStr === 'game_draw' && currentDrawGame.isActive && currentDrawGame.drawerId !== currentUserId) {
-        const guess = txt.toLowerCase(); const answer = currentDrawGame.word.toLowerCase();
-        if (guess === answer) { isCorrect = true; } else if (guess !== answer && answer.length >= 3 && (answer.includes(guess) && answer.length - guess.length <= 2)) { isAlmost = true; }
+    if (channelStr === 'game_draw' && currentDrawGame && currentDrawGame.isActive && currentDrawGame.drawerId !== currentUserId) {
+        const guess = txt.toLowerCase(); 
+        const answer = currentDrawGame.word ? currentDrawGame.word.toLowerCase() : "";
+        if (guess === answer) { isCorrect = true; } 
+        else if (guess !== answer && answer.length >= 3 && (answer.includes(guess) && answer.length - guess.length <= 2)) { isAlmost = true; }
     }
+    
     await addDoc(collection(db, "messages"), { text: txt, senderName: currentUsername, channel: channelStr, timestamp: serverTimestamp(), reactions: {}, replyTo: replyingTo }); 
     replyingTo = null; 
     const rBanner = document.getElementById('reply-banner');
@@ -865,7 +870,9 @@ async function sendAnyMessage(inputEl, channelStr) {
     if(isCorrect) {
         await setDoc(doc(db, "appData", "drawGame"), { isActive: false }, { merge: true });
         await addDoc(collection(db, "messages"), { text: `🎉 ปรบมือ! **${currentUsername}** ทายถูกเป๊ะ!\nคำตอบคือ **"${currentDrawGame.word}"** เก่งมาก! 🏆`, senderName: "🤖 System Bot", channel: channelStr, timestamp: serverTimestamp() });
-    } else if (isAlmost) { await addDoc(collection(db, "messages"), { text: `👀 **${currentUsername}** เกือบถูกแล้ว! พิมพ์ตกไปนิดเดียว พยายามอีกนิด!`, senderName: "🤖 System Bot", channel: channelStr, timestamp: serverTimestamp() }); }
+    } else if (isAlmost) { 
+        await addDoc(collection(db, "messages"), { text: `👀 **${currentUsername}** เกือบถูกแล้ว! พิมพ์ตกไปนิดเดียว พยายามอีกนิด!`, senderName: "🤖 System Bot", channel: channelStr, timestamp: serverTimestamp() }); 
+    }
 }
 
 const btnSend = document.getElementById('send-btn');
@@ -902,6 +909,50 @@ if(fileInput) {
 }
 
 // ==========================================
+// 🎨 10.5 เกมทายภาพ (Draw & Guess) - คืนชีพแล้ว!
+// ==========================================
+onSnapshot(doc(db, "appData", "drawGame"), (d) => {
+    if(d.exists()) {
+        currentDrawGame = d.data();
+        const display = document.getElementById('game-word-display');
+        const toolbar = document.getElementById('game-toolbar');
+        if(currentDrawGame.isActive) {
+            if(currentDrawGame.drawerId === currentUserId) { 
+                if(display) display.innerHTML = `🎨 คำปริศนาของคุณคือ: <span class="text-yellow-400 ml-2 font-bold tracking-wider">${currentDrawGame.word}</span>`; 
+                if(toolbar) toolbar.classList.remove('hidden'); 
+            } else { 
+                let hiddenWord = currentDrawGame.word ? currentDrawGame.word.replace(/./g, '_ ') : ''; 
+                if(display) display.innerHTML = `🤔 <span class="text-yellow-400 mr-2 font-bold">${currentDrawGame.drawerName}</span> กำลังวาด... | <span class="tracking-widest ml-2">${hiddenWord}</span>`; 
+                if(toolbar) toolbar.classList.add('hidden'); 
+            }
+        } else { 
+            if(display) display.innerHTML = `<i class="ph-fill ph-check-circle mr-2 text-[#23a559]"></i> เกมจบแล้ว รอเริ่มรอบใหม่`; 
+            if(toolbar) toolbar.classList.add('hidden'); 
+        }
+    }
+});
+
+const btnStartGameDraw = document.getElementById('start-game-btn');
+if(btnStartGameDraw) {
+    btnStartGameDraw.onclick = async () => {
+        const originalText = btnStartGameDraw.innerHTML; 
+        btnStartGameDraw.innerHTML = `<i class="ph-fill ph-spinner animate-spin mr-1.5 text-[16px]"></i> AI กำลังคิดคำ...`; 
+        btnStartGameDraw.disabled = true;
+        
+        const randomWord = await getWordFromAI("draw"); 
+        if(gameCtx && gameCanvas) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); 
+        
+        await setDoc(doc(db, "appData", "gameWhiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
+        await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: "game_draw", timestamp: serverTimestamp() });
+        await addDoc(collection(db, "messages"), { text: `🎨 **${currentUsername}** เริ่มเกมทายภาพแล้ว! (คำศัพท์รอบนี้สุ่มโดย AI 🧠)`, senderName: "🤖 System Bot", channel: "game_draw", timestamp: serverTimestamp() });
+        
+        btnStartGameDraw.innerHTML = originalText; 
+        btnStartGameDraw.disabled = false;
+    };
+}
+
+
+// ==========================================
 // 🎨 11. ระบบกระดานวาดรูป
 // ==========================================
 let isDrawing = false; let isGameDrawing = false; let isEraserMode = false; let wbSyncTimer = null; let gameWbSyncTimer = null;
@@ -922,7 +973,7 @@ function initGameCanvasSize() {
         }
     }
 }
-window.addEventListener('resize', () => { initCanvasSize(); initGameCanvasSize(); renderAllVideos(); }); 
+window.addEventListener('resize', () => { initCanvasSize(); initGameCanvasSize(); if(typeof window.renderAllVideos === 'function') window.renderAllVideos(); }); 
 
 function getMousePos(e, c) { const r = c.getBoundingClientRect(); const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY; return { x: x - r.left, y: y - r.top }; } 
 function startDrawing(e) { if(e.type === 'touchstart') e.preventDefault(); isDrawing = true; draw(e); } 
@@ -1105,10 +1156,8 @@ if(spyEndBtn) {
 }
 
 // ==========================================
-// 🎙️ 12. ระบบเสียง & วิดีโอ (🌟 V35: Video Rearranger)
+// 🎙️ 12. ระบบเสียง & วิดีโออัจฉริยะ (Video Rearranger)
 // ==========================================
-
-// ฟังก์ชันจัดระเบียบวิดีโอ (แยกมือถือ vs คอม)
 window.renderAllVideos = () => {
     const isMobile = window.innerWidth < 768;
     const voiceView = document.getElementById('view-voice');
@@ -1119,10 +1168,8 @@ window.renderAllVideos = () => {
     
     if(!centerStage || !sidebarGrid) return;
 
-    // เลือกจุดหมาย: ถ้าเป็นมือถือ หรือ กำลังเปิดหน้าห้องเสียง ให้เอาไว้ตรงกลาง
     let targetContainer = isMobile ? centerStage : (isVoiceViewActive ? centerStage : sidebarGrid);
 
-    // ย้ายวิดีโอทั้งหมดไปจุดหมาย
     activeVideos.forEach((videoData, uid) => {
         let camCard = document.getElementById(`cam-card-${uid}`);
         if (!camCard) {
@@ -1131,7 +1178,6 @@ window.renderAllVideos = () => {
             camCard.innerHTML = `<div id="player-${uid}" class="absolute inset-0 w-full h-full bg-black"></div><div class="absolute bottom-1 left-1 bg-black/70 px-2 py-0.5 rounded text-[10px] font-bold text-white z-10"><i class="ph-fill ph-video-camera text-[#23a559] mr-1"></i>${videoData.username}</div>`;
         }
 
-        // จัดสไตล์ตามจุดหมาย
         if (targetContainer === centerStage) {
             camCard.className = "w-[160px] sm:w-[240px] aspect-video bg-black rounded-xl overflow-hidden relative shadow-lg border border-[#35373c] animate-[fadeIn_0.3s_ease-out] flex-shrink-0";
         } else {
@@ -1140,21 +1186,16 @@ window.renderAllVideos = () => {
 
         if (camCard.parentNode !== targetContainer) {
             targetContainer.appendChild(camCard);
-            // สั่งให้วิดีโอเล่นหลังจากย้ายมาลงใน DOM แล้ว
             if(videoData.track) videoData.track.play(`player-${uid}`, { fit: "cover" });
         }
     });
 
-    // ซ่อน/โชว์ คอนเทนเนอร์ตรงกลาง
     if (centerStage.children.length > 0) {
-        centerStage.classList.remove('hidden');
-        centerStage.classList.add('flex');
+        centerStage.classList.remove('hidden'); centerStage.classList.add('flex');
     } else {
-        centerStage.classList.add('hidden');
-        centerStage.classList.remove('flex');
+        centerStage.classList.add('hidden'); centerStage.classList.remove('flex');
     }
 
-    // ซ่อน/โชว์ คอนเทนเนอร์แถบขวา (Sidebar)
     const sidebarLiveContainer = document.getElementById('sidebar-live-container');
     if(sidebarLiveContainer) {
         if (sidebarGrid.children.length > 0) {
@@ -1224,9 +1265,8 @@ async function joinVoice() {
                         let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; 
                         ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); 
                     } else {
-                        // 🌟 V35: จัดการวิดีโอผ่านระบบอัจฉริยะ
                         activeVideos.set(u.uid, { track: u.videoTrack, username: matchedUserName });
-                        renderAllVideos();
+                        window.renderAllVideos();
                     }
                 }
             } 
@@ -1242,10 +1282,9 @@ async function joinVoice() {
                     if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
                 }
                 
-                // 🌟 V35: จัดการวิดีโอผ่านระบบอัจฉริยะ
                 activeVideos.delete(u.uid);
                 const camCard = document.getElementById(`cam-card-${u.uid}`); if (camCard) camCard.remove();
-                renderAllVideos();
+                window.renderAllVideos();
             } 
         }); 
         
@@ -1303,9 +1342,8 @@ if(camBtn) {
                 camBtn.classList.remove('bg-[#2b2d31]'); camBtn.classList.add('bg-[#23a559]', 'text-white');
                 if(camIcon) camIcon.className = "ph-fill ph-video-camera text-[20px] md:text-[24px]";
                 
-                // 🌟 V35: นำกล้องตัวเองเข้าระบบอัจฉริยะ
                 activeVideos.set('local', { track: localTracks.videoTrack, username: `คุณ (${currentUsername})` });
-                renderAllVideos();
+                window.renderAllVideos();
 
                 showToast("เปิดกล้องแล้ว!", "success");
             } catch(e) { console.log(e); showToast("ไม่สามารถเข้าถึงกล้องได้ หรือไม่มีกล้องครับ", "error"); }
@@ -1321,7 +1359,7 @@ async function stopCamera() {
     
     activeVideos.delete('local');
     const camCard = document.getElementById(`cam-card-local`); if (camCard) camCard.remove();
-    renderAllVideos();
+    window.renderAllVideos();
 }
 
 async function stopScreenShare() { 
@@ -1378,9 +1416,9 @@ async function leaveVoice(isSwitching = false) {
     amIInVoice = false; 
     if(!isSwitching) updateVoiceUI(); 
     
-    activeVideos.clear(); // ล้างวิดีโอตอนกดออก
+    activeVideos.clear();
     const centerStage = document.getElementById('camera-stage'); if(centerStage) centerStage.innerHTML = '';
-    renderAllVideos(); stopBackgroundAudioMode();
+    window.renderAllVideos(); stopBackgroundAudioMode();
 }
 
 if(leaveBtn) leaveBtn.onclick = () => leaveVoice(false);
