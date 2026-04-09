@@ -32,7 +32,34 @@ const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-
 const sfxPing = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); sfxPing.volume = 0.8;
 
 // ==========================================
-// 🎯 3. ฟังก์ชันช่วยเหลือ & UI
+// 🎯 3. ประกาศตัวแปร DOM (UI Elements)
+// ==========================================
+const joinBtn = document.getElementById('join-voice-btn');
+const leaveBtn = document.getElementById('leave-voice-btn'); 
+const muteBtn = document.getElementById('mute-btn'); 
+const ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
+const camBtn = document.getElementById('camera-btn'), camIcon = document.getElementById('camera-icon');
+const bottomMicBtn = document.getElementById('bottom-mic-btn'); 
+const bottomMicIcon = document.getElementById('bottom-mic-icon');
+const bottomLeaveBtn = document.getElementById('bottom-leave-btn');
+const bottomDeafenBtn = document.getElementById('bottom-deafen-btn');
+const bottomDeafenIcon = document.getElementById('bottom-deafen-icon');
+
+const canvas = document.getElementById('whiteboard-canvas');
+const ctx = canvas ? canvas.getContext('2d') : null;
+const canvasContainer = document.getElementById('canvas-container');
+const wbStatus = document.getElementById('wb-status'); 
+
+const gameCanvas = document.getElementById('game-whiteboard-canvas');
+const gameCtx = gameCanvas ? gameCanvas.getContext('2d') : null;
+const gameCanvasContainer = document.getElementById('game-canvas-container');
+
+const chatInput = document.getElementById('chat-input');
+const gameChatInput = document.getElementById('game-chat-input');
+const cmdMenu = document.getElementById('slash-command-menu');
+
+// ==========================================
+// 🛠️ 4. ฟังก์ชันช่วยเหลือทั่วไป
 // ==========================================
 window.showToast = (msg, type = "success") => {
     const toastContainer = document.getElementById("toast-container");
@@ -48,7 +75,7 @@ window.showToast = (msg, type = "success") => {
 const lightbox = document.createElement('div'); lightbox.className = 'fixed inset-0 bg-black/95 z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 cursor-zoom-out p-4'; lightbox.innerHTML = `<img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl scale-95 transition-transform duration-300"><button class="absolute top-6 right-6 text-white hover:text-gray-300 transition"><i class="ph ph-x text-[32px]"></i></button>`; document.body.appendChild(lightbox);
 window.openLightbox = (url) => { document.getElementById('lightbox-img').src = url; lightbox.classList.remove('hidden'); void lightbox.offsetWidth; lightbox.classList.remove('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-95', 'scale-100'); };
 lightbox.onclick = () => { lightbox.classList.add('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-100', 'scale-95'); setTimeout(() => lightbox.classList.add('hidden'), 300); };
-window.sendWave = () => { const input = document.getElementById('chat-input'); if(input) { input.value = '👋 โบกมือทักทาย!'; const sendBtn = document.getElementById('send-btn'); if(sendBtn) sendBtn.click(); }};
+window.sendWave = () => { if(chatInput) { chatInput.value = '👋 โบกมือทักทาย!'; const sendBtn = document.getElementById('send-btn'); if(sendBtn) sendBtn.click(); }};
 
 let bgAudio = null; let wakeLock = null;
 async function startBackgroundAudioMode() {
@@ -71,7 +98,7 @@ async function getWordFromAI(gameType = "draw") {
 }
 
 // ==========================================
-// 📁 4. ระบบจัดการหมวดหมู่ & สลับหน้าจอ
+// 📁 5. ระบบจัดการหมวดหมู่ & สลับหน้าจอ
 // ==========================================
 window.toggleCategory = (iconId, containerId) => {
     const icon = document.getElementById(iconId);
@@ -912,7 +939,7 @@ function stopDrawing() {
 
 if(canvas) {
     canvas.onmousedown = startDrawing; canvas.onmousemove = draw; canvas.onmouseup = canvas.onmouseout = stopDrawing; 
-    canvas.addEventListener('touchstart', startDrawing, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchend', stopDrawing); 
+    canvas.addEventListener('touchstart', startDrawing, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchmove', function(e){ if(isDrawing) e.preventDefault(); }, {passive: false}); canvas.addEventListener('touchend', stopDrawing); 
 }
 
 const btnWbClear = document.getElementById('wb-clear');
@@ -1072,7 +1099,7 @@ if(spyEndBtn) {
 }
 
 // ==========================================
-// 🎙️ 12. ระบบเสียง (🌟 V33: Room Switcher)
+// 🎙️ 12. ระบบเสียง (🌟 V34: แก้ไขระบบไมค์และสลับห้อง)
 // ==========================================
 function updateSidebarLive() {
     const container = document.getElementById('sidebar-live-container');
@@ -1110,8 +1137,9 @@ function updateVoiceUI() {
 
 if(joinBtn) {
     joinBtn.onclick = async () => {
-        if (amIInVoice && connectedVoiceChannel !== viewedVoiceChannel) {
-            await leaveVoice(true); 
+        if (amIInVoice) {
+            if (connectedVoiceChannel === viewedVoiceChannel) return; // อยู่ห้องนี้อยู่แล้ว
+            await leaveVoice(true); // ทิ้งห้องเก่าก่อนย้าย
         }
         await joinVoice(); 
     };
@@ -1175,16 +1203,19 @@ async function joinVoice() {
         connectedVoiceChannel = viewedVoiceChannel; 
         await rtcClient.join(AGORA_APP_ID, connectedVoiceChannel, null, myNumericUid); 
         
-        let micConnected = false;
+        // ขออนุญาตใช้ไมค์ก่อน
         try {
             localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack({ AEC: true, ANS: true, AGC: true }); 
             await rtcClient.publish(localTracks.audioTrack); 
-            micConnected = true;
+            // ซิงค์สถานะไมค์ล่าสุด
             await localTracks.audioTrack.setMuted(isMuted);
-        } catch (micErr) { console.warn("ไม่สามารถเข้าถึงไมค์ได้", micErr); }
+        } catch (micErr) { 
+            console.warn("ไม่สามารถเข้าถึงไมค์ได้", micErr); 
+            isMuted = true; 
+            showToast("เข้าร่วมแบบ 'ฟังอย่างเดียว' (เบราว์เซอร์บล็อกไมค์ / ไม่พบไมค์)", "info");
+        }
         
-        if (!micConnected) { isMuted = true; showToast("เข้าร่วมแบบ 'ฟังอย่างเดียว' (เบราว์เซอร์บล็อกไมค์ / ไม่พบไมค์)", "info"); }
-        
+        // อัปเดต UI ของไมค์ให้ตรงกับสถานะ
         const muteIcon = document.getElementById('mute-icon'); 
         if (isMuted) {
             if(bottomMicIcon) bottomMicIcon.className = "ph-fill ph-microphone-slash text-[18px] text-[#da373c]";
@@ -1204,8 +1235,9 @@ async function joinVoice() {
         startBackgroundAudioMode(); 
         
     } catch (err) { 
-        console.error(err); localStorage.removeItem('dosh_active_voice'); 
-        showToast("เชื่อมต่อห้องเสียงไม่สำเร็จ", "error"); 
+        console.error("Join Voice Error:", err); 
+        localStorage.removeItem('dosh_active_voice'); 
+        showToast("เชื่อมต่อห้องเสียงไม่สำเร็จ กรุณาลองใหม่", "error"); 
         if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, voiceChannel: null, agoraUid: null }); }
         amIInVoice = false; updateVoiceUI();
     } 
@@ -1330,9 +1362,6 @@ async function toggleMute() {
 }
 if(muteBtn) muteBtn.onclick = toggleMute;
 if(bottomMicBtn) bottomMicBtn.onclick = toggleMute;
-
-const bottomDeafenBtn = document.getElementById('bottom-deafen-btn');
-const bottomDeafenIcon = document.getElementById('bottom-deafen-icon');
 
 function toggleDeafen() {
     isDeafened = !isDeafened;
