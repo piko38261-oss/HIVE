@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hive-pwa-cache-v36';
+const CACHE_NAME = 'hive-pwa-cache-v31-stable';
 
 const urlsToCache = [
   './',
@@ -12,7 +12,7 @@ const urlsToCache = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-        console.log('✅ เปิดใช้งาน Cache HIVE V35 สำเร็จ');
+        console.log('✅ เปิดใช้งาน Cache HIVE V31 (Stable) สำเร็จ');
         return cache.addAll(urlsToCache);
     })
   );
@@ -36,7 +36,6 @@ self.addEventListener('activate', event => {
   );
 });
 
-// 🌟 ดักจับการกดแจ้งเตือนบนมือถือ
 self.addEventListener('notificationclick', event => {
   if (event.action === 'leave_call') {
     event.notification.close(); 
