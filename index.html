@@ -100,13 +100,14 @@
         import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // รหัสเชื่อมต่อ Firebase ของทีมมัลติมีเดียเราครับ!
-        const firebaseConfig = { 
-            apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I", 
-            authDomain: "apoko-hq.firebaseapp.com", 
-            projectId: "apoko-hq", 
-            storageBucket: "apoko-hq.firebasestorage.app", 
-            messagingSenderId: "122632343459", 
-            appId: "1:122632343459:web:c225aaff8464f1b0c35416" 
+        const firebaseConfig = {
+          apiKey: "AIzaSyDRArTdFcrI7WuV0Bj72mpvnl3uiaRbMq0",
+          authDomain: "hive-workspace-f373c.firebaseapp.com",
+          projectId: "hive-workspace-f373c",
+          storageBucket: "hive-workspace-f373c.firebasestorage.app",
+          messagingSenderId: "724551925164",
+          appId: "1:724551925164:web:4f355224d17e2b1e414e09",
+          measurementId: "G-JE6XBR241G"
         };
         
         const app = initializeApp(firebaseConfig);
@@ -126,7 +127,8 @@
 
         // ถ้ามีคนล็อกอินค้างไว้ ให้เด้งเข้าแอปเลยไม่ต้องล็อกอินซ้ำ
         onAuthStateChanged(auth, (user) => {
-            if (user) { window.location.href = "app.html"; }
+            // ปิดการเด้งอัตโนมัติ เพื่อให้ระบบสร้างฐานข้อมูลเสร็จก่อน
+            // if (user) { window.location.href = "app.html"; }
         });
 
         // ระบบสลับแท็บ Login / Register
@@ -165,6 +167,7 @@
             try {
                 await signInWithEmailAndPassword(auth, email, pass);
                 showToast("เข้าสู่ระบบสำเร็จ!", "success");
+                setTimeout(() => { window.location.href = "app.html"; }, 1000);
             } catch (error) {
                 showToast("อีเมลหรือรหัสผ่านไม่ถูกต้องครับ", "error");
                 btn.innerHTML = "เข้าสู่ระบบ";
@@ -196,6 +199,7 @@
                     });
                 }
                 showToast("ล็อกอินด้วย Google สำเร็จ!", "success");
+                setTimeout(() => { window.location.href = "app.html"; }, 1000);
             } catch (error) {
                 showToast("ยกเลิกหรือเกิดข้อผิดพลาดครับ", "error");
                 btn.innerHTML = originalHTML;
@@ -229,6 +233,7 @@
                     createdAt: serverTimestamp()
                 });
                 showToast("สมัครสมาชิกสำเร็จ! ยินดีต้อนรับสู่ HIVE", "success");
+                setTimeout(() => { window.location.href = "app.html"; }, 1000);
             } catch (error) {
                 if (error.code === 'auth/email-already-in-use') {
                     showToast("อีเมลนี้ถูกใช้งานไปแล้วครับ", "error");

@@ -2,36 +2,79 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebas
 import { getAuth, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-const firebaseConfig = { apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I", authDomain: "apoko-hq.firebaseapp.com", projectId: "apoko-hq", storageBucket: "apoko-hq.firebasestorage.app", messagingSenderId: "122632343459", appId: "1:122632343459:web:c225aaff8464f1b0c35416" };
+// ==========================================
+// 🚨 1. ตั้งค่า Firebase & API ต่างๆ
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDRArTdFcrI7WuV0Bj72mpvnl3uiaRbMq0",
+  authDomain: "hive-workspace-f373c.firebaseapp.com",
+  projectId: "hive-workspace-f373c",
+  storageBucket: "hive-workspace-f373c.firebasestorage.app",
+  messagingSenderId: "724551925164",
+  appId: "1:724551925164:web:4f355224d17e2b1e414e09",
+  measurementId: "G-JE6XBR241G"
+};
 const app = initializeApp(firebaseConfig); const auth = getAuth(app); const db = getFirestore(app);
 const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a"; const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
 const GEMINI_API_KEY = "AIzaSyCifkioB2z1Ho9LAGSFBYWtV-kM4bgtzhw"; 
 
+// ==========================================
+// ⚙️ 2. ประกาศตัวแปร DOM และ Globals ไว้บนสุด (กัน Error)
+// ==========================================
 const rtcClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 let localTracks = { audioTrack: null, videoTrack: null }, screenTrack = null, screenAudioTrack = null;
-let isMuted = false, isDeafened = false, isSharingScreen = false, isVideoOn = false, myNumericUid = null, currentUserId = null, currentUsername = "Guest", activeChannel = "general", currentUserRole = "Member"; 
+let isMuted = false, isDeafened = false, isSharingScreen = false, isVideoOn = false, myNumericUid = null;
+let currentUserId = null, currentUsername = "Guest", currentUserRole = "Member"; 
 let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false, unreadCounts = { general: 0, project: 0, game_draw: 0 };
 let replyingTo = null; let messageToDelete = null;
 
+let activeChannel = "general"; 
+let connectedVoiceChannel = null; 
+let amIInVoice = false;
+let isAppInitialized = false; 
+
 let remoteAudioTracks = {}; let remoteVideoTracks = {}; 
 let userVolumes = JSON.parse(localStorage.getItem('dosh_volumes')) || {};
+let currentDrawGame = { isActive: false, drawerId: null, drawerName: "", word: "" };
 
 const sfxMsg = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'); sfxMsg.volume = 0.5;
 const sfxPing = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); sfxPing.volume = 0.8;
 
+// 🌟 ตัวแปรหน้าจอที่ต้องประกาศไว้ก่อน
+const chatInput = document.getElementById('chat-input');
+const gameChatInput = document.getElementById('game-chat-input');
+const cmdMenu = document.getElementById('slash-command-menu');
+const joinBtn = document.getElementById('join-voice-btn');
+const leaveBtn = document.getElementById('leave-voice-btn'); 
+const muteBtn = document.getElementById('mute-btn'); 
+const ssBtn = document.getElementById('screen-share-btn'), ssStage = document.getElementById('screen-share-stage');
+const camBtn = document.getElementById('camera-btn'), camIcon = document.getElementById('camera-icon');
+const bottomMicBtn = document.getElementById('bottom-mic-btn'), bottomMicIcon = document.getElementById('bottom-mic-icon');
+const bottomLeaveBtn = document.getElementById('bottom-leave-btn');
+const bottomDeafenBtn = document.getElementById('bottom-deafen-btn'), bottomDeafenIcon = document.getElementById('bottom-deafen-icon');
+const canvas = document.getElementById('whiteboard-canvas'); const ctx = canvas ? canvas.getContext('2d') : null;
+const canvasContainer = document.getElementById('canvas-container'); const wbStatus = document.getElementById('wb-status'); 
+const gameCanvas = document.getElementById('game-whiteboard-canvas'); const gameCtx = gameCanvas ? gameCanvas.getContext('2d') : null;
+const gameCanvasContainer = document.getElementById('game-canvas-container');
+
+// ==========================================
+// 🛠️ 3. ฟังก์ชันช่วยเหลือทั่วไป
+// ==========================================
 window.showToast = (msg, type = "success") => {
+    const toastContainer = document.getElementById("toast-container");
+    if (!toastContainer) return;
     const toast = document.createElement("div");
     const icon = type === "success" ? `<i class="ph-fill ph-check-circle text-[#23a559] text-[20px]"></i>` : (type === "error" ? `<i class="ph-fill ph-warning-circle text-[#da373c] text-[20px]"></i>` : `<i class="ph-fill ph-info text-[#5865F2] text-[20px]"></i>`);
     toast.className = `flex items-center gap-3 bg-[#1e1f22] border border-[#2b2d31] text-[#dbdee1] px-4 py-3 rounded-lg shadow-xl animate-[slideUpFade_0.3s_ease-out] z-[200]`;
     toast.innerHTML = `${icon} <span class="text-[13px] font-medium">${msg}</span>`;
-    document.getElementById("toast-container").appendChild(toast);
+    toastContainer.appendChild(toast);
     setTimeout(() => { toast.classList.add("opacity-0", "translate-y-4", "transition-all", "duration-300"); setTimeout(() => toast.remove(), 300); }, 3000);
 };
 
 const lightbox = document.createElement('div'); lightbox.className = 'fixed inset-0 bg-black/95 z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 cursor-zoom-out p-4'; lightbox.innerHTML = `<img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl scale-95 transition-transform duration-300"><button class="absolute top-6 right-6 text-white hover:text-gray-300 transition"><i class="ph ph-x text-[32px]"></i></button>`; document.body.appendChild(lightbox);
 window.openLightbox = (url) => { document.getElementById('lightbox-img').src = url; lightbox.classList.remove('hidden'); void lightbox.offsetWidth; lightbox.classList.remove('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-95', 'scale-100'); };
 lightbox.onclick = () => { lightbox.classList.add('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-100', 'scale-95'); setTimeout(() => lightbox.classList.add('hidden'), 300); };
-window.sendWave = () => { const input = document.getElementById('chat-input'); input.value = '👋 โบกมือทักทาย!'; document.getElementById('send-btn').click(); };
+window.sendWave = () => { if(chatInput) { chatInput.value = '👋 โบกมือทักทาย!'; const sendBtn = document.getElementById('send-btn'); if(sendBtn) sendBtn.click(); }};
 
 let bgAudio = null; let wakeLock = null;
 async function startBackgroundAudioMode() {
@@ -54,65 +97,243 @@ async function getWordFromAI(gameType = "draw") {
 }
 
 // ==========================================
-// 🌟 ฟังก์ชันจัดการวิดีโออัจฉริยะ (Video Rearranger)
+// 🛡️ 4. ระบบ Auth & เริ่มต้นโหลดข้อมูล (Auth Guard ป้องกันบั๊กจอดำ)
 // ==========================================
-const activeVideos = new Map();
-
-window.renderAllVideos = () => {
-    const isMobile = window.innerWidth < 768;
-    const voiceView = document.getElementById('view-voice');
-    const isVoiceViewActive = voiceView && !voiceView.classList.contains('hidden');
-
-    const centerStage = document.getElementById('camera-stage');
-    const sidebarGrid = document.getElementById('sidebar-video-grid');
-    if(!centerStage || !sidebarGrid) return;
-
-    let targetContainer = isMobile ? centerStage : (isVoiceViewActive ? centerStage : sidebarGrid);
-
-    activeVideos.forEach((videoData, uid) => {
-        let camCard = document.getElementById(`cam-card-${uid}`);
-        if (!camCard) {
-            camCard = document.createElement("div");
-            camCard.id = `cam-card-${uid}`;
-            camCard.innerHTML = `<div id="player-${uid}" class="absolute inset-0 w-full h-full bg-black"></div><div class="absolute bottom-1 left-1 bg-black/70 px-2 py-0.5 rounded text-[10px] font-bold text-white z-10"><i class="ph-fill ph-video-camera text-[#23a559] mr-1"></i>${videoData.username}</div>`;
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        currentUserId = user.uid; 
+        currentUsername = user.displayName || user.email.split('@')[0];
+        
+        const myNameUI = document.getElementById('current-user-name');
+        if(myNameUI) myNameUI.textContent = currentUsername;
+        const myAvatarUI = document.getElementById('current-user-avatar');
+        if(myAvatarUI) myAvatarUI.src = user.photoURL || `https://ui-avatars.com/api/?name=${currentUsername}&background=5865F2&color=fff&rounded=true&bold=true`;
+        
+        try { 
+            const userDoc = await getDoc(doc(db, "users", currentUserId)); 
+            if (userDoc.exists()) { 
+                currentUserRole = userDoc.data().role; 
+                const adminBtn = document.getElementById('admin-menu-btn'); 
+                if (currentUserRole === 'Admin' && adminBtn) adminBtn.classList.remove('hidden'); 
+            } 
+        } catch (err) {}
+        
+        // 🌟 ล็อกอินเสร็จแล้ว ถึงจะอนุญาตให้เริ่มโหลดฐานข้อมูล
+        if (!isAppInitialized) {
+            isAppInitialized = true;
+            startDatabaseListeners(); 
         }
+        
+        const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
+        if (wasInVoice) { 
+            await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>{}); 
+            setTimeout(() => { if(joinBtn) joinBtn.click(); }, 1500); 
+        } 
+        else { await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false, isTyping: false }).catch(e=>{}); }
+    } else { 
+        window.location.href = "index.html"; 
+    }
+});
 
-        if (targetContainer === centerStage) {
-            camCard.className = "w-[160px] sm:w-[240px] aspect-video bg-black rounded-xl overflow-hidden relative shadow-lg border border-[#35373c] animate-[fadeIn_0.3s_ease-out] flex-shrink-0";
-        } else {
-            camCard.className = "w-full aspect-video bg-black rounded overflow-hidden relative border border-[#35373c] mb-1 animate-[fadeIn_0.3s_ease-out]";
+const btnLogout = document.getElementById('logout-btn');
+if(btnLogout) {
+    btnLogout.addEventListener('click', async () => { 
+        if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false, isTyping: false }); } catch (e) {} } 
+        localStorage.removeItem('dosh_active_voice'); 
+        if (localTracks.audioTrack && leaveBtn) { leaveBtn.click(); } 
+        signOut(auth); 
+    });
+}
+
+// ==========================================
+// 📡 5. ระบบดึงข้อมูลจากฐานข้อมูล (รันหลังจาก Auth สำเร็จเท่านั้น)
+// ==========================================
+function startDatabaseListeners() {
+
+    // --- โหลดข้อความแชท ---
+    let isInitialLoad = true;
+    onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => { 
+        allMessages = []; snapshot.forEach((docSnap) => { allMessages.push({ id: docSnap.id, ...docSnap.data() }); }); renderMessages(); 
+        if (activeChannel === 'game_draw') scrollToBottom('game-chat-container'); else scrollToBottom('chat-container');
+        if (!isInitialLoad) { 
+            snapshot.docChanges().forEach((change) => { 
+                if (change.type === "added") { 
+                    const m = change.doc.data(); 
+                    if (m.senderName !== currentUsername) { 
+                        if (m.channel !== activeChannel) { unreadCounts[m.channel] = (unreadCounts[m.channel] || 0) + 1; updateUnreadBadge(m.channel); }
+                        const isTagged = m.text && m.text.includes(`@${currentUsername}`);
+                        if (isTagged) { sfxPing.play().catch(()=>{}); } else if (m.channel === activeChannel) { sfxMsg.play().catch(()=>{}); }
+                    } 
+                } 
+            }); 
         }
+        isInitialLoad = false;
+    });
 
-        if (camCard.parentNode !== targetContainer) {
-            targetContainer.appendChild(camCard);
-            if(videoData.track) videoData.track.play(`player-${uid}`, { fit: "cover" });
+    // --- โหลดผู้ใช้งาน ---
+    onSnapshot(collection(db, "users"), (snapshot) => {
+        const membersList = document.getElementById('members-list'), voiceActiveList = document.getElementById('voice-active-users'), voiceGrid = document.getElementById('voice-grid'), typingIndicator = document.getElementById('typing-indicator');
+        if(membersList) membersList.innerHTML = ''; if (voiceActiveList) voiceActiveList.innerHTML = ''; 
+        let usersInVoiceCount = 0, peopleTyping = []; 
+        const countEl = document.getElementById('member-count');
+        if(countEl) countEl.textContent = snapshot.size; 
+        usersData = {}; const currentVoiceCardIds = [];
+
+        snapshot.forEach((docSnap) => {
+            const u = docSnap.data(), id = docSnap.id, userName = u.username || 'Unknown';
+            const userAvatar = u.photoURL || `https://ui-avatars.com/api/?name=${userName}`;
+            const frameUrl = u.profileFrame || '';
+            
+            usersData[userName] = { avatar: userAvatar, banner: u.bannerURL || '', id: id, agoraUid: u.agoraUid, customStatus: u.customStatus || '', role: u.role, isSharingScreen: u.isSharingScreen, isVideoOn: u.isVideoOn, profileFrame: frameUrl }; 
+            if (u.isTyping && u.typingChannel === activeChannel && id !== currentUserId) peopleTyping.push(userName);
+            
+            const isOnline = u.status === 'online', statusColor = isOnline ? 'bg-[#23a559]' : 'bg-[#5c6069]';
+            const roleDisplay = u.role === 'Admin' ? `<span class="text-[#da373c] font-extrabold ml-1.5 text-[9px] bg-[#da373c]/10 px-1.5 py-0.5 rounded uppercase">Admin</span>` : '';
+            const nameStyle = u.role === 'Banned' ? 'line-through text-[#da373c]' : (isOnline ? 'text-[#d1d3d6]' : 'text-[#6d717a]');
+            const muteIconSmall = u.isMuted ? '<i class="ph-fill ph-microphone-slash text-[#da373c] ml-auto text-[14px]"></i>' : '';
+            const muteIconLarge = u.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#111214] rounded-full p-1.5 border-2 border-[#1e1f22] shadow-sm flex items-center justify-center z-30"><i class="ph-fill ph-microphone-slash text-[#da373c] text-[14px]"></i></div>' : '';
+            const screenBadgeSmall = u.isSharingScreen ? '<span class="ml-2 text-[9px] bg-[#5865F2] text-white px-1.5 py-0.5 rounded flex items-center font-bold tracking-wider"><i class="ph-fill ph-screencast mr-1"></i>LIVE</span>' : '';
+            const customStatusText = u.customStatus ? `<p class="text-[11px] text-[#23a559] truncate mt-0.5">${u.customStatus}</p>` : `<p class="text-[11px] text-[#6d717a] truncate mt-0.5">${isOnline ? 'ออนไลน์' : 'ออฟไลน์'}</p>`;
+            
+            const renderFrameHtml = frameUrl ? `<img src="${frameUrl}" class="absolute w-[135%] h-[135%] max-w-none pointer-events-none z-10 drop-shadow-md">` : '';
+
+            if (id === currentUserId) { 
+                const myStatusUI = document.getElementById('current-user-status'); 
+                if(myStatusUI) { myStatusUI.textContent = u.customStatus || 'ออนไลน์'; myStatusUI.className = u.customStatus ? 'text-[11px] text-[#23a559] truncate leading-none mt-0.5' : 'text-[11px] text-[#6d717a] truncate leading-none mt-0.5'; }
+                const inputUI = document.getElementById('settings-username-input'); 
+                if(inputUI) inputUI.value = currentUsername; 
+                const myBottomFrame = document.getElementById('current-user-frame');
+                if(myBottomFrame) { if (frameUrl) { myBottomFrame.src = frameUrl; myBottomFrame.classList.remove('hidden'); } else { myBottomFrame.classList.add('hidden'); } }
+            }
+
+            if(membersList) {
+                membersList.insertAdjacentHTML('beforeend', `
+                    <div onclick="showUserProfile('${userName}')" class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#2b2d31] transition group ${!isOnline ? 'opacity-50' : ''}">
+                        <div class="relative flex-shrink-0 flex items-center justify-center w-8 h-8"><img src="${userAvatar}" class="w-8 h-8 rounded-full object-cover opacity-90 absolute z-0">${renderFrameHtml}<div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619] z-20"></div></div>
+                        <div class="overflow-hidden flex-1"><div class="flex items-center"><p class="text-[14px] font-medium truncate ${nameStyle}">${userName} ${roleDisplay}</p></div>${customStatusText}</div>
+                    </div>`);
+            }
+                
+            if (u.inVoice && voiceActiveList) {
+                voiceActiveList.insertAdjacentHTML('beforeend', `
+                <div class="flex items-center space-x-2.5 text-[13px] text-[#80848e] py-1 px-2 hover:bg-[#2b2d31] hover:text-[#dbdee1] rounded-md transition cursor-pointer ml-2">
+                    <div class="relative flex-shrink-0 flex items-center justify-center w-6 h-6"><img src="${userAvatar}" class="w-6 h-6 rounded-full object-cover opacity-90 absolute z-0">${frameUrl ? `<img src="${frameUrl}" class="absolute w-[140%] h-[140%] max-w-none pointer-events-none z-10 drop-shadow-md">` : ''}</div>
+                    <span class="truncate font-medium flex-1 flex items-center">${userName} ${screenBadgeSmall}</span>${muteIconSmall}
+                </div>`);
+            }
+            
+            if (u.inVoice && voiceGrid) { 
+                usersInVoiceCount++; 
+                const isMe = id === currentUserId;
+                const savedVol = userVolumes[id] !== undefined ? userVolumes[id] : 100;
+                const volSlider = (!isMe && u.agoraUid) ? `<div class="w-full mt-1.5 px-3 flex items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()"><i class="ph ph-speaker-high text-[#80848e] text-[12px]"></i><input type="range" min="0" max="300" value="${savedVol}" class="w-full h-1 accent-[#5865F2] cursor-pointer" oninput="changeUserVolume('${u.agoraUid}', '${id}', this.value)" title="ปรับเสียง (สูงสุด 300%)"></div>` : `<div class="h-6"></div>`;
+
+                currentVoiceCardIds.push(`voice-card-${id}`);
+                let card = document.getElementById(`voice-card-${id}`);
+                
+                if (!card) {
+                    voiceGrid.insertAdjacentHTML('beforeend', `
+                        <div id="voice-card-${id}" class="bg-[#111214] rounded-2xl w-[140px] h-[160px] sm:w-[160px] sm:h-[180px] md:w-[190px] md:h-[210px] pt-4 pb-2 px-2 flex flex-col items-center justify-center relative shadow-xl border border-[#1e1f22] animate-[fadeIn_0.3s_ease-out] hover:border-[#35373c] transition-colors group overflow-hidden">
+                            <div class="relative mb-2 md:mb-3 flex-shrink-0 z-10 flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 transition-all duration-300"><img src="${userAvatar}" class="w-full h-full rounded-full object-cover bg-gray-900 border-4 border-[#151619] shadow-2xl absolute z-0">${frameUrl ? `<img src="${frameUrl}" class="absolute w-[130%] h-[130%] max-w-none pointer-events-none z-10 drop-shadow-xl">` : ''}<div id="mute-badge-${id}" class="z-20">${muteIconLarge}</div></div>
+                            <p class="font-bold text-[#dbdee1] text-[13px] md:text-[15px] truncate w-full text-center px-2 z-10 drop-shadow-md mt-1">${userName}</p>
+                            <div class="z-10 w-full">${volSlider}</div>
+                        </div>
+                    `);
+                } else {
+                    const muteBadge = document.getElementById(`mute-badge-${id}`);
+                    if (muteBadge) muteBadge.innerHTML = muteIconLarge;
+                }
+            }
+        });
+
+        if(voiceGrid) {
+            Array.from(voiceGrid.children).forEach(child => { if (child.id.startsWith('voice-card-') && !currentVoiceCardIds.includes(child.id)) { child.remove(); } });
+            if (usersInVoiceCount === 0) { if (!document.getElementById('empty-voice')) { voiceGrid.innerHTML = `<div id="empty-voice" class="w-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a]"><div class="w-20 h-20 md:w-24 md:h-24 bg-[#111214] rounded-full flex items-center justify-center mb-4 border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] opacity-40"></i></div><p class="font-bold text-base text-[#949ba4]">ไม่มีใครอยู่ในห้องเสียง</p></div>`; } } else { const empty = document.getElementById('empty-voice'); if (empty) empty.remove(); }
+        }
+        if (typingIndicator) { if (peopleTyping.length > 0) { typingIndicator.innerHTML = `<i class="ph-fill ph-chat-teardrop-dots mr-1.5 animate-bounce"></i> ${peopleTyping.join(', ')} กำลังพิมพ์...`; typingIndicator.classList.remove('opacity-0'); } else { typingIndicator.classList.add('opacity-0'); } }
+        renderMessages();
+    });
+
+    // --- โหลดเกม & กระดานวาดรูป ---
+    onSnapshot(doc(db, "appData", "whiteboard"), (d) => { 
+        if (d.exists() && !isDrawing) { 
+            const val = d.data(); 
+            if (val.updatedBy && val.updatedBy !== currentUsername && !currentDrawGame.isActive) { 
+                if(wbStatus) { wbStatus.innerHTML = `<i class="ph ph-pencil-simple mr-1.5"></i> ${val.updatedBy} เพิ่งอัปเดตกระดาน`; wbStatus.classList.remove('opacity-0'); setTimeout(() => { if(!currentDrawGame.isActive) wbStatus.classList.add('opacity-0'); }, 3000); }
+            } 
+            if(val.image) { 
+                const img = new Image(); img.onload = () => { if(ctx && canvas) { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); } }; img.src = val.image; 
+            } else { 
+                if(ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height); 
+            } 
+        } 
+    });
+
+    onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => { 
+        if (d.exists() && !isGameDrawing) { 
+            const val = d.data(); 
+            if(val.image) { 
+                const img = new Image(); img.onload = () => { if(gameCtx && gameCanvas) { gameCtx.globalCompositeOperation = 'source-over'; gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); gameCtx.drawImage(img, 0, 0); } }; img.src = val.image; 
+            } else { 
+                if(gameCtx && gameCanvas) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); 
+            } 
+        } 
+    });
+
+    onSnapshot(doc(db, "appData", "drawGame"), (d) => {
+        if(d.exists()) {
+            currentDrawGame = d.data();
+            const display = document.getElementById('game-word-display');
+            const toolbar = document.getElementById('game-toolbar');
+            if(currentDrawGame.isActive) {
+                if(currentDrawGame.drawerId === currentUserId) { 
+                    if(display) display.innerHTML = `🎨 คำปริศนาของคุณคือ: <span class="text-yellow-400 ml-2 font-bold tracking-wider">${currentDrawGame.word}</span>`; 
+                    if(toolbar) toolbar.classList.remove('hidden'); 
+                } else { 
+                    let hiddenWord = currentDrawGame.word ? currentDrawGame.word.replace(/./g, '_ ') : ''; 
+                    if(display) display.innerHTML = `🤔 <span class="text-yellow-400 mr-2 font-bold">${currentDrawGame.drawerName}</span> กำลังวาด... | <span class="tracking-widest ml-2">${hiddenWord}</span>`; 
+                    if(toolbar) toolbar.classList.add('hidden'); 
+                }
+            } else { 
+                if(display) display.innerHTML = `<i class="ph-fill ph-check-circle mr-2 text-[#23a559]"></i> เกมจบแล้ว รอเริ่มรอบใหม่`; 
+                if(toolbar) toolbar.classList.add('hidden'); 
+            }
         }
     });
 
-    if (centerStage.children.length > 0) {
-        centerStage.classList.remove('hidden'); centerStage.classList.add('flex');
-    } else {
-        centerStage.classList.add('hidden'); centerStage.classList.remove('flex');
-    }
+    onSnapshot(doc(db, "appData", "spyGame"), (d) => { if(d.exists()) { currentSpyData = d.data(); renderSpyGame(); } });
 
-    const sidebarLiveContainer = document.getElementById('sidebar-live-container');
-    if(sidebarLiveContainer) {
-        if (sidebarGrid.children.length > 0) {
-            sidebarLiveContainer.classList.remove('hidden'); sidebarLiveContainer.classList.add('active'); sidebarLiveContainer.style.display = 'block';
-        } else {
-            sidebarLiveContainer.classList.add('hidden'); sidebarLiveContainer.classList.remove('active'); sidebarLiveContainer.style.display = 'none';
-        }
-    }
-};
-
-window.addEventListener('resize', () => { window.renderAllVideos(); });
+    // --- โหลด Task Board ---
+    const zones = { 'todo': document.getElementById('todo'), 'in_progress': document.getElementById('in_progress'), 'done': document.getElementById('done') };
+    onSnapshot(collection(db, "tasks"), (snapshot) => { 
+        Object.values(zones).forEach(z => { if(z) z.innerHTML = ''; }); 
+        snapshot.forEach((docSnap) => { 
+            const d = docSnap.data(), id = docSnap.id, s = d.status || 'todo'; 
+            let tC = "bg-[#1e1f22] text-[#dbdee1] border border-[#35373c]"; 
+            if(d.tag && d.tag.includes('Dev')) tC = "bg-blue-500/10 text-blue-400 border border-blue-500/20"; 
+            if(d.tag && d.tag.includes('Music')) tC = "bg-pink-500/10 text-pink-400 border border-pink-500/20"; 
+            if(d.tag && d.tag.includes('Video')) tC = "bg-purple-500/10 text-purple-400 border border-purple-500/20"; 
+            if(d.tag && d.tag.includes('Design')) tC = "bg-[#23a559]/10 text-[#23a559] border border-[#23a559]/20"; 
+            const cardHTML = `<div draggable="true" data-id="${id}" class="task-card bg-[#1e1f22] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${s === 'done' ? 'border-[#4e5058] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]"><div class="flex space-x-2 mb-2.5"><span class="${tC} text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center"><i class="ph-fill ph-tag text-[10px] mr-1"></i>${d.tag}</span></div><p class="text-[13px] md:text-[14px] font-medium text-[#dbdee1] ${s === 'done' ? 'line-through text-[#80848e]' : ''} leading-snug">${d.title}</p></div>`; 
+            if (zones[s]) zones[s].insertAdjacentHTML('beforeend', cardHTML); 
+        }); 
+        document.querySelectorAll('.task-card').forEach(c => { 
+            c.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', c.getAttribute('data-id')); setTimeout(() => c.classList.add('opacity-30'), 0); }); 
+            c.addEventListener('dragend', () => c.classList.remove('opacity-30')); 
+        }); 
+    });
+} // จบฟังก์ชัน startDatabaseListeners()
 
 // ==========================================
-// 🗺️ 5. ระบบ Navigation แบบ Static
+// 🗺️ 6. ระบบ Navigation และหน้าจอต่างๆ
 // ==========================================
 const views = { chat: document.getElementById('view-chat'), board: document.getElementById('view-board'), voice: document.getElementById('view-voice'), whiteboard: document.getElementById('view-whiteboard'), 'game-draw': document.getElementById('view-game-draw'), 'game-spy': document.getElementById('view-game-spy') };
 const membersSidebar = document.getElementById('members-sidebar'), sidebar = document.getElementById('sidebar'), overlay = document.getElementById('overlay');
-document.querySelectorAll('.open-menu, #open-members-voice').forEach(btn => btn.onclick = () => { sidebar.classList.add('open'); overlay.classList.add('active'); }); document.getElementById('close-menu').onclick = () => { sidebar.classList.remove('open'); overlay.classList.remove('active'); }; document.getElementById('open-members').onclick = () => { membersSidebar.classList.remove('translate-x-full'); overlay.classList.add('active'); }; document.getElementById('close-members').onclick = () => { membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); }; overlay.onclick = () => { sidebar.classList.remove('open'); membersSidebar.classList.add('translate-x-full'); overlay.classList.remove('active'); };
+document.querySelectorAll('.open-menu, #open-members-voice').forEach(btn => btn.onclick = () => { if(sidebar) sidebar.classList.add('open'); if(overlay) overlay.classList.add('active'); }); 
+const btnCloseMenu = document.getElementById('close-menu'); if(btnCloseMenu) btnCloseMenu.onclick = () => { if(sidebar) sidebar.classList.remove('open'); if(overlay) overlay.classList.remove('active'); }; 
+const btnOpenMembers = document.getElementById('open-members'); if(btnOpenMembers) btnOpenMembers.onclick = () => { if(membersSidebar) membersSidebar.classList.remove('translate-x-full'); if(overlay) overlay.classList.add('active'); }; 
+const btnCloseMembers = document.getElementById('close-members'); if(btnCloseMembers) btnCloseMembers.onclick = () => { if(membersSidebar) membersSidebar.classList.add('translate-x-full'); if(overlay) overlay.classList.remove('active'); }; 
+if(overlay) overlay.onclick = () => { if(sidebar) sidebar.classList.remove('open'); if(membersSidebar) membersSidebar.classList.add('translate-x-full'); if(overlay) overlay.classList.remove('active'); };
 
 function updateUnreadBadge(channel) { const btn = document.querySelector(`.nav-btn[data-channel="${channel}"]`); if (!btn) return; let badge = btn.querySelector('.unread-badge'); if (unreadCounts[channel] > 0) { if (!badge) { badge = document.createElement('span'); badge.className = 'unread-badge bg-[#da373c] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-auto animate-[fadeIn_0.2s_ease-out] shadow-sm'; btn.appendChild(badge); } badge.textContent = unreadCounts[channel] > 99 ? '99+' : unreadCounts[channel]; } else { if (badge) badge.remove(); } }
 
@@ -133,7 +354,8 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
             if(membersSidebar) membersSidebar.classList.remove('hidden'); 
             if (view === 'chat') { 
                 activeChannel = btn.getAttribute('data-channel'); 
-                document.getElementById('chat-header-title').textContent = btn.getAttribute('data-name'); 
+                const headerTitle = document.getElementById('chat-header-title');
+                if(headerTitle) headerTitle.textContent = btn.getAttribute('data-name'); 
                 unreadCounts[activeChannel] = 0; updateUnreadBadge(activeChannel); renderMessages(); 
             } 
         } else { 
@@ -141,125 +363,37 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         } 
         
         if (view === 'game-draw') { activeChannel = 'game_draw'; unreadCounts[activeChannel] = 0; updateUnreadBadge(activeChannel); renderMessages(); }
-        sidebar.classList.remove('open'); overlay.classList.remove('active'); 
-        
-        window.renderAllVideos();
+        if(sidebar) sidebar.classList.remove('open'); 
+        if(overlay) overlay.classList.remove('active'); 
     }; 
 });
 
 window.showUserProfile = (userName) => { 
     const u = usersData[userName]; if(!u) return; 
-    document.getElementById('profile-card-name').textContent = userName; 
-    document.getElementById('profile-card-avatar').src = u.avatar; 
+    const pName = document.getElementById('profile-card-name'); if(pName) pName.textContent = userName; 
+    const pAvatar = document.getElementById('profile-card-avatar'); if(pAvatar) pAvatar.src = u.avatar; 
     const bannerImg = document.getElementById('profile-card-banner'); 
-    if (u.banner) { bannerImg.src = u.banner; bannerImg.classList.remove('hidden'); } else { bannerImg.classList.add('hidden'); } 
-    document.getElementById('profile-card-status').textContent = u.customStatus || 'ไม่ได้ตั้งสถานะ'; 
+    if(bannerImg) { if (u.banner) { bannerImg.src = u.banner; bannerImg.classList.remove('hidden'); } else { bannerImg.classList.add('hidden'); } }
+    const pStatus = document.getElementById('profile-card-status'); if(pStatus) pStatus.textContent = u.customStatus || 'ไม่ได้ตั้งสถานะ'; 
+    
     let badges = ''; 
     if(u.role === 'Admin') badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#da373c] mr-2 shadow-[0_0_8px_#da373c]"></div> Admin</span>'; 
     else badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#5865F2] mr-2 shadow-[0_0_8px_#5865F2]"></div> Member</span>'; 
     if (u.avatar.toLowerCase().includes('.gif') || u.banner.toLowerCase().includes('.gif') || u.profileFrame) { 
         badges += '<span class="inline-flex items-center bg-gradient-to-r from-pink-500 to-purple-500 border border-white/20 px-3 py-1.5 rounded-lg text-[12px] text-white font-bold shadow-[0_0_15px_rgba(236,72,153,0.5)] animate-pulse"><i class="ph-fill ph-sparkle mr-1.5"></i> VIP</span>'; 
     }
-    document.getElementById('profile-card-badges').innerHTML = badges; 
+    const pBadges = document.getElementById('profile-card-badges'); if(pBadges) pBadges.innerHTML = badges; 
     
     const frameImg = document.getElementById('profile-card-frame');
-    if (u.profileFrame) { frameImg.src = u.profileFrame; frameImg.classList.remove('hidden'); } else { frameImg.classList.add('hidden'); }
-    document.getElementById('profile-card-modal').classList.remove('hidden'); 
+    if(frameImg) { if (u.profileFrame) { frameImg.src = u.profileFrame; frameImg.classList.remove('hidden'); } else { frameImg.classList.add('hidden'); } }
+    const pModal = document.getElementById('profile-card-modal'); if(pModal) pModal.classList.remove('hidden'); 
 }
-document.getElementById('close-profile-card').onclick = () => document.getElementById('profile-card-modal').classList.add('hidden'); document.getElementById('profile-card-modal').addEventListener('click', (e) => { if (e.target === document.getElementById('profile-card-modal')) document.getElementById('profile-card-modal').classList.add('hidden'); });
 
-// ==========================================
-// 🟢 6. โหลดรายชื่อผู้ใช้งาน
-// ==========================================
-window.changeUserVolume = (uid, userId, vol) => {
-    if (remoteAudioTracks[uid]) { remoteAudioTracks[uid].setVolume(parseInt(vol)); }
-    userVolumes[userId] = vol; localStorage.setItem('dosh_volumes', JSON.stringify(userVolumes)); 
-};
+const btnCloseProfile = document.getElementById('close-profile-card');
+if(btnCloseProfile) btnCloseProfile.onclick = () => { const p = document.getElementById('profile-card-modal'); if(p) p.classList.add('hidden'); }; 
 
-onSnapshot(collection(db, "users"), (snapshot) => {
-    const membersList = document.getElementById('members-list'), voiceActiveList = document.getElementById('voice-active-users'), voiceGrid = document.getElementById('voice-grid'), typingIndicator = document.getElementById('typing-indicator');
-    if(membersList) membersList.innerHTML = ''; if (voiceActiveList) voiceActiveList.innerHTML = ''; 
-    let usersInVoiceCount = 0, peopleTyping = []; document.getElementById('member-count').textContent = snapshot.size; usersData = {}; 
-    const currentVoiceCardIds = [];
-
-    snapshot.forEach((docSnap) => {
-        const u = docSnap.data(), id = docSnap.id, userName = u.username || 'Unknown';
-        const userAvatar = u.photoURL || `https://ui-avatars.com/api/?name=${userName}`;
-        const frameUrl = u.profileFrame || '';
-        
-        usersData[userName] = { avatar: userAvatar, banner: u.bannerURL || '', id: id, agoraUid: u.agoraUid, customStatus: u.customStatus || '', role: u.role, isSharingScreen: u.isSharingScreen, isVideoOn: u.isVideoOn, profileFrame: frameUrl }; 
-        if (u.isTyping && u.typingChannel === activeChannel && id !== currentUserId) peopleTyping.push(userName);
-        
-        const isOnline = u.status === 'online', statusColor = isOnline ? 'bg-[#23a559]' : 'bg-[#5c6069]';
-        const roleDisplay = u.role === 'Admin' ? `<span class="text-[#da373c] font-extrabold ml-1.5 text-[9px] bg-[#da373c]/10 px-1.5 py-0.5 rounded uppercase">Admin</span>` : '';
-        const nameStyle = u.role === 'Banned' ? 'line-through text-[#da373c]' : (isOnline ? 'text-[#d1d3d6]' : 'text-[#6d717a]');
-        const muteIconSmall = u.isMuted ? '<i class="ph-fill ph-microphone-slash text-[#da373c] ml-auto text-[14px]"></i>' : '';
-        const muteIconLarge = u.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#111214] rounded-full p-1.5 border-2 border-[#1e1f22] shadow-sm flex items-center justify-center z-30"><i class="ph-fill ph-microphone-slash text-[#da373c] text-[14px]"></i></div>' : '';
-        const screenBadgeSmall = u.isSharingScreen ? '<span class="ml-2 text-[9px] bg-[#5865F2] text-white px-1.5 py-0.5 rounded flex items-center font-bold tracking-wider"><i class="ph-fill ph-screencast mr-1"></i>LIVE</span>' : '';
-        const customStatusText = u.customStatus ? `<p class="text-[11px] text-[#23a559] truncate mt-0.5">${u.customStatus}</p>` : `<p class="text-[11px] text-[#6d717a] truncate mt-0.5">${isOnline ? 'ออนไลน์' : 'ออฟไลน์'}</p>`;
-        
-        const renderFrameHtml = frameUrl ? `<img src="${frameUrl}" class="absolute w-[135%] h-[135%] max-w-none pointer-events-none z-10 drop-shadow-md">` : '';
-
-        if (id === currentUserId) { 
-            const myStatusUI = document.getElementById('current-user-status'); 
-            if(myStatusUI) { myStatusUI.textContent = u.customStatus || 'ออนไลน์'; myStatusUI.className = u.customStatus ? 'text-[11px] text-[#23a559] truncate leading-none mt-0.5' : 'text-[11px] text-[#6d717a] truncate leading-none mt-0.5'; }
-            const myNameUI = document.getElementById('current-user-name'); 
-            if(myNameUI) myNameUI.textContent = currentUsername; 
-            const inputUI = document.getElementById('settings-username-input'); 
-            if(inputUI) inputUI.value = currentUsername; 
-            const myAvatarUI = document.getElementById('current-user-avatar');
-            if(myAvatarUI) myAvatarUI.src = u.avatar;
-            const myBottomFrame = document.getElementById('current-user-frame');
-            if(myBottomFrame) { if (frameUrl) { myBottomFrame.src = frameUrl; myBottomFrame.classList.remove('hidden'); } else { myBottomFrame.classList.add('hidden'); } }
-        }
-
-        if(membersList) {
-            membersList.insertAdjacentHTML('beforeend', `
-                <div onclick="showUserProfile('${userName}')" class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#2b2d31] transition group ${!isOnline ? 'opacity-50' : ''}">
-                    <div class="relative flex-shrink-0 flex items-center justify-center w-8 h-8"><img src="${userAvatar}" class="w-8 h-8 rounded-full object-cover opacity-90 absolute z-0">${renderFrameHtml}<div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619] z-20"></div></div>
-                    <div class="overflow-hidden flex-1"><div class="flex items-center"><p class="text-[14px] font-medium truncate ${nameStyle}">${userName} ${roleDisplay}</p></div>${customStatusText}</div>
-                </div>`);
-        }
-            
-        if (u.inVoice && voiceActiveList) {
-            voiceActiveList.insertAdjacentHTML('beforeend', `
-            <div class="flex items-center space-x-2.5 text-[13px] text-[#80848e] py-1 px-2 hover:bg-[#2b2d31] hover:text-[#dbdee1] rounded-md transition cursor-pointer ml-2">
-                <div class="relative flex-shrink-0 flex items-center justify-center w-6 h-6"><img src="${userAvatar}" class="w-6 h-6 rounded-full object-cover opacity-90 absolute z-0">${frameUrl ? `<img src="${frameUrl}" class="absolute w-[140%] h-[140%] max-w-none pointer-events-none z-10 drop-shadow-md">` : ''}</div>
-                <span class="truncate font-medium flex-1 flex items-center">${userName} ${screenBadgeSmall}</span>${muteIconSmall}
-            </div>`);
-        }
-        
-        if (u.inVoice && voiceGrid) { 
-            usersInVoiceCount++; 
-            const isMe = id === currentUserId;
-            const savedVol = userVolumes[id] !== undefined ? userVolumes[id] : 100;
-            const volSlider = (!isMe && u.agoraUid) ? `<div class="w-full mt-1.5 px-3 flex items-center space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()"><i class="ph ph-speaker-high text-[#80848e] text-[12px]"></i><input type="range" min="0" max="300" value="${savedVol}" class="w-full h-1 accent-[#5865F2] cursor-pointer" oninput="changeUserVolume('${u.agoraUid}', '${id}', this.value)" title="ปรับเสียง (สูงสุด 300%)"></div>` : `<div class="h-6"></div>`;
-
-            currentVoiceCardIds.push(`voice-card-${id}`);
-            let card = document.getElementById(`voice-card-${id}`);
-            
-            if (!card) {
-                voiceGrid.insertAdjacentHTML('beforeend', `
-                    <div id="voice-card-${id}" class="bg-[#111214] rounded-2xl w-[140px] h-[160px] sm:w-[160px] sm:h-[180px] md:w-[190px] md:h-[210px] pt-4 pb-2 px-2 flex flex-col items-center justify-center relative shadow-xl border border-[#1e1f22] animate-[fadeIn_0.3s_ease-out] hover:border-[#35373c] transition-colors group overflow-hidden">
-                        <div class="relative mb-2 md:mb-3 flex-shrink-0 z-10 flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 transition-all duration-300"><img src="${userAvatar}" class="w-full h-full rounded-full object-cover bg-gray-900 border-4 border-[#151619] shadow-2xl absolute z-0">${frameUrl ? `<img src="${frameUrl}" class="absolute w-[130%] h-[130%] max-w-none pointer-events-none z-10 drop-shadow-xl">` : ''}<div id="mute-badge-${id}" class="z-20">${muteIconLarge}</div></div>
-                        <p class="font-bold text-[#dbdee1] text-[13px] md:text-[15px] truncate w-full text-center px-2 z-10 drop-shadow-md mt-1">${userName}</p>
-                        <div class="z-10 w-full">${volSlider}</div>
-                    </div>
-                `);
-            } else {
-                const muteBadge = document.getElementById(`mute-badge-${id}`);
-                if (muteBadge) muteBadge.innerHTML = muteIconLarge;
-            }
-        }
-    });
-
-    if(voiceGrid) {
-        Array.from(voiceGrid.children).forEach(child => { if (child.id.startsWith('voice-card-') && !currentVoiceCardIds.includes(child.id)) { child.remove(); } });
-        if (usersInVoiceCount === 0) { if (!document.getElementById('empty-voice')) { voiceGrid.innerHTML = `<div id="empty-voice" class="w-full flex flex-col items-center justify-center mt-20 md:mt-32 text-[#6d717a]"><div class="w-20 h-20 md:w-24 md:h-24 bg-[#111214] rounded-full flex items-center justify-center mb-4 border border-[#1e1f22]"><i class="ph ph-users-three text-[40px] opacity-40"></i></div><p class="font-bold text-base text-[#949ba4]">ไม่มีใครอยู่ในห้องเสียง</p></div>`; } } else { const empty = document.getElementById('empty-voice'); if (empty) empty.remove(); }
-    }
-    if (typingIndicator) { if (peopleTyping.length > 0) { typingIndicator.innerHTML = `<i class="ph-fill ph-chat-teardrop-dots mr-1.5 animate-bounce"></i> ${peopleTyping.join(', ')} กำลังพิมพ์...`; typingIndicator.classList.remove('opacity-0'); } else { typingIndicator.classList.add('opacity-0'); } }
-    renderMessages();
-});
+const pModalWrap = document.getElementById('profile-card-modal');
+if(pModalWrap) { pModalWrap.addEventListener('click', (e) => { if (e.target === pModalWrap) pModalWrap.classList.add('hidden'); }); }
 
 // ==========================================
 // 🎨 7. โปรไฟล์ Settings 
@@ -396,55 +530,21 @@ if(btnSaveSettings) {
 }
 
 // ==========================================
-// 🛡️ 8. ระบบ Auth
+// 💬 8. ระบบ Chat & Mentions
 // ==========================================
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        currentUserId = user.uid; currentUsername = user.displayName || user.email.split('@')[0];
-        const myNameUI = document.getElementById('current-user-name');
-        if(myNameUI) myNameUI.textContent = currentUsername;
-        const myAvatarUI = document.getElementById('current-user-avatar');
-        if(myAvatarUI) myAvatarUI.src = user.photoURL || `https://ui-avatars.com/api/?name=${currentUsername}`;
-        
-        try { const userDoc = await getDoc(doc(db, "users", currentUserId)); if (userDoc.exists()) { currentUserRole = userDoc.data().role; const adminBtn = document.getElementById('admin-menu-btn'); if (currentUserRole === 'Admin' && adminBtn) adminBtn.classList.remove('hidden'); } } catch (err) {}
-        
-        const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
-        if (wasInVoice) { 
-            await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>console.log(e)); 
-            setTimeout(() => { if(joinBtn) joinBtn.click(); }, 1500); 
-        } 
-        else { await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false, isTyping: false }).catch(e=>console.log(e)); }
-    } else { window.location.href = "index.html"; }
-});
-
-const btnLogout = document.getElementById('logout-btn');
-if(btnLogout) {
-    btnLogout.addEventListener('click', async () => { 
-        if (currentUserId) { try { await updateDoc(doc(db, "users", currentUserId), { status: 'offline', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false, isTyping: false }); } catch (e) {} } 
-        localStorage.removeItem('dosh_active_voice'); 
-        if (localTracks.audioTrack && leaveBtn) { leaveBtn.click(); } 
-        signOut(auth); 
-    });
-}
-
-// ==========================================
-// 💬 9. ระบบ Chat & Mentions
-// ==========================================
-const mentionPopup = document.createElement('div');
-mentionPopup.id = 'mention-popup';
-mentionPopup.className = 'hidden absolute bg-[#2b2d31] border border-[#1e1f22] rounded-lg shadow-2xl z-[100] w-48 max-h-40 overflow-y-auto py-1 animate-[slideUpFade_0.1s_ease-out]';
-document.body.appendChild(mentionPopup);
-let currentActiveInput = null; let mentionQuery = '';
-
 function handleMentionInput(e) {
-    const input = e.target; currentActiveInput = input;
+    const input = e.target; let currentActiveInput = input;
     const val = input.value; const cursorPos = input.selectionStart;
     const textBeforeCursor = val.substring(0, cursorPos);
     const match = textBeforeCursor.match(/@([a-zA-Z0-9_ก-๙]*)$/);
+    const mentionPopup = document.getElementById('mention-popup');
+    if(!mentionPopup) return;
     if (match) { mentionQuery = match[1].toLowerCase(); showMentionPopup(input, match[0]); } else { mentionPopup.classList.add('hidden'); }
 }
 
 function showMentionPopup(inputEl, fullMatch) {
+    const mentionPopup = document.getElementById('mention-popup');
+    if(!mentionPopup) return;
     mentionPopup.innerHTML = ''; const rect = inputEl.getBoundingClientRect();
     mentionPopup.style.left = `${rect.left}px`; mentionPopup.style.top = `${rect.top - 160}px`; 
     const matchedUsers = Object.keys(usersData).filter(name => name.toLowerCase().includes(mentionQuery));
@@ -463,9 +563,13 @@ function showMentionPopup(inputEl, fullMatch) {
         mentionPopup.appendChild(item);
     });
 }
+
 if(chatInput) chatInput.addEventListener('input', handleMentionInput); 
 if(gameChatInput) gameChatInput.addEventListener('input', handleMentionInput); 
-document.addEventListener('click', (e) => { if (!mentionPopup.contains(e.target) && e.target !== chatInput && e.target !== gameChatInput) mentionPopup.classList.add('hidden'); });
+document.addEventListener('click', (e) => { 
+    const mentionPopup = document.getElementById('mention-popup');
+    if (mentionPopup && !mentionPopup.contains(e.target) && e.target !== chatInput && e.target !== gameChatInput) mentionPopup.classList.add('hidden'); 
+});
 
 if(chatInput) {
     chatInput.addEventListener('input', () => { 
@@ -477,8 +581,11 @@ if(chatInput) {
 
 const deleteModal = document.getElementById('delete-confirm-modal'); 
 window.deleteChatMsg = (msgId) => { messageToDelete = msgId; if(deleteModal) deleteModal.classList.remove('hidden'); }; 
+
 const btnCancelDelete = document.getElementById('cancel-delete-btn');
-if(btnCancelDelete) { btnCancelDelete.onclick = () => { messageToDelete = null; if(deleteModal) deleteModal.classList.add('hidden'); }; }
+if(btnCancelDelete) {
+    btnCancelDelete.onclick = () => { messageToDelete = null; if(deleteModal) deleteModal.classList.add('hidden'); }; 
+}
 const btnConfirmDelete = document.getElementById('confirm-delete-btn');
 if(btnConfirmDelete) {
     btnConfirmDelete.onclick = async () => { 
@@ -498,7 +605,9 @@ window.setReply = (msgId, senderName, rawText) => {
     if(chatInput) chatInput.focus(); 
 }; 
 const btnCancelReply = document.getElementById('cancel-reply-btn');
-if(btnCancelReply) { btnCancelReply.onclick = () => { replyingTo = null; const rBanner = document.getElementById('reply-banner'); if(rBanner) rBanner.classList.add('hidden'); }; }
+if(btnCancelReply) {
+    btnCancelReply.onclick = () => { replyingTo = null; const rBanner = document.getElementById('reply-banner'); if(rBanner) rBanner.classList.add('hidden'); };
+}
 
 function scrollToBottom(containerId) {
     const container = document.getElementById(containerId);
@@ -506,25 +615,6 @@ function scrollToBottom(containerId) {
     if (images.length > 0) { images.forEach(img => { if (img.complete) { loadedCount++; } else { img.onload = () => { loadedCount++; if (loadedCount === images.length) container.scrollTop = container.scrollHeight; }; } }); }
     container.scrollTop = container.scrollHeight;
 }
-
-let isInitialLoad = true;
-onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => { 
-    allMessages = []; snapshot.forEach((docSnap) => { allMessages.push({ id: docSnap.id, ...docSnap.data() }); }); renderMessages(); 
-    if (activeChannel === 'game_draw') scrollToBottom('game-chat-container'); else scrollToBottom('chat-container');
-    if (!isInitialLoad) { 
-        snapshot.docChanges().forEach((change) => { 
-            if (change.type === "added") { 
-                const m = change.doc.data(); 
-                if (m.senderName !== currentUsername) { 
-                    if (m.channel !== activeChannel) { unreadCounts[m.channel] = (unreadCounts[m.channel] || 0) + 1; updateUnreadBadge(m.channel); }
-                    const isTagged = m.text && m.text.includes(`@${currentUsername}`);
-                    if (isTagged) { sfxPing.play().catch(()=>{}); } else if (m.channel === activeChannel) { sfxMsg.play().catch(()=>{}); }
-                } 
-            } 
-        }); 
-    }
-    isInitialLoad = false;
-});
 
 window.toggleReaction = async (msgId, emoji) => { if (!currentUserId) return; const msgRef = doc(db, "messages", msgId); const msgDoc = await getDoc(msgRef); if (!msgDoc.exists()) return; const data = msgDoc.data(); let reactions = data.reactions || {}; let usersReacted = reactions[emoji] || []; if (usersReacted.includes(currentUserId)) { usersReacted = usersReacted.filter(id => id !== currentUserId); } else { usersReacted.push(currentUserId); } if (usersReacted.length === 0) { delete reactions[emoji]; } else { reactions[emoji] = usersReacted; } await updateDoc(msgRef, { reactions: reactions }); };
 
@@ -554,7 +644,7 @@ function renderMessages() {
             lastSender = "system_bot"; return; 
         }
 
-        let msgAvatarUrl = usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}`;
+        let msgAvatarUrl = usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}&background=5865F2&color=fff&rounded=true&bold=true`;
         let msgFrameUrl = usersData[m.senderName] ? usersData[m.senderName].profileFrame : '';
         let frameHTML = msgFrameUrl ? `<img src="${msgFrameUrl}" class="absolute w-[135%] h-[135%] max-w-none pointer-events-none z-10 drop-shadow-sm">` : '';
 
@@ -622,6 +712,7 @@ async function sendAnyMessage(inputEl, channelStr) {
     const txt = inputEl.value.trim(); if (!txt) return; inputEl.value = ''; 
     clearTimeout(typingTimeout); isTyping = false; updateDoc(doc(db, "users", currentUserId), { isTyping: false }); 
     if(cmdMenu) cmdMenu.classList.add('hidden'); 
+    const mentionPopup = document.getElementById('mention-popup');
     if(mentionPopup) mentionPopup.classList.add('hidden');
     
     if(txt.startsWith('/') && channelStr !== 'game_draw') {
@@ -634,7 +725,7 @@ async function sendAnyMessage(inputEl, channelStr) {
             const randomWord = await getWordFromAI("draw");
             if(gameCanvas && gameCtx) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
             await setDoc(doc(db, "appData", "gameWhiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
-            await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: "game_draw", timestamp: serverTimestamp() });
+            await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: activeChannel, timestamp: serverTimestamp() });
             botReply = `🎨 **${currentUsername}** ท้าประลองเกมทายภาพ!\nรีบสลับหน้าจอไปดูที่แท็บ **"🎮 ทายคำจากภาพ"** แล้วพิมพ์คำตอบเลย! (AI เป็นคนคิดคำนะรอบนี้)`; 
         } else { showToast("ไม่รู้จักคำสั่งนี้", "error"); return; }
         await addDoc(collection(db, "messages"), { text: botReply, senderName: "🤖 System Bot", channel: channelStr, timestamp: serverTimestamp() }); return;
@@ -695,51 +786,7 @@ if(fileInput) {
 }
 
 // ==========================================
-// 🎨 10.5 เกมทายภาพ (Draw & Guess)
-// ==========================================
-onSnapshot(doc(db, "appData", "drawGame"), (d) => {
-    if(d.exists()) {
-        currentDrawGame = d.data();
-        const display = document.getElementById('game-word-display');
-        const toolbar = document.getElementById('game-toolbar');
-        if(currentDrawGame.isActive) {
-            if(currentDrawGame.drawerId === currentUserId) { 
-                if(display) display.innerHTML = `🎨 คำปริศนาของคุณคือ: <span class="text-yellow-400 ml-2 font-bold tracking-wider">${currentDrawGame.word}</span>`; 
-                if(toolbar) toolbar.classList.remove('hidden'); 
-            } else { 
-                let hiddenWord = currentDrawGame.word ? currentDrawGame.word.replace(/./g, '_ ') : ''; 
-                if(display) display.innerHTML = `🤔 <span class="text-yellow-400 mr-2 font-bold">${currentDrawGame.drawerName}</span> กำลังวาด... | <span class="tracking-widest ml-2">${hiddenWord}</span>`; 
-                if(toolbar) toolbar.classList.add('hidden'); 
-            }
-        } else { 
-            if(display) display.innerHTML = `<i class="ph-fill ph-check-circle mr-2 text-[#23a559]"></i> เกมจบแล้ว รอเริ่มรอบใหม่`; 
-            if(toolbar) toolbar.classList.add('hidden'); 
-        }
-    }
-});
-
-const btnStartGameDraw = document.getElementById('start-game-btn');
-if(btnStartGameDraw) {
-    btnStartGameDraw.onclick = async () => {
-        const originalText = btnStartGameDraw.innerHTML; 
-        btnStartGameDraw.innerHTML = `<i class="ph-fill ph-spinner animate-spin mr-1.5 text-[16px]"></i> AI กำลังคิดคำ...`; 
-        btnStartGameDraw.disabled = true;
-        
-        const randomWord = await getWordFromAI("draw"); 
-        if(gameCtx && gameCanvas) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); 
-        
-        await setDoc(doc(db, "appData", "gameWhiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
-        await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: "game_draw", timestamp: serverTimestamp() });
-        await addDoc(collection(db, "messages"), { text: `🎨 **${currentUsername}** เริ่มเกมทายภาพแล้ว! (คำศัพท์รอบนี้สุ่มโดย AI 🧠)`, senderName: "🤖 System Bot", channel: "game_draw", timestamp: serverTimestamp() });
-        
-        btnStartGameDraw.innerHTML = originalText; 
-        btnStartGameDraw.disabled = false;
-    };
-}
-
-
-// ==========================================
-// 🎨 11. ระบบกระดานวาดรูป
+// 🎨 10. ระบบวาดรูป และ เกมทายภาพ
 // ==========================================
 let isDrawing = false; let isGameDrawing = false; let isEraserMode = false; let wbSyncTimer = null; let gameWbSyncTimer = null;
 
@@ -759,7 +806,7 @@ function initGameCanvasSize() {
         }
     }
 }
-window.addEventListener('resize', () => { initCanvasSize(); initGameCanvasSize(); if(typeof window.renderAllVideos === 'function') window.renderAllVideos(); }); 
+window.addEventListener('resize', () => { initCanvasSize(); initGameCanvasSize(); }); 
 
 function getMousePos(e, c) { const r = c.getBoundingClientRect(); const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY; return { x: x - r.left, y: y - r.top }; } 
 function startDrawing(e) { if(e.type === 'touchstart') e.preventDefault(); isDrawing = true; draw(e); } 
@@ -800,24 +847,6 @@ async function syncWhiteboard(isC = false) {
     const imgData = isC ? "" : canvas.toDataURL("image/webp", 0.5); 
     await setDoc(doc(db, "appData", "whiteboard"), { image: imgData, updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); 
 } 
-
-onSnapshot(doc(db, "appData", "whiteboard"), (d) => { 
-    if (d.exists() && !isDrawing) { 
-        const val = d.data(); 
-        if (val.updatedBy && val.updatedBy !== currentUsername && !currentDrawGame.isActive) { 
-            if(wbStatus) {
-                wbStatus.innerHTML = `<i class="ph ph-pencil-simple mr-1.5"></i> ${val.updatedBy} เพิ่งอัปเดตกระดาน`; 
-                wbStatus.classList.remove('opacity-0'); 
-                setTimeout(() => { if(!currentDrawGame.isActive) wbStatus.classList.add('opacity-0'); }, 3000); 
-            }
-        } 
-        if(val.image) { 
-            const img = new Image(); img.onload = () => { if(ctx && canvas) { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); } }; img.src = val.image; 
-        } else { 
-            if(ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height); 
-        } 
-    } 
-});
 
 const btnGameEraser = document.getElementById('game-eraser-btn');
 if(btnGameEraser) {
@@ -862,24 +891,30 @@ async function syncGameWhiteboard(isC = false) {
     await setDoc(doc(db, "appData", "gameWhiteboard"), { image: imgData, updatedBy: currentUsername, timestamp: serverTimestamp() }, { merge: true }); 
 } 
 
-onSnapshot(doc(db, "appData", "gameWhiteboard"), (d) => { 
-    if (d.exists() && !isGameDrawing) { 
-        const val = d.data(); 
-        if(val.image) { 
-            const img = new Image(); img.onload = () => { if(gameCtx && gameCanvas) { gameCtx.globalCompositeOperation = 'source-over'; gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); gameCtx.drawImage(img, 0, 0); } }; img.src = val.image; 
-        } else { 
-            if(gameCtx && gameCanvas) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); 
-        } 
-    } 
-});
+const btnStartGameDraw = document.getElementById('start-game-btn');
+if(btnStartGameDraw) {
+    btnStartGameDraw.onclick = async () => {
+        const originalText = btnStartGameDraw.innerHTML; 
+        btnStartGameDraw.innerHTML = `<i class="ph-fill ph-spinner animate-spin mr-1.5 text-[16px]"></i> AI กำลังคิดคำ...`; 
+        btnStartGameDraw.disabled = true;
+        
+        const randomWord = await getWordFromAI("draw"); 
+        if(gameCtx && gameCanvas) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); 
+        
+        await setDoc(doc(db, "appData", "gameWhiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
+        await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: "game_draw", timestamp: serverTimestamp() });
+        await addDoc(collection(db, "messages"), { text: `🎨 **${currentUsername}** เริ่มเกมทายภาพแล้ว! (คำศัพท์รอบนี้สุ่มโดย AI 🧠)`, senderName: "🤖 System Bot", channel: "game_draw", timestamp: serverTimestamp() });
+        
+        btnStartGameDraw.innerHTML = originalText; 
+        btnStartGameDraw.disabled = false;
+    };
+}
 
 // ==========================================
-// 🕵️‍♂️ 11.5 เกมจับสปาย (Who is the Spy?)
+// 🕵️‍♂️ 11. เกมจับสปาย (Who is the Spy?)
 // ==========================================
 let currentSpyData = { status: 'waiting', players: {}, votes: {} };
 const lobbyUI = document.getElementById('spy-lobby-ui'); const playUI = document.getElementById('spy-play-ui'); const voteUI = document.getElementById('spy-vote-ui'); const playersListUI = document.getElementById('spy-players-list'); const joinSpyBtn = document.getElementById('spy-join-btn'); const startSpyBtn = document.getElementById('spy-start-btn'); const secretWordUI = document.getElementById('spy-secret-word');
-
-onSnapshot(doc(db, "appData", "spyGame"), (d) => { if(d.exists()) { currentSpyData = d.data(); renderSpyGame(); } });
 
 function renderSpyGame() {
     if(!playersListUI) return;
@@ -942,7 +977,7 @@ if(spyEndBtn) {
 }
 
 // ==========================================
-// 🎙️ 12. ระบบเสียง
+// 🎙️ 12. ระบบเสียง (Agora WebRTC)
 // ==========================================
 async function joinVoice() { 
     try { 
@@ -970,8 +1005,17 @@ async function joinVoice() {
                         let pc = document.createElement("div"); pc.id = `v-wrap-${u.uid}`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; 
                         ssStage.appendChild(pc); u.videoTrack.play(pc, { fit: "contain" }); 
                     } else {
-                        activeVideos.set(u.uid, { track: u.videoTrack, username: matchedUserName });
-                        if(typeof window.renderAllVideos === 'function') window.renderAllVideos();
+                        const sidebarGrid = document.getElementById('sidebar-video-grid');
+                        if(sidebarGrid) {
+                            const ex = document.getElementById(`sidebar-cam-${u.uid}`); if(ex) ex.remove();
+                            let camCard = document.createElement("div"); camCard.id = `sidebar-cam-${u.uid}`; 
+                            camCard.className = "w-full aspect-video bg-black rounded overflow-hidden relative border border-[#35373c] mb-1 animate-[fadeIn_0.3s_ease-out]";
+                            camCard.innerHTML = `<div id="sidebar-player-${u.uid}" class="absolute inset-0 w-full h-full bg-black"></div><div class="absolute bottom-1 left-1 bg-black/70 px-2 py-0.5 rounded text-[10px] font-bold text-white z-10"><i class="ph-fill ph-video-camera text-[#23a559] mr-1"></i>${matchedUserName}</div>`;
+                            sidebarGrid.appendChild(camCard); 
+                            u.videoTrack.play(`sidebar-player-${u.uid}`, { fit: "cover" });
+                            const container = document.getElementById('sidebar-live-container');
+                            if(container) { container.classList.remove('hidden'); container.classList.add('active'); container.style.display = 'block'; }
+                        }
                     }
                 }
             } 
@@ -986,14 +1030,15 @@ async function joinVoice() {
                     const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
                     if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
                 }
-                
-                activeVideos.delete(u.uid);
-                const camCard = document.getElementById(`cam-card-${u.uid}`); if (camCard) camCard.remove();
-                if(typeof window.renderAllVideos === 'function') window.renderAllVideos();
+                const sidebarCam = document.getElementById(`sidebar-cam-${u.uid}`); if (sidebarCam) sidebarCam.remove();
+                const sidebarGrid = document.getElementById('sidebar-video-grid');
+                const container = document.getElementById('sidebar-live-container');
+                if(container && sidebarGrid) {
+                    if (sidebarGrid.children.length === 0) { container.classList.add('hidden'); container.classList.remove('active'); container.style.display = 'none'; }
+                }
             } 
         }); 
         
-        connectedVoiceChannel = viewedVoiceChannel; 
         await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid); 
         
         let micConnected = false;
@@ -1019,7 +1064,7 @@ async function joinVoice() {
             if(muteIcon) muteIcon.className = "ph ph-microphone text-[20px] md:text-[24px]"; 
         }
         
-        await updateDoc(doc(db, "users", currentUserId), { inVoice: true, voiceChannel: connectedVoiceChannel, agoraUid: myNumericUid, isMuted: isMuted, isSharingScreen: false, isVideoOn: false }); 
+        await updateDoc(doc(db, "users", currentUserId), { inVoice: true, voiceChannel: "DOSH_VOICE", agoraUid: myNumericUid, isMuted: isMuted, isSharingScreen: false, isVideoOn: false }); 
         localStorage.setItem('dosh_active_voice', 'true'); 
         
         amIInVoice = true; 
@@ -1034,7 +1079,7 @@ async function joinVoice() {
         showToast("เชื่อมต่อห้องเสียงไม่สำเร็จ กรุณาลองใหม่", "error"); 
         if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, voiceChannel: null, agoraUid: null }); }
         amIInVoice = false; 
-        if(joinBtn) { joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[22px] mr-2 animate-pulse"></i> เข้าร่วมห้องเสียง'; joinBtn.classList.remove('hidden'); }
+        if(joinBtn) { joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; joinBtn.classList.remove('hidden'); }
     } 
 }
 
@@ -1050,9 +1095,17 @@ if(camBtn) {
                 camBtn.classList.remove('bg-[#2b2d31]'); camBtn.classList.add('bg-[#23a559]', 'text-white');
                 if(camIcon) camIcon.className = "ph-fill ph-video-camera text-[20px] md:text-[24px]";
                 
-                activeVideos.set('local', { track: localTracks.videoTrack, username: `คุณ (${currentUsername})` });
-                if(typeof window.renderAllVideos === 'function') window.renderAllVideos();
-
+                const sidebarGrid = document.getElementById('sidebar-video-grid');
+                if(sidebarGrid) {
+                    const ex = document.getElementById(`sidebar-cam-local`); if(ex) ex.remove();
+                    let camCard = document.createElement("div"); camCard.id = `sidebar-cam-local`; 
+                    camCard.className = "w-full aspect-video bg-black rounded overflow-hidden relative border border-[#23a559] mb-1 animate-[fadeIn_0.3s_ease-out]";
+                    camCard.innerHTML = `<div id="sidebar-player-local" class="absolute inset-0 w-full h-full bg-black"></div><div class="absolute bottom-1 left-1 bg-black/70 px-2 py-0.5 rounded text-[10px] font-bold text-white z-10"><i class="ph-fill ph-video-camera text-[#23a559] mr-1"></i>คุณ (${currentUsername})</div>`;
+                    sidebarGrid.prepend(camCard); 
+                    localTracks.videoTrack.play(`sidebar-player-local`, { fit: "cover" });
+                    const container = document.getElementById('sidebar-live-container');
+                    if(container) { container.classList.remove('hidden'); container.classList.add('active'); container.style.display = 'block'; }
+                }
                 showToast("เปิดกล้องแล้ว!", "success");
             } catch(e) { console.log(e); showToast("ไม่สามารถเข้าถึงกล้องได้ หรือไม่มีกล้องครับ", "error"); }
         } else { await stopCamera(); }
@@ -1065,9 +1118,12 @@ async function stopCamera() {
     if(camBtn) { camBtn.classList.add('bg-[#2b2d31]'); camBtn.classList.remove('bg-[#23a559]', 'text-white'); }
     if(camIcon) camIcon.className = "ph ph-video-camera text-[20px] md:text-[24px]";
     
-    activeVideos.delete('local');
-    const camCard = document.getElementById(`cam-card-local`); if (camCard) camCard.remove();
-    if(typeof window.renderAllVideos === 'function') window.renderAllVideos();
+    const sidebarCam = document.getElementById(`sidebar-cam-local`); if (sidebarCam) sidebarCam.remove();
+    const sidebarGrid = document.getElementById('sidebar-video-grid');
+    const container = document.getElementById('sidebar-live-container');
+    if(container && sidebarGrid) {
+        if (sidebarGrid.children.length === 0) { container.classList.add('hidden'); container.classList.remove('active'); container.style.display = 'none'; }
+    }
 }
 
 async function stopScreenShare() { 
@@ -1126,8 +1182,6 @@ async function leaveVoice() {
     const activeUI = document.getElementById('active-voice-ui'); if(activeUI) activeUI.classList.add('hidden'); 
     if(bottomLeaveBtn) bottomLeaveBtn.classList.add('hidden');
     
-    activeVideos.clear();
-    const centerStage = document.getElementById('camera-stage'); if(centerStage) centerStage.innerHTML = '';
     const sidebarLiveContainer = document.getElementById('sidebar-live-container');
     if(sidebarLiveContainer) { sidebarLiveContainer.classList.add('hidden'); sidebarLiveContainer.classList.remove('active'); sidebarLiveContainer.style.display = 'none'; }
     const sidebarGrid = document.getElementById('sidebar-video-grid'); if(sidebarGrid) sidebarGrid.innerHTML = ''; 
@@ -1245,3 +1299,77 @@ if ('serviceWorker' in navigator) {
         });
     }); 
 }
+// ==========================================
+// 🍿 14. ระบบ Watch Party (YouTube)
+// ==========================================
+const toggleWpBtn = document.getElementById('toggle-wp-input-btn');
+const wpControls = document.getElementById('wp-controls');
+const startWpBtn = document.getElementById('start-wp-btn');
+const wpLinkInput = document.getElementById('wp-link-input');
+const wpStage = document.getElementById('watch-party-stage');
+const ytContainer = document.getElementById('yt-player-container');
+const closeWpBtn = document.getElementById('close-wp-btn');
+const wpHost = document.getElementById('wp-host');
+
+// 1. กดปุ่มเปิด/ปิดช่องใส่ลิงก์
+if (toggleWpBtn && wpControls) {
+    toggleWpBtn.onclick = () => wpControls.classList.toggle('hidden');
+}
+
+// 2. กดปุ่มเริ่มสตรีม (บันทึกลง Firebase เพื่อแชร์ให้ทุกคน)
+if (startWpBtn) {
+    startWpBtn.onclick = async () => {
+        const url = wpLinkInput.value.trim();
+        if (!url) { showToast("กรุณาใส่ลิงก์ YouTube ด้วยครับ", "error"); return; }
+        
+        // ดึง Video ID จากลิงก์ YouTube
+        let videoId = "";
+        if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
+        else if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
+        
+        if (!videoId) { showToast("รูปแบบลิงก์ YouTube ไม่ถูกต้อง", "error"); return; }
+
+        try {
+            await setDoc(doc(db, "appData", "watchParty"), { 
+                videoId: videoId, 
+                hostName: currentUsername, 
+                isActive: true,
+                timestamp: serverTimestamp() 
+            });
+            wpControls.classList.add('hidden');
+            wpLinkInput.value = '';
+        } catch(err) { showToast("เกิดข้อผิดพลาดในการเริ่มสตรีม", "error"); }
+    };
+}
+
+// 3. กดปุ่มปิดสตรีม
+if (closeWpBtn) {
+    closeWpBtn.onclick = async () => {
+        try {
+            await setDoc(doc(db, "appData", "watchParty"), { isActive: false }, { merge: true });
+        } catch(err) {}
+    };
+}
+
+// 4. ดึงข้อมูลคลิปจาก Firebase มาเล่น (ซิงค์ตรงกันทุกคน)
+onSnapshot(doc(db, "appData", "watchParty"), (d) => {
+    if (d.exists()) {
+        const data = d.data();
+        if (data.isActive && data.videoId) {
+            if(wpStage) {
+                wpStage.classList.remove('hidden');
+                wpStage.classList.add('flex');
+            }
+            if(wpHost) wpHost.textContent = data.hostName;
+            if(ytContainer && !ytContainer.innerHTML.includes(data.videoId)) {
+                ytContainer.innerHTML = `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${data.videoId}?autoplay=1" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen class="absolute inset-0 w-full h-full rounded-xl"></iframe>`;
+            }
+        } else {
+            if(wpStage) {
+                wpStage.classList.add('hidden');
+                wpStage.classList.remove('flex');
+            }
+            if(ytContainer) ytContainer.innerHTML = '';
+        }
+    }
+});

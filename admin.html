@@ -105,14 +105,15 @@
         import { getFirestore, collection, onSnapshot, doc, getDoc, updateDoc, deleteDoc, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         // 🚨 ตั้งค่า Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyBNsG-gdNHZzIerTyd33fIwblwccktfU9I",
-            authDomain: "apoko-hq.firebaseapp.com",
-            projectId: "apoko-hq",
-            storageBucket: "apoko-hq.firebasestorage.app",
-            messagingSenderId: "122632343459",
-            appId: "1:122632343459:web:c225aaff8464f1b0c35416"
-        };
+const firebaseConfig = {
+  apiKey: "AIzaSyDRArTdFcrI7WuV0Bj72mpvnl3uiaRbMq0",
+  authDomain: "hive-workspace-f373c.firebaseapp.com",
+  projectId: "hive-workspace-f373c",
+  storageBucket: "hive-workspace-f373c.firebasestorage.app",
+  messagingSenderId: "724551925164",
+  appId: "1:724551925164:web:4f355224d17e2b1e414e09",
+  measurementId: "G-JE6XBR241G"
+};
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
