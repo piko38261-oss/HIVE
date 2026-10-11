@@ -1300,7 +1300,7 @@ if ('serviceWorker' in navigator) {
     }); 
 }
 // ==========================================
-// 🍿 14. ระบบ Watch Party (YouTube)
+// 🍿 14. ระบบ Watch Party (YouTube Sync Pro)
 // ==========================================
 const toggleWpBtn = document.getElementById('toggle-wp-input-btn');
 const wpControls = document.getElementById('wp-controls');
@@ -1311,18 +1311,20 @@ const ytContainer = document.getElementById('yt-player-container');
 const closeWpBtn = document.getElementById('close-wp-btn');
 const wpHost = document.getElementById('wp-host');
 
+let ytPlayer = null;
+let isSyncing = false;
+
 // 1. กดปุ่มเปิด/ปิดช่องใส่ลิงก์
 if (toggleWpBtn && wpControls) {
     toggleWpBtn.onclick = () => wpControls.classList.toggle('hidden');
 }
 
-// 2. กดปุ่มเริ่มสตรีม (บันทึกลง Firebase เพื่อแชร์ให้ทุกคน)
+// 2. กดปุ่มเริ่มสตรีม
 if (startWpBtn) {
     startWpBtn.onclick = async () => {
         const url = wpLinkInput.value.trim();
         if (!url) { showToast("กรุณาใส่ลิงก์ YouTube ด้วยครับ", "error"); return; }
         
-        // ดึง Video ID จากลิงก์ YouTube
         let videoId = "";
         if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
         else if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
@@ -1334,6 +1336,8 @@ if (startWpBtn) {
                 videoId: videoId, 
                 hostName: currentUsername, 
                 isActive: true,
+                currentTime: 0,
+                state: 1, // 1 = Playing
                 timestamp: serverTimestamp() 
             });
             wpControls.classList.add('hidden');
@@ -1351,7 +1355,7 @@ if (closeWpBtn) {
     };
 }
 
-// 4. ดึงข้อมูลคลิปจาก Firebase มาเล่น (ซิงค์ตรงกันทุกคน)
+// 4. สร้าง YouTube Player และดึงข้อมูลซิงค์จาก Firebase
 onSnapshot(doc(db, "appData", "watchParty"), (d) => {
     if (d.exists()) {
         const data = d.data();
@@ -1361,8 +1365,52 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
                 wpStage.classList.add('flex');
             }
             if(wpHost) wpHost.textContent = data.hostName;
-            if(ytContainer && !ytContainer.innerHTML.includes(data.videoId)) {
-                ytContainer.innerHTML = `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${data.videoId}?autoplay=1" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen class="absolute inset-0 w-full h-full rounded-xl"></iframe>`;
+
+            // ถ้ายังไม่มี Player ให้สร้างขึ้นมา
+            if (!ytPlayer) {
+                ytContainer.innerHTML = `<div id="actual-yt-player" class="w-full h-full"></div>`;
+                ytPlayer = new YT.Player('actual-yt-player', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: data.videoId,
+                    playerVars: { 'autoplay': 1, 'controls': 1 },
+                    events: {
+                        'onStateChange': (event) => {
+                            if (isSyncing) return;
+                            // ถ้าคนในห้องกด Play (1) หรือ Pause (2) ให้ส่งค่าอัปเดตไปบอกคนอื่น
+                            const state = event.data;
+                            if (state === 1 || state === 2) {
+                                const currTime = ytPlayer.getCurrentTime();
+                                setDoc(doc(db, "appData", "watchParty"), {
+                                    currentTime: currTime,
+                                    state: state,
+                                    timestamp: serverTimestamp()
+                                }, { merge: true });
+                            }
+                        }
+                    }
+                });
+            } else {
+                // ถ้าเปลี่ยนคลิปใหม่
+                const currentVid = ytPlayer.getVideoData ? ytPlayer.getVideoData().video_id : "";
+                if (currentVid !== data.videoId) {
+                    isSyncing = true;
+                    ytPlayer.loadVideoById(data.videoId, data.currentTime || 0);
+                    setTimeout(() => { isSyncing = false; }, 1000);
+                } else {
+                    // ซิงค์เวลาและสถานะ Play/Pause
+                    const localTime = ytPlayer.getCurrentTime();
+                    if (Math.abs(localTime - (data.currentTime || 0)) > 2) {
+                        isSyncing = true;
+                        ytPlayer.seekTo(data.currentTime);
+                        setTimeout(() => { isSyncing = false; }, 1000);
+                    }
+                    if (data.state === 1 && ytPlayer.getPlayerState() !== 1) {
+                        ytPlayer.playVideo();
+                    } else if (data.state === 2 && ytPlayer.getPlayerState() !== 2) {
+                        ytPlayer.pauseVideo();
+                    }
+                }
             }
         } else {
             if(wpStage) {
@@ -1370,6 +1418,7 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
                 wpStage.classList.remove('flex');
             }
             if(ytContainer) ytContainer.innerHTML = '';
+            ytPlayer = null;
         }
     }
 });
