@@ -1300,7 +1300,7 @@ if ('serviceWorker' in navigator) {
     }); 
 }
 // ==========================================
-// 🍿 14. ระบบ Watch Party (YouTube Sync Pro)
+// 🍿 14. ระบบ Watch Party (Fixed Duplicate Bug)
 // ==========================================
 const toggleWpBtn = document.getElementById('toggle-wp-input-btn');
 const wpControls = document.getElementById('wp-controls');
@@ -1312,14 +1312,14 @@ const closeWpBtn = document.getElementById('close-wp-btn');
 const wpHost = document.getElementById('wp-host');
 
 let ytPlayer = null;
-let isSyncing = false;
+let syncInterval = null;
+let isSettingState = false;
+let lastVideoId = "";
 
-// 1. กดปุ่มเปิด/ปิดช่องใส่ลิงก์
 if (toggleWpBtn && wpControls) {
     toggleWpBtn.onclick = () => wpControls.classList.toggle('hidden');
 }
 
-// 2. กดปุ่มเริ่มสตรีม
 if (startWpBtn) {
     startWpBtn.onclick = async () => {
         const url = wpLinkInput.value.trim();
@@ -1337,8 +1337,8 @@ if (startWpBtn) {
                 hostName: currentUsername, 
                 isActive: true,
                 currentTime: 0,
-                state: 1, // 1 = Playing
-                timestamp: serverTimestamp() 
+                isPlaying: true,
+                updatedAt: serverTimestamp() 
             });
             wpControls.classList.add('hidden');
             wpLinkInput.value = '';
@@ -1346,7 +1346,6 @@ if (startWpBtn) {
     };
 }
 
-// 3. กดปุ่มปิดสตรีม
 if (closeWpBtn) {
     closeWpBtn.onclick = async () => {
         try {
@@ -1355,7 +1354,21 @@ if (closeWpBtn) {
     };
 }
 
-// 4. สร้าง YouTube Player และดึงข้อมูลซิงค์จาก Firebase
+async function broadcastPlayerState() {
+    if (!ytPlayer || isSettingState) return;
+    try {
+        const currentTime = ytPlayer.getCurrentTime();
+        const playerState = ytPlayer.getPlayerState();
+        const isPlaying = (playerState === YT.PlayerState.PLAYING);
+
+        await setDoc(doc(db, "appData", "watchParty"), {
+            currentTime: currentTime,
+            isPlaying: isPlaying,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    } catch(e) {}
+}
+
 onSnapshot(doc(db, "appData", "watchParty"), (d) => {
     if (d.exists()) {
         const data = d.data();
@@ -1366,48 +1379,52 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
             }
             if(wpHost) wpHost.textContent = data.hostName;
 
-            // ถ้ายังไม่มี Player ให้สร้างขึ้นมา
-            if (!ytPlayer) {
+            // ถ้ายังไม่มี Player หรือเปลี่ยนคลิปใหม่ ให้สร้างใหม่ครั้งเดียว
+            if (!ytPlayer || lastVideoId !== data.videoId) {
+                lastVideoId = data.videoId;
                 ytContainer.innerHTML = `<div id="actual-yt-player" class="w-full h-full"></div>`;
-                ytPlayer = new YT.Player('actual-yt-player', {
-                    height: '100%',
-                    width: '100%',
-                    videoId: data.videoId,
-                    playerVars: { 'autoplay': 1, 'controls': 1 },
-                    events: {
-                        'onStateChange': (event) => {
-                            if (isSyncing) return;
-                            // ถ้าคนในห้องกด Play (1) หรือ Pause (2) ให้ส่งค่าอัปเดตไปบอกคนอื่น
-                            const state = event.data;
-                            if (state === 1 || state === 2) {
-                                const currTime = ytPlayer.getCurrentTime();
-                                setDoc(doc(db, "appData", "watchParty"), {
-                                    currentTime: currTime,
-                                    state: state,
-                                    timestamp: serverTimestamp()
-                                }, { merge: true });
+                
+                if (window.YT && window.YT.Player) {
+                    ytPlayer = new YT.Player('actual-yt-player', {
+                        height: '100%',
+                        width: '100%',
+                        videoId: data.videoId,
+                        playerVars: { 'autoplay': 1, 'controls': 1 },
+                        events: {
+                            'onReady': () => {
+                                ytPlayer.seekTo(data.currentTime || 0);
+                                if (data.isPlaying) ytPlayer.playVideo(); else ytPlayer.pauseVideo();
+                                
+                                if (syncInterval) clearInterval(syncInterval);
+                                syncInterval = setInterval(() => {
+                                    if (ytPlayer && typeof ytPlayer.getPlayerState === 'function' && ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                                        broadcastPlayerState();
+                                    }
+                                }, 2000);
+                            },
+                            'onStateChange': (event) => {
+                                if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED) {
+                                    broadcastPlayerState();
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                }
             } else {
-                // ถ้าเปลี่ยนคลิปใหม่
-                const currentVid = ytPlayer.getVideoData ? ytPlayer.getVideoData().video_id : "";
-                if (currentVid !== data.videoId) {
-                    isSyncing = true;
-                    ytPlayer.loadVideoById(data.videoId, data.currentTime || 0);
-                    setTimeout(() => { isSyncing = false; }, 1000);
-                } else {
-                    // ซิงค์เวลาและสถานะ Play/Pause
+                // ถ้าเป็นคลิปเดิม ให้เช็คการซิงค์เวลาและสถานะ Play/Pause
+                if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
                     const localTime = ytPlayer.getCurrentTime();
-                    if (Math.abs(localTime - (data.currentTime || 0)) > 2) {
-                        isSyncing = true;
-                        ytPlayer.seekTo(data.currentTime);
-                        setTimeout(() => { isSyncing = false; }, 1000);
+                    const remoteTime = data.currentTime || 0;
+                    if (Math.abs(localTime - remoteTime) > 1.5) {
+                        isSettingState = true;
+                        ytPlayer.seekTo(remoteTime);
+                        setTimeout(() => { isSettingState = false; }, 1000);
                     }
-                    if (data.state === 1 && ytPlayer.getPlayerState() !== 1) {
+
+                    const localState = ytPlayer.getPlayerState();
+                    if (data.isPlaying && localState !== YT.PlayerState.PLAYING) {
                         ytPlayer.playVideo();
-                    } else if (data.state === 2 && ytPlayer.getPlayerState() !== 2) {
+                    } else if (!data.isPlaying && localState === YT.PlayerState.PLAYING) {
                         ytPlayer.pauseVideo();
                     }
                 }
@@ -1419,6 +1436,8 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
             }
             if(ytContainer) ytContainer.innerHTML = '';
             ytPlayer = null;
+            lastVideoId = "";
+            if (syncInterval) clearInterval(syncInterval);
         }
     }
 });
