@@ -97,7 +97,7 @@ async function getWordFromAI(gameType = "draw") {
 }
 
 // ==========================================
-// 🛡️ 4. ระบบ Auth & เริ่มต้นโหลดข้อมูล (Auth Guard ป้องกันบั๊กจอดำ)
+// 🛡️ 4. ระบบ Auth & เริ่มต้นโหลดข้อมูล
 // ==========================================
 onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -118,7 +118,6 @@ onAuthStateChanged(auth, async (user) => {
             } 
         } catch (err) {}
         
-        // 🌟 ล็อกอินเสร็จแล้ว ถึงจะอนุญาตให้เริ่มโหลดฐานข้อมูล
         if (!isAppInitialized) {
             isAppInitialized = true;
             startDatabaseListeners(); 
@@ -146,7 +145,7 @@ if(btnLogout) {
 }
 
 // ==========================================
-// 📡 5. ระบบดึงข้อมูลจากฐานข้อมูล (รันหลังจาก Auth สำเร็จเท่านั้น)
+// 📡 5. ระบบดึงข้อมูลจากฐานข้อมูล 
 // ==========================================
 function startDatabaseListeners() {
 
@@ -322,7 +321,7 @@ function startDatabaseListeners() {
             c.addEventListener('dragend', () => c.classList.remove('opacity-30')); 
         }); 
     });
-} // จบฟังก์ชัน startDatabaseListeners()
+}
 
 // ==========================================
 // 🗺️ 6. ระบบ Navigation และหน้าจอต่างๆ
@@ -483,27 +482,80 @@ const closeCropModal = () => { const cropModal = document.getElementById('crop-m
 const btnCloseCrop = document.getElementById('close-crop-btn'); if(btnCloseCrop) btnCloseCrop.onclick = closeCropModal; 
 const btnCancelCrop = document.getElementById('cancel-crop-btn'); if(btnCancelCrop) btnCancelCrop.onclick = closeCropModal;
 
+// 🌟 ฟังก์ชันบีบอัดภาพเพื่อให้อัปโหลดไวขึ้นและแก้ปัญหาแบนเนอร์ไม่ขึ้น
 async function uploadImage(file, type) { 
-    showToast(`กำลังอัปโหลด${type === 'avatar' ? 'โปรไฟล์' : 'ภาพปก'}... ⏳`, "info"); 
+    showToast(`กำลังบีบอัดและอัปโหลด${type === 'avatar' ? 'โปรไฟล์' : 'ภาพปก'}... ⏳`, "info"); 
     const wrap = document.getElementById(`settings-${type}-wrapper`);
     if(wrap) wrap.classList.add('opacity-50', 'pointer-events-none'); 
+
     try { 
-        const fd = new FormData(); fd.append("image", file); 
+        const compressedBlob = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    const maxWidth = type === 'avatar' ? 400 : 1200;
+                    const maxHeight = type === 'avatar' ? 400 : 600;
+                    
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = Math.round((width * maxHeight) / height);
+                            height = maxHeight;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    canvas.toBlob((blob) => {
+                        resolve(blob || file);
+                    }, 'image/webp', 0.8);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        const fd = new FormData(); 
+        fd.append("image", compressedBlob, `hive_${type}_${Date.now()}.webp`); 
+        
         const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); 
         const r = await res.json(); 
+        
         if (r.success) { 
             if(type === 'avatar') { 
-                await updateProfile(auth.currentUser, { photoURL: r.data.url }); await updateDoc(doc(db, "users", currentUserId), { photoURL: r.data.url }); 
+                await updateProfile(auth.currentUser, { photoURL: r.data.url }); 
+                await updateDoc(doc(db, "users", currentUserId), { photoURL: r.data.url }); 
                 const p1 = document.getElementById('settings-avatar-preview'); if(p1) p1.src = r.data.url; 
                 const p2 = document.getElementById('current-user-avatar'); if(p2) p2.src = r.data.url; 
             } else { 
                 await updateDoc(doc(db, "users", currentUserId), { bannerURL: r.data.url }); 
-                const p1 = document.getElementById('settings-banner-preview'); if(p1) { p1.src = r.data.url; p1.classList.remove('hidden'); }
+                const p1 = document.getElementById('settings-banner-preview'); 
+                if(p1) { 
+                    p1.src = r.data.url; 
+                    p1.classList.remove('hidden'); 
+                }
             } 
             showToast("อัปโหลดสำเร็จ!", "success"); 
-        } 
-    } catch(err) { showToast("เกิดข้อผิดพลาดในการอัปโหลด", "error"); } 
-    finally { if(wrap) wrap.classList.remove('opacity-50', 'pointer-events-none'); } 
+        } else {
+            showToast("อัปโหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", "error");
+        }
+    } catch(err) { 
+        showToast("เกิดข้อผิดพลาดในการอัปโหลด", "error"); 
+    } finally { 
+        if(wrap) wrap.classList.remove('opacity-50', 'pointer-events-none'); 
+    } 
 }
 
 const btnSaveSettings = document.getElementById('save-settings-btn');
@@ -1068,6 +1120,12 @@ async function joinVoice() {
         localStorage.setItem('dosh_active_voice', 'true'); 
         
         amIInVoice = true; 
+
+        // 🌟 1. เพิ่มโค้ดเปิดเสียง YouTube เมื่อเข้าห้องเสียง
+        if (ytPlayer && typeof ytPlayer.unMute === 'function') {
+            ytPlayer.unMute();
+        }
+
         if(joinBtn) joinBtn.classList.add('hidden'); 
         const activeUI = document.getElementById('active-voice-ui'); if(activeUI) activeUI.classList.remove('hidden'); 
         if(bottomLeaveBtn) bottomLeaveBtn.classList.remove('hidden');
@@ -1178,6 +1236,12 @@ async function leaveVoice() {
     localStorage.removeItem('dosh_active_voice'); 
     
     amIInVoice = false; 
+
+    // 🌟 2. เพิ่มโค้ดบังคับปิดเสียง YouTube ทันทีเมื่อกดออกห้อง
+    if (ytPlayer && typeof ytPlayer.mute === 'function') {
+        ytPlayer.mute();
+    }
+
     if(joinBtn) { joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[22px] mr-2 animate-pulse"></i> เข้าร่วมห้องเสียง'; joinBtn.classList.remove('hidden'); }
     const activeUI = document.getElementById('active-voice-ui'); if(activeUI) activeUI.classList.add('hidden'); 
     if(bottomLeaveBtn) bottomLeaveBtn.classList.add('hidden');
@@ -1299,8 +1363,9 @@ if ('serviceWorker' in navigator) {
         });
     }); 
 }
+
 // ==========================================
-// 🍿 14. ระบบ Watch Party (Fixed Duplicate Bug)
+// 🍿 14. ระบบ Watch Party (Fixed Duplicate Bug & Audio Mute)
 // ==========================================
 const toggleWpBtn = document.getElementById('toggle-wp-input-btn');
 const wpControls = document.getElementById('wp-controls');
@@ -1395,6 +1460,13 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
                                 ytPlayer.seekTo(data.currentTime || 0);
                                 if (data.isPlaying) ytPlayer.playVideo(); else ytPlayer.pauseVideo();
                                 
+                                // 🌟 3.1 เช็คทันทีที่คลิปโหลด: ถ้าไม่ได้เข้าห้องเสียง ให้ปิดเสียง (Mute) ไว้ก่อน
+                                if (!amIInVoice) {
+                                    ytPlayer.mute();
+                                } else {
+                                    ytPlayer.unMute();
+                                }
+                                
                                 if (syncInterval) clearInterval(syncInterval);
                                 syncInterval = setInterval(() => {
                                     if (ytPlayer && typeof ytPlayer.getPlayerState === 'function' && ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
@@ -1413,6 +1485,11 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
             } else {
                 // ถ้าเป็นคลิปเดิม ให้เช็คการซิงค์เวลาและสถานะ Play/Pause
                 if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+                    
+                    // 🌟 3.2 บังคับเช็คสถานะเสียงตลอดเวลา (เผื่อมีคนแอบเปิดเสียงเองตอนไม่ได้อยู่ห้อง)
+                    if (!amIInVoice && !ytPlayer.isMuted()) ytPlayer.mute();
+                    else if (amIInVoice && ytPlayer.isMuted()) ytPlayer.unMute();
+
                     const localTime = ytPlayer.getCurrentTime();
                     const remoteTime = data.currentTime || 0;
                     if (Math.abs(localTime - remoteTime) > 1.5) {
