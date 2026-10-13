@@ -36,6 +36,7 @@ let isAppInitialized = false;
 let remoteAudioTracks = {}; let remoteVideoTracks = {}; 
 let userVolumes = JSON.parse(localStorage.getItem('dosh_volumes')) || {};
 let currentDrawGame = { isActive: false, drawerId: null, drawerName: "", word: "" };
+let currentWatchParty = { isActive: false, videoId: "", hostName: "" };
 
 let camLayoutPreference = localStorage.getItem('hive_cam_layout') || 'sidebar';
 let denoiserExtension = null;
@@ -111,8 +112,14 @@ onAuthStateChanged(auth, async (user) => {
         
         const myNameUI = document.getElementById('current-user-name');
         if(myNameUI) myNameUI.textContent = currentUsername;
+        
+        // 🌟 แก้ไข: ตรวจสอบรูปล่าสุดของผู้ใช้ ป้องกันรูปหาย
         const myAvatarUI = document.getElementById('current-user-avatar');
-        if(myAvatarUI) myAvatarUI.src = user.photoURL || `https://ui-avatars.com/api/?name=${currentUsername}&background=5865F2&color=fff&rounded=true&bold=true`;
+        if(myAvatarUI) {
+            myAvatarUI.src = (user.photoURL && user.photoURL !== "null" && user.photoURL !== "undefined" && user.photoURL.trim() !== "") 
+                ? user.photoURL 
+                : `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUsername)}&background=5865F2&color=fff&rounded=true&bold=true`;
+        }
         
         try { 
             const userDoc = await getDoc(doc(db, "users", currentUserId)); 
@@ -182,10 +189,16 @@ function startDatabaseListeners() {
 
         snapshot.forEach((docSnap) => {
             const u = docSnap.data(), id = docSnap.id, userName = u.username || 'Unknown';
-            const userAvatar = u.photoURL || `https://ui-avatars.com/api/?name=${userName}`;
+            
+            // 🌟 แก้ไข: ตรวจสอบลิงก์รูปและรองรับชื่อที่มีเว้นวรรค
+            let userAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=5865F2&color=fff&bold=true`;
+            if (u.photoURL && u.photoURL !== "undefined" && u.photoURL !== "null" && u.photoURL.trim() !== "") {
+                userAvatar = u.photoURL;
+            }
+            
             const frameUrl = u.profileFrame || '';
             
-            usersData[userName] = { avatar: userAvatar, banner: u.bannerURL || '', id: id, agoraUid: u.agoraUid, customStatus: u.customStatus || '', role: u.role, isSharingScreen: u.isSharingScreen, isVideoOn: u.isVideoOn, profileFrame: frameUrl }; 
+            usersData[userName] = { avatar: userAvatar, banner: u.bannerURL || '', id: id, agoraUid: u.agoraUid, customStatus: u.customStatus || '', role: u.role, inVoice: u.inVoice, isSharingScreen: u.isSharingScreen, isVideoOn: u.isVideoOn, profileFrame: frameUrl }; 
             if (u.isTyping && u.typingChannel === activeChannel && id !== currentUserId) peopleTyping.push(userName);
             
             const isOnline = u.status === 'online', statusColor = isOnline ? 'bg-[#23a559]' : 'bg-[#5c6069]';
@@ -352,6 +365,8 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('channel-inactive', 'text-[#80848e]'); btn.classList.add('channel-active', 'text-[#dbdee1]', 'bg-[#404249]'); 
         Object.values(views).forEach(v => { if(v) v.classList.add('hidden') }); 
         if(views[view]) views[view].classList.remove('hidden'); 
+        if(view === 'whiteboard') setTimeout(initCanvasSize, 50);
+        if(view === 'game-draw') setTimeout(initGameCanvasSize, 50);
         
         if(membersSidebar) membersSidebar.classList.remove('md:hidden'); 
         if (view === 'chat' || view === 'voice') { 
@@ -387,6 +402,34 @@ window.showUserProfile = (userName) => {
         badges += '<span class="inline-flex items-center bg-gradient-to-r from-pink-500 to-purple-500 border border-white/20 px-3 py-1.5 rounded-lg text-[12px] text-white font-bold shadow-[0_0_15px_rgba(236,72,153,0.5)] animate-pulse"><i class="ph-fill ph-sparkle mr-1.5"></i> VIP</span>'; 
     }
     const pBadges = document.getElementById('profile-card-badges'); if(pBadges) pBadges.innerHTML = badges; 
+    
+    // 🌟 ระบบแสดงกิจกรรม (Rich Presence - Watch Party)
+    const activitySection = document.getElementById('profile-card-activity');
+    if (activitySection) {
+        // เช็คว่ามี Watch Party เปิดอยู่ และ ผู้ใช้คนนี้กำลังอยู่ในห้องเสียงหรือไม่
+        if (currentWatchParty && currentWatchParty.isActive && currentWatchParty.videoId && u && u.inVoice) {
+            activitySection.classList.remove('hidden');
+            
+            // ดึงภาพปก (Thumbnail) จาก YouTube มาแสดง
+            const activityImg = document.getElementById('profile-activity-img');
+            if (activityImg) activityImg.src = `https://img.youtube.com/vi/${currentWatchParty.videoId}/mqdefault.jpg`;
+            
+            const activityTitle = document.getElementById('profile-activity-title');
+            const activityDetail = document.getElementById('profile-activity-detail');
+            
+            // ถ้าคนที่เรากดดู เป็นคนเปิดคลิปเอง (Host)
+            if (currentWatchParty.hostName === userName) {
+                if(activityTitle) activityTitle.textContent = "กำลังแชร์ YouTube";
+                if(activityDetail) activityDetail.innerHTML = `เป็นโฮสต์เปิดคลิปให้เพื่อนดู`;
+            } else {
+                // ถ้าเป็นคนอื่นที่เข้ามานั่งดู
+                if(activityTitle) activityTitle.textContent = "กำลังดู Watch Party";
+                if(activityDetail) activityDetail.innerHTML = `เปิดคลิปโดย ${currentWatchParty.hostName}`;
+            }
+        } else {
+            activitySection.classList.add('hidden'); // ซ่อนถ้าไม่ได้อยู่ในห้องเสียง หรือไม่ได้เปิดคลิป
+        }
+    }
     
     const frameImg = document.getElementById('profile-card-frame');
     if(frameImg) { if (u.profileFrame) { frameImg.src = u.profileFrame; frameImg.classList.remove('hidden'); } else { frameImg.classList.add('hidden'); } }
@@ -729,7 +772,8 @@ function renderMessages() {
             lastSender = "system_bot"; return; 
         }
 
-        let msgAvatarUrl = usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${m.senderName}&background=5865F2&color=fff&rounded=true&bold=true`;
+        // 🌟 อัปเดต: เข้ารหัสชื่อผู้ใช้สำหรับ Fallback Avatar ป้องกันรูปภาพหาย
+        let msgAvatarUrl = usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(m.senderName)}&background=5865F2&color=fff&rounded=true&bold=true`;
         let msgFrameUrl = usersData[m.senderName] ? usersData[m.senderName].profileFrame : '';
         let frameHTML = msgFrameUrl ? `<img src="${msgFrameUrl}" class="absolute w-[135%] h-[135%] max-w-none pointer-events-none z-10 drop-shadow-sm">` : '';
 
@@ -749,7 +793,7 @@ function renderMessages() {
 
         let replyBlockHTML = ''; let isReply = !!m.replyTo;
         if (isReply) {
-            const replyAvatar = usersData[m.replyTo.senderName] ? usersData[m.replyTo.senderName].avatar : `https://ui-avatars.com/api/?name=${m.replyTo.senderName}`;
+            const replyAvatar = usersData[m.replyTo.senderName] ? usersData[m.replyTo.senderName].avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(m.replyTo.senderName)}`;
             replyBlockHTML = `<div class="flex items-center space-x-1.5 mb-1 opacity-70 hover:opacity-100 cursor-pointer transition select-none"><div class="w-4 h-4 border-l-2 border-t-2 border-[#4e5058] rounded-tl-md ml-3 mt-1"></div><img src="${replyAvatar}" class="w-4 h-4 rounded-full object-cover opacity-80"><span class="text-[11px] font-bold text-[#e4e5e7]">@${m.replyTo.senderName}</span><span class="text-[11px] text-[#b5bac1] truncate max-w-[150px] md:max-w-xs">${m.replyTo.text}</span></div>`;
         }
 
@@ -871,27 +915,38 @@ if(fileInput) {
 }
 
 // ==========================================
-// 🎨 10. ระบบวาดรูป และ เกมทายภาพ
+// 🎨 10. ระบบวาดรูป และ เกมทายภาพ (แก้ไข Canvas Scale)
 // ==========================================
 let isDrawing = false; let isGameDrawing = false; let isEraserMode = false; let wbSyncTimer = null; let gameWbSyncTimer = null;
 
-function initCanvasSize() { 
-    if(canvas && canvasContainer) {
-        if(canvas.width !== canvasContainer.clientWidth || canvas.height !== canvasContainer.clientHeight) { 
-            const temp = canvas.toDataURL(); canvas.width = canvasContainer.clientWidth; canvas.height = canvasContainer.clientHeight; 
-            if(temp !== "data:,") { const img = new Image(); img.onload = () => { if(ctx) ctx.drawImage(img, 0, 0); }; img.src = temp; } 
-        } 
-    }
-}
-function initGameCanvasSize() { 
-    if(gameCanvas && gameCanvasContainer) {
-        if(gameCanvas.width !== gameCanvasContainer.clientWidth || gameCanvas.height !== gameCanvasContainer.clientHeight) { 
-            const temp = gameCanvas.toDataURL(); gameCanvas.width = gameCanvasContainer.clientWidth; gameCanvas.height = gameCanvasContainer.clientHeight; 
-            if(temp !== "data:,") { const img = new Image(); img.onload = () => { if(gameCtx) gameCtx.drawImage(img, 0, 0); }; img.src = temp; } 
+function resizeCanvasToDisplaySize(canvas) {
+    if(!canvas) return;
+    const parent = canvas.parentElement;
+    if(!parent) return;
+    
+    // ดึงขนาดจริงของกล่องแม่
+    const width = parent.clientWidth;
+    const height = parent.clientHeight;
+    
+    // ถ้าย่อขยายจอ ให้ปรับสัดส่วนภาพเดิมให้ตรง
+    if (canvas.width !== width || canvas.height !== height) {
+        const tempImg = canvas.toDataURL(); // เก็บภาพเดิมไว้ก่อน
+        canvas.width = width;
+        canvas.height = height;
+        if(tempImg !== "data:,") { 
+            const img = new Image(); 
+            img.onload = () => { 
+                const context = canvas.getContext('2d');
+                if(context) context.drawImage(img, 0, 0, width, height); 
+            }; 
+            img.src = tempImg; 
         }
     }
 }
-window.addEventListener('resize', () => { initCanvasSize(); initGameCanvasSize(); }); 
+
+function initCanvasSize() { resizeCanvasToDisplaySize(canvas); }
+function initGameCanvasSize() { resizeCanvasToDisplaySize(gameCanvas); }
+window.addEventListener('resize', () => { initCanvasSize(); initGameCanvasSize(); });
 
 function getMousePos(e, c) { const r = c.getBoundingClientRect(); const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY; return { x: x - r.left, y: y - r.top }; } 
 function startDrawing(e) { if(e.type === 'touchstart') e.preventDefault(); isDrawing = true; draw(e); } 
@@ -952,7 +1007,7 @@ function drawGame(e) {
     if(gSize) gameCtx.lineWidth = gSize.value; 
     gameCtx.lineCap = 'round'; gameCtx.globalCompositeOperation = isEraserMode ? 'destination-out' : 'source-over'; 
     if(gColor) gameCtx.strokeStyle = gColor.value; 
-    gameCtx.lineTo(p.x, p.y); gameCtx.stroke(); gameCtx.beginPath(); gameCtx.moveTo(p.x, p.y); 
+    gameCtx.lineTo(p.x, p.y); gameCtx.stroke(); gameCtx.beginPath(); ctx.moveTo(p.x, p.y); 
 } 
 function stopGameDrawing() { 
     if (!isGameDrawing || !gameCtx) return; 
@@ -1619,6 +1674,7 @@ async function broadcastPlayerState() {
 onSnapshot(doc(db, "appData", "watchParty"), (d) => {
     if (d.exists()) {
         const data = d.data();
+        currentWatchParty = data;
         if (data.isActive && data.videoId) {
             if(wpStage) {
                 wpStage.classList.remove('hidden');
@@ -1696,3 +1752,52 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
         }
     }
 });
+
+window.showUserProfile = (userName) => { 
+    const u = usersData[userName]; if(!u) return; 
+    const pName = document.getElementById('profile-card-name'); if(pName) pName.textContent = userName; 
+    const pAvatar = document.getElementById('profile-card-avatar'); if(pAvatar) pAvatar.src = u.avatar; 
+    const bannerImg = document.getElementById('profile-card-banner'); 
+    if(bannerImg) { if (u.banner) { bannerImg.src = u.banner; bannerImg.classList.remove('hidden'); } else { bannerImg.classList.add('hidden'); } }
+    const pStatus = document.getElementById('profile-card-status'); if(pStatus) pStatus.textContent = u.customStatus || 'ไม่ได้ตั้งสถานะ'; 
+    
+    let badges = ''; 
+    if(u.role === 'Admin') badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#da373c] mr-2 shadow-[0_0_8px_#da373c]"></div> Admin</span>'; 
+    else badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#5865F2] mr-2 shadow-[0_0_8px_#5865F2]"></div> Member</span>'; 
+    if (u.avatar.toLowerCase().includes('.gif') || u.banner.toLowerCase().includes('.gif') || u.profileFrame) { 
+        badges += '<span class="inline-flex items-center bg-gradient-to-r from-pink-500 to-purple-500 border border-white/20 px-3 py-1.5 rounded-lg text-[12px] text-white font-bold shadow-[0_0_15px_rgba(236,72,153,0.5)] animate-pulse"><i class="ph-fill ph-sparkle mr-1.5"></i> VIP</span>'; 
+    }
+    const pBadges = document.getElementById('profile-card-badges'); if(pBadges) pBadges.innerHTML = badges; 
+    
+    // 🌟 ระบบแสดงกิจกรรม (Rich Presence - Watch Party)
+    const activitySection = document.getElementById('profile-card-activity');
+    if (activitySection) {
+        // เช็คว่ามี Watch Party เปิดอยู่ และ ผู้ใช้คนนี้กำลังอยู่ในห้องเสียงหรือไม่
+        if (currentWatchParty && currentWatchParty.isActive && currentWatchParty.videoId && u && u.inVoice) {
+            activitySection.classList.remove('hidden');
+            
+            // ดึงภาพปก (Thumbnail) จาก YouTube มาแสดง
+            const activityImg = document.getElementById('profile-activity-img');
+            if (activityImg) activityImg.src = `https://img.youtube.com/vi/${currentWatchParty.videoId}/mqdefault.jpg`;
+            
+            const activityTitle = document.getElementById('profile-activity-title');
+            const activityDetail = document.getElementById('profile-activity-detail');
+            
+            // ถ้าคนที่เรากดดู เป็นคนเปิดคลิปเอง (Host)
+            if (currentWatchParty.hostName === userName) {
+                if(activityTitle) activityTitle.textContent = "กำลังแชร์ YouTube";
+                if(activityDetail) activityDetail.innerHTML = `เป็นโฮสต์เปิดคลิปให้เพื่อนดู`;
+            } else {
+                // ถ้าเป็นคนอื่นที่เข้ามานั่งดู
+                if(activityTitle) activityTitle.textContent = "กำลังดู Watch Party";
+                if(activityDetail) activityDetail.innerHTML = `เปิดคลิปโดย ${currentWatchParty.hostName}`;
+            }
+        } else {
+            activitySection.classList.add('hidden'); // ซ่อนถ้าไม่ได้อยู่ในห้องเสียง หรือไม่ได้เปิดคลิป
+        }
+    }
+    
+    const frameImg = document.getElementById('profile-card-frame');
+    if(frameImg) { if (u.profileFrame) { frameImg.src = u.profileFrame; frameImg.classList.remove('hidden'); } else { frameImg.classList.add('hidden'); } }
+    const pModal = document.getElementById('profile-card-modal'); if(pModal) pModal.classList.remove('hidden'); 
+}
