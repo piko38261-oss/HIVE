@@ -95,11 +95,56 @@ function stopBackgroundAudioMode() {
 
 async function getWordFromAI(gameType = "draw") {
     try {
-        let promptText = "สุ่มคำศัพท์ภาษาไทย 1 คำ สำหรับเกมทายภาพ ขอแปลกๆ สร้างสรรค์ ไม่ซ้ำเดิม ห้ามมีเครื่องหมายใดๆ";
-        if (gameType === "spy") { promptText = "สุ่มคำศัพท์ภาษาไทย 1 คำ (เป็นหมวดของกิน, ของใช้, สัตว์ หรือสถานที่) สำหรับเล่นเกม Spyfall ขอคำที่คนทั่วไปรู้จักดี ห้ามมีคำอธิบาย ห้ามมีเครื่องหมายใดๆ ขอแค่คำศัพท์ 1 คำเท่านั้น"; }
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], generationConfig: { temperature: 1.5 } }) });
-        const data = await res.json(); return data.candidates[0].content.parts[0].text.replace(/[\r\n.]/g, "").trim();
-    } catch (err) { const backup = ["ไดโนเสาร์", "ชาบู", "มนุษย์ต่างดาว", "แฮมเบอร์เกอร์", "หมูกระทะ", "โรงหนัง"]; return backup[Math.floor(Math.random() * backup.length)]; }
+        // เพิ่มเลขสุ่ม (Seed) เพื่อไม่ให้ AI ขี้เกียจและจำเจกับคำเดิมๆ
+        const randomSeed = Math.floor(Math.random() * 100000);
+        let promptText = `สุ่มคำศัพท์ภาษาไทย 1 คำ สำหรับเกมทายภาพ (วาดรูป) ขอคำแปลกๆ สร้างสรรค์ ไม่ซ้ำเดิม (Seed: ${randomSeed}) ห้ามมีเครื่องหมายใดๆ ตอบมาแค่คำศัพท์เพียวๆ 1 คำ`;
+        
+        if (gameType === "spy") { 
+            // สุ่มหมวดหมู่เพื่อบังคับให้ AI คิดคำกว้างขึ้น
+            const categories = ["อาหาร", "ของใช้ในบ้าน", "สัตว์โลก", "สถานที่", "อาชีพ", "ยานพาหนะ", "ผลไม้", "เครื่องใช้ไฟฟ้า", "เครื่องแต่งกาย"];
+            const randomCat = categories[Math.floor(Math.random() * categories.length)];
+            promptText = `สุ่มคำศัพท์ภาษาไทย 1 คำ ในหมวดหมู่ "${randomCat}" สำหรับเล่นเกม Spyfall ขอคำที่คนทั่วไปรู้จักดี (Seed: ${randomSeed}) ห้ามมีเครื่องหมายใดๆ ตอบมาแค่คำศัพท์เพียวๆ 1 คำ`; 
+        }
+        
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify({ 
+                contents: [{ parts: [{ text: promptText }] }], 
+                generationConfig: { temperature: 1.5 } 
+            }) 
+        });
+        
+        const data = await res.json(); 
+        // เช็คว่ามีข้อมูลตอบกลับมาจริงๆ ก่อนนำไปใช้
+        if(data.candidates && data.candidates[0]) {
+            return data.candidates[0].content.parts[0].text.replace(/[\r\n.]/g, "").trim();
+        } else {
+            throw new Error("API Limit"); // บังคับลง catch ถ้า API ส่งข้อผิดพลาดกลับมา
+        }
+        
+    } catch (err) { 
+        // กรณีคีย์ AI ตาย, โควต้าเต็ม, หรือเน็ตหลุด จะสลับมาใช้คลังคำศัพท์สำรองชุดใหญ่ (แยกตามประเภทเกม)
+        const drawBackup = [
+            "ไดโนเสาร์", "ชาบู", "มนุษย์ต่างดาว", "แฮมเบอร์เกอร์", "หมูกระทะ", "โรงหนัง", 
+            "นางเงือก", "จรวด", "ผีดิบ", "กล้องถ่ายรูป", "แว่นตาว่ายน้ำ", "รถพยาบาล", 
+            "นักบินอวกาศ", "ซูชิ", "ปลาหมึกย่าง", "ภูเขาไฟ", "เรือดำน้ำ", "เฮลิคอปเตอร์", 
+            "ตู้เย็น", "ไดร์เป่าผม", "สายชาร์จ", "กระบองเพชร", "แมงมุม", "กิ้งก่า", "นกฮูก",
+            "ปราสาท", "เตารีด", "กระเป๋าเดินทาง", "ไฟฉาย", "รองเท้าสเก็ต", "โดรน", "เรือใบ",
+            "พิซซ่า", "ปฏิทิน", "ต้นไม้", "ภูเขา", "ร่ม", "กีตาร์", "กลองชุด", "ไมโครโฟน"
+        ];
+        
+        const spyBackup = [
+            "พิซซ่า", "โรงพยาบาล", "สวนสัตว์", "รถไฟ", "เครื่องบิน", "หมอ", "ตำรวจ", "ครู", 
+            "สิงโต", "ช้าง", "พัดลม", "ทีวี", "ตู้เย็น", "ไมโครเวฟ", "ส้มตำ", "ชานมไข่มุก", 
+            "วัด", "ทะเล", "น้ำตก", "ห้างสรรพสินค้า", "โรงเรียน", "มหาวิทยาลัย", "ร้านกาแฟ", "ตลาดนัด",
+            "สระว่ายน้ำ", "สนามบิน", "โรงแรม", "สถานีตำรวจ", "ธนาคาร", "ร้านตัดผม", "ร้านอาหาร",
+            "แมว", "สุนัข", "หมู", "กระต่าย", "กางเกงยีนส์", "รองเท้าผ้าใบ", "นาฬิกาข้อมือ"
+        ];
+        
+        const backup = gameType === "spy" ? spyBackup : drawBackup;
+        return backup[Math.floor(Math.random() * backup.length)]; 
+    }
 }
 
 // ==========================================
@@ -307,7 +352,8 @@ function startDatabaseListeners() {
             const display = document.getElementById('game-word-display');
             const toolbar = document.getElementById('game-toolbar');
             if(currentDrawGame.isActive) {
-                if(currentDrawGame.drawerId === currentUserId) { 
+                // 🌟 แก้ไข: ใช้ชื่อผู้ใช้แทนไอดี
+                if(currentDrawGame.drawerId === currentUsername) { 
                     if(display) display.innerHTML = `🎨 คำปริศนาของคุณคือ: <span class="text-yellow-400 ml-2 font-bold tracking-wider">${currentDrawGame.word}</span>`; 
                     if(toolbar) toolbar.classList.remove('hidden'); 
                 } else { 
@@ -406,28 +452,21 @@ window.showUserProfile = (userName) => {
     // 🌟 ระบบแสดงกิจกรรม (Rich Presence - Watch Party)
     const activitySection = document.getElementById('profile-card-activity');
     if (activitySection) {
-        // เช็คว่ามี Watch Party เปิดอยู่ และ ผู้ใช้คนนี้กำลังอยู่ในห้องเสียงหรือไม่
         if (currentWatchParty && currentWatchParty.isActive && currentWatchParty.videoId && u && u.inVoice) {
             activitySection.classList.remove('hidden');
-            
-            // ดึงภาพปก (Thumbnail) จาก YouTube มาแสดง
             const activityImg = document.getElementById('profile-activity-img');
             if (activityImg) activityImg.src = `https://img.youtube.com/vi/${currentWatchParty.videoId}/mqdefault.jpg`;
-            
             const activityTitle = document.getElementById('profile-activity-title');
             const activityDetail = document.getElementById('profile-activity-detail');
-            
-            // ถ้าคนที่เรากดดู เป็นคนเปิดคลิปเอง (Host)
             if (currentWatchParty.hostName === userName) {
                 if(activityTitle) activityTitle.textContent = "กำลังแชร์ YouTube";
                 if(activityDetail) activityDetail.innerHTML = `เป็นโฮสต์เปิดคลิปให้เพื่อนดู`;
             } else {
-                // ถ้าเป็นคนอื่นที่เข้ามานั่งดู
                 if(activityTitle) activityTitle.textContent = "กำลังดู Watch Party";
                 if(activityDetail) activityDetail.innerHTML = `เปิดคลิปโดย ${currentWatchParty.hostName}`;
             }
         } else {
-            activitySection.classList.add('hidden'); // ซ่อนถ้าไม่ได้อยู่ในห้องเสียง หรือไม่ได้เปิดคลิป
+            activitySection.classList.add('hidden');
         }
     }
     
@@ -468,7 +507,19 @@ const frameOptions = [
     { id: '', name: 'ไม่มี', url: '' },
     { id: 'neon', name: 'นีออนม่วง', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='none' stroke='%23a855f7' stroke-width='6'/></svg>" },
     { id: 'gold', name: 'ทองคำ VIP', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='none' stroke='%23eab308' stroke-width='8'/></svg>" },
-    { id: 'cow', name: 'ลายวัว (ชั่วคราว)', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='none' stroke='%23ffffff' stroke-width='8'/><circle cx='50' cy='50' r='46' fill='none' stroke='%23111111' stroke-width='8' stroke-dasharray='15 20'/></svg>" }
+    { id: 'cow', name: 'ลายวัว (ชั่วคราว)', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='none' stroke='%23ffffff' stroke-width='8'/><circle cx='50' cy='50' r='46' fill='none' stroke='%23111111' stroke-width='8' stroke-dasharray='15 20'/></svg>" },
+    
+    // ✨ เพิ่มกรอบใหม่ตรงนี้ครับ!
+    { 
+        id: 'fire', 
+        name: 'ไฟลุก', 
+        url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='none' stroke='%23ef4444' stroke-width='4'/><circle cx='50' cy='50' r='48' fill='none' stroke='%23f97316' stroke-width='2' stroke-dasharray='5 5'/></svg>" 
+    },
+    { 
+        id: 'cyber', 
+        name: 'ไซเบอร์', 
+        url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='5' y='5' width='90' height='90' rx='45' fill='none' stroke='%2306b6d4' stroke-width='4'/><path d='M 10 50 L 90 50' stroke='%2306b6d4' stroke-width='1' opacity='0.5'/></svg>" 
+    }
 ];
 
 window.renderFrameOptions = (currentUrl) => {
@@ -524,7 +575,19 @@ if(wrapperBanner) wrapperBanner.onclick = () => { if(bannerInput) bannerInput.cl
 function handleImageSelect(e, type) {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.type === 'image/gif') { showToast("ว้าว! ตรวจพบรูปเคลื่อนไหว (GIF) กำลังอัปโหลดแบบ VIP!", "info"); uploadImage(file, type); e.target.value = ""; return; }
+
+    // 🌟 ดักจับไฟล์ GIF ให้วิ่งเข้าฟังก์ชันอัปโหลดตรงๆ เลย ไม่ต้องผ่านระบบครอบตัด
+    if (file.type === 'image/gif') { 
+        showToast("ว้าว! ตรวจพบรูปเคลื่อนไหว (GIF) กำลังอัปโหลดแบบ VIP!", "info"); 
+        
+        // ส่งไฟล์จริงไปอัปโหลดแบบดิบๆ (Bypass)
+        uploadImageRaw(file, type); 
+        
+        e.target.value = ""; 
+        return; 
+    }
+
+    // โค้ดเดิมสำหรับการครอบตัดรูปภาพปกติ (JPG, PNG)
     const reader = new FileReader();
     reader.onload = (event) => {
         const cropTarget = document.getElementById('crop-image-target');
@@ -854,14 +917,17 @@ async function sendAnyMessage(inputEl, channelStr) {
             const randomWord = await getWordFromAI("draw");
             if(gameCanvas && gameCtx) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
             await setDoc(doc(db, "appData", "gameWhiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
-            await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: activeChannel, timestamp: serverTimestamp() });
+            
+            // 🌟 แก้ไข: ใช้ currentUsername แทน currentUserId ป้องกันปัญหา AI ไม่ให้วาด
+            await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUsername, drawerName: currentUsername, word: randomWord, channel: activeChannel, timestamp: serverTimestamp() });
             botReply = `🎨 **${currentUsername}** ท้าประลองเกมทายภาพ!\nรีบสลับหน้าจอไปดูที่แท็บ **"🎮 ทายคำจากภาพ"** แล้วพิมพ์คำตอบเลย! (AI เป็นคนคิดคำนะรอบนี้)`; 
         } else { showToast("ไม่รู้จักคำสั่งนี้", "error"); return; }
         await addDoc(collection(db, "messages"), { text: botReply, senderName: "🤖 System Bot", channel: channelStr, timestamp: serverTimestamp() }); return;
     }
     
     let isCorrect = false; let isAlmost = false;
-    if (channelStr === 'game_draw' && currentDrawGame && currentDrawGame.isActive && currentDrawGame.drawerId !== currentUserId) {
+    // 🌟 แก้ไข: ตรวจสอบจากชื่อผู้ใช้ว่าไม่ใช่คนวาด จึงจะให้ทายได้
+    if (channelStr === 'game_draw' && currentDrawGame && currentDrawGame.isActive && currentDrawGame.drawerId !== currentUsername) {
         const guess = txt.toLowerCase(); 
         const answer = currentDrawGame.word ? currentDrawGame.word.toLowerCase() : "";
         if (guess === answer) { isCorrect = true; } 
@@ -997,7 +1063,9 @@ if(btnGameEraser) {
     }; 
 }
 
-function startGameDrawing(e) { if(!currentDrawGame.isActive || currentDrawGame.drawerId !== currentUserId) return; if(e.type === 'touchstart') e.preventDefault(); isGameDrawing = true; drawGame(e); } 
+// 🌟 แก้ไข: ใช้ชื่อผู้ใช้แทนไอดี เพื่อป้องกันบักจาก AI ให้วาดได้
+function startGameDrawing(e) { if(!currentDrawGame.isActive || currentDrawGame.drawerId !== currentUsername) return; if(e.type === 'touchstart') e.preventDefault(); isGameDrawing = true; drawGame(e); } 
+
 function drawGame(e) { 
     if (!isGameDrawing || !gameCtx || !gameCanvas) return; 
     if(e.type === 'touchmove') e.preventDefault(); 
@@ -1007,7 +1075,9 @@ function drawGame(e) {
     if(gSize) gameCtx.lineWidth = gSize.value; 
     gameCtx.lineCap = 'round'; gameCtx.globalCompositeOperation = isEraserMode ? 'destination-out' : 'source-over'; 
     if(gColor) gameCtx.strokeStyle = gColor.value; 
-    gameCtx.lineTo(p.x, p.y); gameCtx.stroke(); gameCtx.beginPath(); ctx.moveTo(p.x, p.y); 
+    
+    // 🌟 แก้ไข: เปลี่ยนจาก ctx เป็น gameCtx เพื่อให้ลากเส้นได้อย่างถูกต้อง
+    gameCtx.lineTo(p.x, p.y); gameCtx.stroke(); gameCtx.beginPath(); gameCtx.moveTo(p.x, p.y); 
 } 
 function stopGameDrawing() { 
     if (!isGameDrawing || !gameCtx) return; 
@@ -1042,7 +1112,9 @@ if(btnStartGameDraw) {
         if(gameCtx && gameCanvas) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); 
         
         await setDoc(doc(db, "appData", "gameWhiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
-        await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUserId, drawerName: currentUsername, word: randomWord, channel: "game_draw", timestamp: serverTimestamp() });
+        
+        // 🌟 แก้ไข: ใช้ currentUsername แทนไอดี
+        await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUsername, drawerName: currentUsername, word: randomWord, channel: "game_draw", timestamp: serverTimestamp() });
         await addDoc(collection(db, "messages"), { text: `🎨 **${currentUsername}** เริ่มเกมทายภาพแล้ว! (คำศัพท์รอบนี้สุ่มโดย AI 🧠)`, senderName: "🤖 System Bot", channel: "game_draw", timestamp: serverTimestamp() });
         
         btnStartGameDraw.innerHTML = originalText; 
@@ -1250,7 +1322,7 @@ async function joinVoice() {
                             camStage.classList.remove('hidden'); camStage.classList.add('flex');
                             camCard.className = "w-[300px] md:w-[400px] aspect-video bg-black rounded-xl overflow-hidden relative border border-[#35373c] shadow-lg animate-[fadeIn_0.3s_ease-out]";
                         } else {
-                            camCard.className = "w-full aspect-video bg-black rounded overflow-hidden relative border border-[#35373c] mb-1 animate-[fadeIn_0.3s_ease-out]";
+                            camCard.className = "w-full aspect-video bg-black rounded overflow-hidden relative border border-[#23a559] mb-1 animate-[fadeIn_0.3s_ease-out]";
                             const sidebarLiveContainer = document.getElementById('sidebar-live-container');
                             if(sidebarLiveContainer) { sidebarLiveContainer.classList.remove('hidden'); sidebarLiveContainer.classList.add('active'); sidebarLiveContainer.style.display = 'block'; }
                         }
@@ -1752,52 +1824,3 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
         }
     }
 });
-
-window.showUserProfile = (userName) => { 
-    const u = usersData[userName]; if(!u) return; 
-    const pName = document.getElementById('profile-card-name'); if(pName) pName.textContent = userName; 
-    const pAvatar = document.getElementById('profile-card-avatar'); if(pAvatar) pAvatar.src = u.avatar; 
-    const bannerImg = document.getElementById('profile-card-banner'); 
-    if(bannerImg) { if (u.banner) { bannerImg.src = u.banner; bannerImg.classList.remove('hidden'); } else { bannerImg.classList.add('hidden'); } }
-    const pStatus = document.getElementById('profile-card-status'); if(pStatus) pStatus.textContent = u.customStatus || 'ไม่ได้ตั้งสถานะ'; 
-    
-    let badges = ''; 
-    if(u.role === 'Admin') badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#da373c] mr-2 shadow-[0_0_8px_#da373c]"></div> Admin</span>'; 
-    else badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#5865F2] mr-2 shadow-[0_0_8px_#5865F2]"></div> Member</span>'; 
-    if (u.avatar.toLowerCase().includes('.gif') || u.banner.toLowerCase().includes('.gif') || u.profileFrame) { 
-        badges += '<span class="inline-flex items-center bg-gradient-to-r from-pink-500 to-purple-500 border border-white/20 px-3 py-1.5 rounded-lg text-[12px] text-white font-bold shadow-[0_0_15px_rgba(236,72,153,0.5)] animate-pulse"><i class="ph-fill ph-sparkle mr-1.5"></i> VIP</span>'; 
-    }
-    const pBadges = document.getElementById('profile-card-badges'); if(pBadges) pBadges.innerHTML = badges; 
-    
-    // 🌟 ระบบแสดงกิจกรรม (Rich Presence - Watch Party)
-    const activitySection = document.getElementById('profile-card-activity');
-    if (activitySection) {
-        // เช็คว่ามี Watch Party เปิดอยู่ และ ผู้ใช้คนนี้กำลังอยู่ในห้องเสียงหรือไม่
-        if (currentWatchParty && currentWatchParty.isActive && currentWatchParty.videoId && u && u.inVoice) {
-            activitySection.classList.remove('hidden');
-            
-            // ดึงภาพปก (Thumbnail) จาก YouTube มาแสดง
-            const activityImg = document.getElementById('profile-activity-img');
-            if (activityImg) activityImg.src = `https://img.youtube.com/vi/${currentWatchParty.videoId}/mqdefault.jpg`;
-            
-            const activityTitle = document.getElementById('profile-activity-title');
-            const activityDetail = document.getElementById('profile-activity-detail');
-            
-            // ถ้าคนที่เรากดดู เป็นคนเปิดคลิปเอง (Host)
-            if (currentWatchParty.hostName === userName) {
-                if(activityTitle) activityTitle.textContent = "กำลังแชร์ YouTube";
-                if(activityDetail) activityDetail.innerHTML = `เป็นโฮสต์เปิดคลิปให้เพื่อนดู`;
-            } else {
-                // ถ้าเป็นคนอื่นที่เข้ามานั่งดู
-                if(activityTitle) activityTitle.textContent = "กำลังดู Watch Party";
-                if(activityDetail) activityDetail.innerHTML = `เปิดคลิปโดย ${currentWatchParty.hostName}`;
-            }
-        } else {
-            activitySection.classList.add('hidden'); // ซ่อนถ้าไม่ได้อยู่ในห้องเสียง หรือไม่ได้เปิดคลิป
-        }
-    }
-    
-    const frameImg = document.getElementById('profile-card-frame');
-    if(frameImg) { if (u.profileFrame) { frameImg.src = u.profileFrame; frameImg.classList.remove('hidden'); } else { frameImg.classList.add('hidden'); } }
-    const pModal = document.getElementById('profile-card-modal'); if(pModal) pModal.classList.remove('hidden'); 
-}
