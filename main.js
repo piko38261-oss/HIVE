@@ -2472,8 +2472,9 @@ function renderHiveShop() {
                     
                     <div class="h-12 bg-[#35373c] rounded-t-xl w-full"></div>
                     <div class="px-3 pt-5 pb-3 flex-1 flex flex-col relative">
+                        <!-- 🌟 เปลี่ยนโลโก้เป็นตัว H โทนสีเทาของการ์ดจำลอง -->
                         <div class="w-10 h-10 rounded-full bg-[#35373c] border-[4px] border-[#232428] absolute -top-5 left-3 flex items-center justify-center">
-                            <i class="ph-fill ph-discord-logo text-[#80848e] text-[18px]"></i>
+                            <span class="font-extrabold text-[#80848e] text-[16px] leading-none select-none">H</span>
                             <div class="w-3 h-3 rounded-full bg-[#232428] absolute -bottom-0.5 -right-0.5"></div>
                         </div>
                         <div class="w-16 h-2.5 bg-[#35373c] rounded-full mt-2"></div>
@@ -2488,7 +2489,7 @@ function renderHiveShop() {
                         <p class="font-bold text-white text-[15px]">${d.name}</p>
                         <p class="font-extrabold text-[#dbdee1] text-[13px] mt-0.5">${d.price}</p>
                     </div>
-                    <span class="bg-[#5865F2] group-hover:bg-[#4752C4] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition">
+                    <span class="bg-[#5865F2] group-hover:bg-[#4752C4] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition flex-shrink-0">
                         สวมใส่
                     </span>
                 </div>
