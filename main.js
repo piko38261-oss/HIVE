@@ -14,8 +14,11 @@ const firebaseConfig = {
   appId: "1:724551925164:web:4f355224d17e2b1e414e09",
   measurementId: "G-JE6XBR241G"
 };
-const app = initializeApp(firebaseConfig); const auth = getAuth(app); const db = getFirestore(app);
-const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a"; const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a";
+const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
 const GEMINI_API_KEY = "AIzaSyCifkioB2z1Ho9LAGSFBYWtV-kM4bgtzhw"; 
 
 // ==========================================
@@ -26,14 +29,14 @@ let localTracks = { audioTrack: null, videoTrack: null }, screenTrack = null, sc
 let isMuted = false, isDeafened = false, isSharingScreen = false, isVideoOn = false, myNumericUid = null;
 let currentUserId = null, currentUsername = "Guest", currentUserRole = "Member"; 
 let allMessages = [], usersData = {}, typingTimeout = null, isTyping = false, unreadCounts = { general: 0, project: 0, game_draw: 0 };
-let replyingTo = null; let messageToDelete = null;
+let replyingTo = null, messageToDelete = null, mentionQuery = "";
 
 let activeChannel = "general"; 
 let connectedVoiceChannel = null; 
 let amIInVoice = false;
 let isAppInitialized = false; 
 
-let remoteAudioTracks = {}; let remoteVideoTracks = {}; 
+let remoteAudioTracks = {}, remoteVideoTracks = {}; 
 let userVolumes = JSON.parse(localStorage.getItem('dosh_volumes')) || {};
 let currentDrawGame = { isActive: false, drawerId: null, drawerName: "", word: "" };
 let currentWatchParty = { isActive: false, videoId: "", hostName: "" };
@@ -77,12 +80,15 @@ window.showToast = (msg, type = "success") => {
     setTimeout(() => { toast.classList.add("opacity-0", "translate-y-4", "transition-all", "duration-300"); setTimeout(() => toast.remove(), 300); }, 3000);
 };
 
-const lightbox = document.createElement('div'); lightbox.className = 'fixed inset-0 bg-black/95 z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 cursor-zoom-out p-4'; lightbox.innerHTML = `<img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl scale-95 transition-transform duration-300"><button class="absolute top-6 right-6 text-white hover:text-gray-300 transition"><i class="ph ph-x text-[32px]"></i></button>`; document.body.appendChild(lightbox);
+const lightbox = document.createElement('div');
+lightbox.className = 'fixed inset-0 bg-black/95 z-[100] hidden flex items-center justify-center opacity-0 transition-opacity duration-300 cursor-zoom-out p-4';
+lightbox.innerHTML = `<img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl scale-95 transition-transform duration-300"><button class="absolute top-6 right-6 text-white hover:text-gray-300 transition"><i class="ph ph-x text-[32px]"></i></button>`;
+document.body.appendChild(lightbox);
 window.openLightbox = (url) => { document.getElementById('lightbox-img').src = url; lightbox.classList.remove('hidden'); void lightbox.offsetWidth; lightbox.classList.remove('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-95', 'scale-100'); };
 lightbox.onclick = () => { lightbox.classList.add('opacity-0'); document.getElementById('lightbox-img').classList.replace('scale-100', 'scale-95'); setTimeout(() => lightbox.classList.add('hidden'), 300); };
 window.sendWave = () => { if(chatInput) { chatInput.value = '👋 โบกมือทักทาย!'; const sendBtn = document.getElementById('send-btn'); if(sendBtn) sendBtn.click(); }};
 
-let bgAudio = null; let wakeLock = null;
+let bgAudio = null, wakeLock = null;
 async function startBackgroundAudioMode() {
     if (!bgAudio) { bgAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA'); bgAudio.loop = true; bgAudio.volume = 0.01; }
     try { await bgAudio.play(); } catch(e) {}
@@ -97,29 +103,21 @@ async function getWordFromAI(gameType = "draw") {
     try {
         const randomSeed = Math.floor(Math.random() * 100000);
         let promptText = `สุ่มคำศัพท์ภาษาไทย 1 คำ สำหรับเกมทายภาพ (วาดรูป) ขอคำแปลกๆ สร้างสรรค์ ไม่ซ้ำเดิม (Seed: ${randomSeed}) ห้ามมีเครื่องหมายใดๆ ตอบมาแค่คำศัพท์เพียวๆ 1 คำ`;
-        
         if (gameType === "spy") { 
             const categories = ["อาหาร", "ของใช้ในบ้าน", "สัตว์โลก", "สถานที่", "อาชีพ", "ยานพาหนะ", "ผลไม้", "เครื่องใช้ไฟฟ้า", "เครื่องแต่งกาย"];
             const randomCat = categories[Math.floor(Math.random() * categories.length)];
             promptText = `สุ่มคำศัพท์ภาษาไทย 1 คำ ในหมวดหมู่ "${randomCat}" สำหรับเล่นเกม Spyfall ขอคำที่คนทั่วไปรู้จักดี (Seed: ${randomSeed}) ห้ามมีเครื่องหมายใดๆ ตอบมาแค่คำศัพท์เพียวๆ 1 คำ`; 
         }
-        
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, { 
             method: "POST", 
             headers: { "Content-Type": "application/json" }, 
-            body: JSON.stringify({ 
-                contents: [{ parts: [{ text: promptText }] }], 
-                generationConfig: { temperature: 1.5 } 
-            }) 
+            body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], generationConfig: { temperature: 1.5 } }) 
         });
-        
         const data = await res.json(); 
-        if(data.candidates && data.candidates[0]) {
+        if (data.candidates && data.candidates[0]) {
             return data.candidates[0].content.parts[0].text.replace(/[\r\n.]/g, "").trim();
-        } else {
-            throw new Error("API Limit");
         }
-        
+        throw new Error("API Limit");
     } catch (err) { 
         const drawBackup = [
             "ไดโนเสาร์", "ชาบู", "มนุษย์ต่างดาว", "แฮมเบอร์เกอร์", "หมูกระทะ", "โรงหนัง", 
@@ -129,7 +127,6 @@ async function getWordFromAI(gameType = "draw") {
             "ปราสาท", "เตารีด", "กระเป๋าเดินทาง", "ไฟฉาย", "รองเท้าสเก็ต", "โดรน", "เรือใบ",
             "พิซซ่า", "ปฏิทิน", "ต้นไม้", "ภูเขา", "ร่ม", "กีตาร์", "กลองชุด", "ไมโครโฟน"
         ];
-        
         const spyBackup = [
             "พิซซ่า", "โรงพยาบาล", "สวนสัตว์", "รถไฟ", "เครื่องบิน", "หมอ", "ตำรวจ", "ครู", 
             "สิงโต", "ช้าง", "พัดลม", "ทีวี", "ตู้เย็น", "ไมโครเวฟ", "ส้มตำ", "ชานมไข่มุก", 
@@ -137,7 +134,6 @@ async function getWordFromAI(gameType = "draw") {
             "สระว่ายน้ำ", "สนามบิน", "โรงแรม", "สถานีตำรวจ", "ธนาคาร", "ร้านตัดผม", "ร้านอาหาร",
             "แมว", "สุนัข", "หมู", "กระต่าย", "กางเกงยีนส์", "รองเท้าผ้าใบ", "นาฬิกาข้อมือ"
         ];
-        
         const backup = gameType === "spy" ? spyBackup : drawBackup;
         return backup[Math.floor(Math.random() * backup.length)]; 
     }
@@ -177,10 +173,11 @@ onAuthStateChanged(auth, async (user) => {
         
         const wasInVoice = localStorage.getItem('dosh_active_voice') === 'true';
         if (wasInVoice) { 
-            await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(e=>{}); 
+            await updateDoc(doc(db, "users", currentUserId), { status: 'online' }).catch(()=>{}); 
             setTimeout(() => { if(joinBtn) joinBtn.click(); }, 1500); 
-        } 
-        else { await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false, isTyping: false }).catch(e=>{}); }
+        } else { 
+            await updateDoc(doc(db, "users", currentUserId), { status: 'online', inVoice: false, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false, isTyping: false }).catch(()=>{}); 
+        }
     } else { 
         window.location.href = "index.html"; 
     }
@@ -199,6 +196,8 @@ if(btnLogout) {
 // ==========================================
 // 📡 5. ระบบดึงข้อมูลจากฐานข้อมูล 
 // ==========================================
+const zones = { 'todo': document.getElementById('todo'), 'in_progress': document.getElementById('in_progress'), 'done': document.getElementById('done') };
+
 function startDatabaseListeners() {
     let isInitialLoad = true;
     onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => { 
@@ -229,15 +228,26 @@ function startDatabaseListeners() {
 
         snapshot.forEach((docSnap) => {
             const u = docSnap.data(), id = docSnap.id, userName = u.username || 'Unknown';
-            
             let userAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=5865F2&color=fff&bold=true`;
             if (u.photoURL && u.photoURL !== "undefined" && u.photoURL !== "null" && u.photoURL.trim() !== "") {
                 userAvatar = u.photoURL;
             }
-            
             const frameUrl = u.profileFrame || '';
             
-            usersData[userName] = { avatar: userAvatar, banner: u.bannerURL || '', id: id, agoraUid: u.agoraUid, customStatus: u.customStatus || '', role: u.role, inVoice: u.inVoice, isSharingScreen: u.isSharingScreen, isVideoOn: u.isVideoOn, profileFrame: frameUrl }; 
+            usersData[userName] = { 
+                avatar: userAvatar, 
+                banner: u.bannerURL || '', 
+                id: id, 
+                agoraUid: u.agoraUid, 
+                customStatus: u.customStatus || '', 
+                role: u.role, 
+                inVoice: u.inVoice, 
+                isSharingScreen: u.isSharingScreen, 
+                isVideoOn: u.isVideoOn, 
+                profileFrame: frameUrl,
+                cardTheme: u.cardTheme || '',
+                cardDeco: u.cardDeco || ''
+            }; 
             if (u.isTyping && u.typingChannel === activeChannel && id !== currentUserId) peopleTyping.push(userName);
             
             const isOnline = u.status === 'online', statusColor = isOnline ? 'bg-[#23a559]' : 'bg-[#5c6069]';
@@ -247,7 +257,6 @@ function startDatabaseListeners() {
             const muteIconLarge = u.isMuted ? '<div class="absolute -bottom-1 -right-1 bg-[#111214] rounded-full p-1.5 border-2 border-[#1e1f22] shadow-sm flex items-center justify-center z-30"><i class="ph-fill ph-microphone-slash text-[#da373c] text-[14px]"></i></div>' : '';
             const screenBadgeSmall = u.isSharingScreen ? '<span class="ml-2 text-[9px] bg-[#5865F2] text-white px-1.5 py-0.5 rounded flex items-center font-bold tracking-wider"><i class="ph-fill ph-screencast mr-1"></i>LIVE</span>' : '';
             const customStatusText = u.customStatus ? `<p class="text-[11px] text-[#23a559] truncate mt-0.5">${u.customStatus}</p>` : `<p class="text-[11px] text-[#6d717a] truncate mt-0.5">${isOnline ? 'ออนไลน์' : 'ออฟไลน์'}</p>`;
-            
             const renderFrameHtml = frameUrl ? `<img src="${frameUrl}" class="absolute w-[135%] h-[135%] max-w-none pointer-events-none z-10 drop-shadow-md">` : '';
 
             if (id === currentUserId) { 
@@ -293,14 +302,8 @@ function startDatabaseListeners() {
                         </div>
                     `);
                 } else {
-                    if (u.isVideoOn) {
-                        card.classList.add('hidden');
-                        card.classList.remove('flex');
-                    } else {
-                        card.classList.remove('hidden');
-                        card.classList.add('flex');
-                    }
-
+                    if (u.isVideoOn) { card.classList.add('hidden'); card.classList.remove('flex'); } 
+                    else { card.classList.remove('hidden'); card.classList.add('flex'); }
                     const muteBadge = document.getElementById(`mute-badge-${id}`);
                     if (muteBadge) muteBadge.innerHTML = muteIconLarge;
                 }
@@ -363,7 +366,6 @@ function startDatabaseListeners() {
 
     onSnapshot(doc(db, "appData", "spyGame"), (d) => { if(d.exists()) { currentSpyData = d.data(); renderSpyGame(); } });
 
-    const zones = { 'todo': document.getElementById('todo'), 'in_progress': document.getElementById('in_progress'), 'done': document.getElementById('done') };
     onSnapshot(collection(db, "tasks"), (snapshot) => { 
         Object.values(zones).forEach(z => { if(z) z.innerHTML = ''; }); 
         snapshot.forEach((docSnap) => { 
@@ -383,7 +385,18 @@ function startDatabaseListeners() {
     });
 } 
 
-const views = { chat: document.getElementById('view-chat'), board: document.getElementById('view-board'), voice: document.getElementById('view-voice'), whiteboard: document.getElementById('view-whiteboard'), 'game-draw': document.getElementById('view-game-draw'), 'game-spy': document.getElementById('view-game-spy') };
+// ==========================================
+// 🧭 6. ระบบสลับหน้าจอ (Navigation & Views)
+// ==========================================
+const views = { 
+    chat: document.getElementById('view-chat'), 
+    board: document.getElementById('view-board'), 
+    voice: document.getElementById('view-voice'), 
+    whiteboard: document.getElementById('view-whiteboard'), 
+    'game-draw': document.getElementById('view-game-draw'), 
+    'game-spy': document.getElementById('view-game-spy'),
+    shop: document.getElementById('view-shop')
+};
 const membersSidebar = document.getElementById('members-sidebar'), sidebar = document.getElementById('sidebar'), overlay = document.getElementById('overlay');
 document.querySelectorAll('.open-menu, #open-members-voice').forEach(btn => btn.onclick = () => { if(sidebar) sidebar.classList.add('open'); if(overlay) overlay.classList.add('active'); }); 
 const btnCloseMenu = document.getElementById('close-menu'); if(btnCloseMenu) btnCloseMenu.onclick = () => { if(sidebar) sidebar.classList.remove('open'); if(overlay) overlay.classList.remove('active'); }; 
@@ -391,7 +404,15 @@ const btnOpenMembers = document.getElementById('open-members'); if(btnOpenMember
 const btnCloseMembers = document.getElementById('close-members'); if(btnCloseMembers) btnCloseMembers.onclick = () => { if(membersSidebar) membersSidebar.classList.add('translate-x-full'); if(overlay) overlay.classList.remove('active'); }; 
 if(overlay) overlay.onclick = () => { if(sidebar) sidebar.classList.remove('open'); if(membersSidebar) membersSidebar.classList.add('translate-x-full'); if(overlay) overlay.classList.remove('active'); };
 
-function updateUnreadBadge(channel) { const btn = document.querySelector(`.nav-btn[data-channel="${channel}"]`); if (!btn) return; let badge = btn.querySelector('.unread-badge'); if (unreadCounts[channel] > 0) { if (!badge) { badge = document.createElement('span'); badge.className = 'unread-badge bg-[#da373c] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-auto animate-[fadeIn_0.2s_ease-out] shadow-sm'; btn.appendChild(badge); } badge.textContent = unreadCounts[channel] > 99 ? '99+' : unreadCounts[channel]; } else { if (badge) badge.remove(); } }
+function updateUnreadBadge(channel) { 
+    const btn = document.querySelector(`.nav-btn[data-channel="${channel}"]`); 
+    if (!btn) return; 
+    let badge = btn.querySelector('.unread-badge'); 
+    if (unreadCounts[channel] > 0) { 
+        if (!badge) { badge = document.createElement('span'); badge.className = 'unread-badge bg-[#da373c] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-auto animate-[fadeIn_0.2s_ease-out] shadow-sm'; btn.appendChild(badge); } 
+        badge.textContent = unreadCounts[channel] > 99 ? '99+' : unreadCounts[channel]; 
+    } else { if (badge) badge.remove(); } 
+}
 
 document.querySelectorAll('.nav-btn').forEach(btn => { 
     btn.onclick = (e) => { 
@@ -402,10 +423,12 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         
         document.querySelectorAll('.nav-btn').forEach(b => { b.classList.remove('channel-active', 'text-[#dbdee1]', 'bg-[#404249]'); b.classList.add('channel-inactive', 'text-[#80848e]'); }); 
         btn.classList.remove('channel-inactive', 'text-[#80848e]'); btn.classList.add('channel-active', 'text-[#dbdee1]', 'bg-[#404249]'); 
-        Object.values(views).forEach(v => { if(v) v.classList.add('hidden') }); 
+        Object.values(views).forEach(v => { if(v) v.classList.add('hidden'); }); 
         if(views[view]) views[view].classList.remove('hidden'); 
+        
         if(view === 'whiteboard') setTimeout(initCanvasSize, 50);
         if(view === 'game-draw') setTimeout(initGameCanvasSize, 50);
+        if(view === 'shop') renderHiveShop();
         
         if(membersSidebar) membersSidebar.classList.remove('md:hidden'); 
         if (view === 'chat' || view === 'voice') { 
@@ -426,6 +449,9 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     }; 
 });
 
+// ==========================================
+// 🪪 7. โปรไฟล์การ์ด & โปรไฟล์ Settings
+// ==========================================
 window.showUserProfile = (userName) => { 
     const u = usersData[userName]; if(!u) return; 
     const pName = document.getElementById('profile-card-name'); if(pName) pName.textContent = userName; 
@@ -437,7 +463,7 @@ window.showUserProfile = (userName) => {
     let badges = ''; 
     if(u.role === 'Admin') badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#da373c] mr-2 shadow-[0_0_8px_#da373c]"></div> Admin</span>'; 
     else badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#5865F2] mr-2 shadow-[0_0_8px_#5865F2]"></div> Member</span>'; 
-    if (u.avatar.toLowerCase().includes('.gif') || u.banner.toLowerCase().includes('.gif') || u.profileFrame) { 
+    if (u.avatar.toLowerCase().includes('.gif') || u.banner.toLowerCase().includes('.gif') || u.profileFrame || u.cardTheme || u.cardDeco) { 
         badges += '<span class="inline-flex items-center bg-gradient-to-r from-pink-500 to-purple-500 border border-white/20 px-3 py-1.5 rounded-lg text-[12px] text-white font-bold shadow-[0_0_15px_rgba(236,72,153,0.5)] animate-pulse"><i class="ph-fill ph-sparkle mr-1.5"></i> VIP</span>'; 
     }
     const pBadges = document.getElementById('profile-card-badges'); if(pBadges) pBadges.innerHTML = badges; 
@@ -464,8 +490,29 @@ window.showUserProfile = (userName) => {
     
     const frameImg = document.getElementById('profile-card-frame');
     if(frameImg) { if (u.profileFrame) { frameImg.src = u.profileFrame; frameImg.classList.remove('hidden'); } else { frameImg.classList.add('hidden'); } }
-    const pModal = document.getElementById('profile-card-modal'); if(pModal) pModal.classList.remove('hidden'); 
-}
+    
+    const pModal = document.getElementById('profile-card-modal'); 
+    if(pModal) {
+        const cardBox = pModal.firstElementChild;
+        if(cardBox) {
+            cardBox.style.background = u.cardTheme || 'rgba(17, 18, 20, 0.92)';
+            cardBox.classList.remove('overflow-hidden');
+            const bannerWrap = document.getElementById('profile-card-banner')?.parentElement;
+            if(bannerWrap) bannerWrap.classList.add('overflow-hidden', 'rounded-t-2xl', 'md:rounded-t-3xl');
+
+            cardBox.querySelectorAll('.card-deco-overlay').forEach(el => el.remove());
+
+            const decoItem = shopDecos.find(d => d.id === u.cardDeco);
+            if(decoItem && decoItem.topSvg) {
+                cardBox.insertAdjacentHTML('beforeend', `
+                    <img src="${decoItem.topSvg}" class="card-deco-overlay absolute -top-11 left-1/2 -translate-x-1/2 w-[108%] max-w-none pointer-events-none z-30 drop-shadow-[0_6px_12px_rgba(0,0,0,0.8)]">
+                    <img src="${decoItem.bottomSvg}" class="card-deco-overlay absolute -bottom-8 left-1/2 -translate-x-1/2 w-[106%] max-w-none pointer-events-none z-30 drop-shadow-[0_6px_12px_rgba(0,0,0,0.8)]">
+                `);
+            }
+        }
+        pModal.classList.remove('hidden'); 
+    }
+};
 
 const btnCloseProfile = document.getElementById('close-profile-card');
 if(btnCloseProfile) btnCloseProfile.onclick = () => { const p = document.getElementById('profile-card-modal'); if(p) p.classList.add('hidden'); }; 
@@ -473,9 +520,6 @@ if(btnCloseProfile) btnCloseProfile.onclick = () => { const p = document.getElem
 const pModalWrap = document.getElementById('profile-card-modal');
 if(pModalWrap) { pModalWrap.addEventListener('click', (e) => { if (e.target === pModalWrap) pModalWrap.classList.add('hidden'); }); }
 
-// ==========================================
-// 🎨 7. โปรไฟล์ Settings 
-// ==========================================
 document.querySelectorAll('.settings-tab-btn').forEach(btn => {
     btn.onclick = () => {
         document.querySelectorAll('.settings-tab-btn').forEach(b => {
@@ -483,23 +527,21 @@ document.querySelectorAll('.settings-tab-btn').forEach(btn => {
             b.classList.add('text-[#80848e]');
         });
         document.querySelectorAll('.settings-tab-content').forEach(c => c.classList.add('hidden'));
-        
         btn.classList.add('active', 'bg-[#404249]', 'text-[#dbdee1]');
         btn.classList.remove('text-[#80848e]');
-        
         const targetId = btn.getAttribute('data-tab');
         document.getElementById(targetId).classList.remove('hidden');
     };
 });
 
 const settingsModal = document.getElementById('settings-modal'), avatarInput = document.getElementById('settings-avatar-input'), bannerInput = document.getElementById('settings-banner-input');
-let cropper = null; let currentCropType = ''; 
+let cropper = null, currentCropType = ''; 
 
 const frameOptions = [
     { id: '', name: 'ไม่มี', url: '' },
     { id: 'neon', name: 'นีออนม่วง', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='none' stroke='%23a855f7' stroke-width='6'/></svg>" },
     { id: 'gold', name: 'ทองคำ VIP', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='none' stroke='%23eab308' stroke-width='8'/></svg>" },
-    { id: 'cow', name: 'ลายวัว (ชั่วคราว)', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='none' stroke='%23ffffff' stroke-width='8'/><circle cx='50' cy='50' r='46' fill='none' stroke='%23111111' stroke-width='8' stroke-dasharray='15 20'/></svg>" },
+    { id: 'cow', name: 'ลายวัว', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='none' stroke='%23ffffff' stroke-width='8'/><circle cx='50' cy='50' r='46' fill='none' stroke='%23111111' stroke-width='8' stroke-dasharray='15 20'/></svg>" },
     { id: 'fire', name: 'ไฟลุก', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='none' stroke='%23ef4444' stroke-width='4'/><circle cx='50' cy='50' r='48' fill='none' stroke='%23f97316' stroke-width='2' stroke-dasharray='5 5'/></svg>" },
     { id: 'cyber', name: 'ไซเบอร์', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='5' y='5' width='90' height='90' rx='45' fill='none' stroke='%2306b6d4' stroke-width='4'/><path d='M 10 50 L 90 50' stroke='%2306b6d4' stroke-width='1' opacity='0.5'/></svg>" }
 ];
@@ -604,33 +646,16 @@ async function uploadImage(file, type) {
             reader.onload = (e) => {
                 const img = new Image();
                 img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-                    
+                    const c = document.createElement('canvas');
+                    let width = img.width, height = img.height;
                     const maxWidth = type === 'avatar' ? 400 : 1200;
                     const maxHeight = type === 'avatar' ? 400 : 600;
-                    
-                    if (width > height) {
-                        if (width > maxWidth) {
-                            height = Math.round((height * maxWidth) / width);
-                            width = maxWidth;
-                        }
-                    } else {
-                        if (height > maxHeight) {
-                            width = Math.round((width * maxHeight) / height);
-                            height = maxHeight;
-                        }
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    canvas.toBlob((blob) => {
-                        resolve(blob || file);
-                    }, 'image/webp', 0.8);
+                    if (width > height) { if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth; } } 
+                    else { if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight; } }
+                    c.width = width; c.height = height;
+                    const context = c.getContext('2d');
+                    context.drawImage(img, 0, 0, width, height);
+                    c.toBlob((blob) => { resolve(blob || file); }, 'image/webp', 0.8);
                 };
                 img.src = e.target.result;
             };
@@ -639,7 +664,6 @@ async function uploadImage(file, type) {
 
         const fd = new FormData(); 
         fd.append("image", compressedBlob, `hive_${type}_${Date.now()}.webp`); 
-        
         const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); 
         const r = await res.json(); 
         
@@ -652,20 +676,12 @@ async function uploadImage(file, type) {
             } else { 
                 await updateDoc(doc(db, "users", currentUserId), { bannerURL: r.data.url }); 
                 const p1 = document.getElementById('settings-banner-preview'); 
-                if(p1) { 
-                    p1.src = r.data.url; 
-                    p1.classList.remove('hidden'); 
-                }
+                if(p1) { p1.src = r.data.url; p1.classList.remove('hidden'); }
             } 
             showToast("อัปโหลดสำเร็จ!", "success"); 
-        } else {
-            showToast("อัปโหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", "error");
-        }
-    } catch(err) { 
-        showToast("เกิดข้อผิดพลาดในการอัปโหลด", "error"); 
-    } finally { 
-        if(wrap) wrap.classList.remove('opacity-50', 'pointer-events-none'); 
-    } 
+        } else { showToast("อัปโหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", "error"); }
+    } catch(err) { showToast("เกิดข้อผิดพลาดในการอัปโหลด", "error"); } 
+    finally { if(wrap) wrap.classList.remove('opacity-50', 'pointer-events-none'); } 
 }
 
 async function uploadImageRaw(file, type) { 
@@ -676,7 +692,6 @@ async function uploadImageRaw(file, type) {
     try { 
         const fd = new FormData(); 
         fd.append("image", file); 
-        
         const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); 
         const r = await res.json(); 
         
@@ -689,20 +704,12 @@ async function uploadImageRaw(file, type) {
             } else { 
                 await updateDoc(doc(db, "users", currentUserId), { bannerURL: r.data.url }); 
                 const p1 = document.getElementById('settings-banner-preview'); 
-                if(p1) { 
-                    p1.src = r.data.url; 
-                    p1.classList.remove('hidden'); 
-                }
+                if(p1) { p1.src = r.data.url; p1.classList.remove('hidden'); }
             } 
             showToast("อัปโหลดภาพเคลื่อนไหวสำเร็จ!", "success"); 
-        } else {
-            showToast("อัปโหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", "error");
-        }
-    } catch(err) { 
-        showToast("เกิดข้อผิดพลาดในการอัปโหลดไฟล์ GIF", "error"); 
-    } finally { 
-        if(wrap) wrap.classList.remove('opacity-50', 'pointer-events-none'); 
-    } 
+        } else { showToast("อัปโหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", "error"); }
+    } catch(err) { showToast("เกิดข้อผิดพลาดในการอัปโหลดไฟล์ GIF", "error"); } 
+    finally { if(wrap) wrap.classList.remove('opacity-50', 'pointer-events-none'); } 
 }
 
 const btnSaveSettings = document.getElementById('save-settings-btn');
@@ -738,7 +745,7 @@ if(btnSaveSettings) {
 // 💬 8. ระบบ Chat & Mentions
 // ==========================================
 function handleMentionInput(e) {
-    const input = e.target; let currentActiveInput = input;
+    const input = e.target;
     const val = input.value; const cursorPos = input.selectionStart;
     const textBeforeCursor = val.substring(0, cursorPos);
     const match = textBeforeCursor.match(/@([a-zA-Z0-9_ก-๙]*)$/);
@@ -788,9 +795,8 @@ const deleteModal = document.getElementById('delete-confirm-modal');
 window.deleteChatMsg = (msgId) => { messageToDelete = msgId; if(deleteModal) deleteModal.classList.remove('hidden'); }; 
 
 const btnCancelDelete = document.getElementById('cancel-delete-btn');
-if(btnCancelDelete) {
-    btnCancelDelete.onclick = () => { messageToDelete = null; if(deleteModal) deleteModal.classList.add('hidden'); }; 
-}
+if(btnCancelDelete) btnCancelDelete.onclick = () => { messageToDelete = null; if(deleteModal) deleteModal.classList.add('hidden'); }; 
+
 const btnConfirmDelete = document.getElementById('confirm-delete-btn');
 if(btnConfirmDelete) {
     btnConfirmDelete.onclick = async () => { 
@@ -810,9 +816,7 @@ window.setReply = (msgId, senderName, rawText) => {
     if(chatInput) chatInput.focus(); 
 }; 
 const btnCancelReply = document.getElementById('cancel-reply-btn');
-if(btnCancelReply) {
-    btnCancelReply.onclick = () => { replyingTo = null; const rBanner = document.getElementById('reply-banner'); if(rBanner) rBanner.classList.add('hidden'); };
-}
+if(btnCancelReply) btnCancelReply.onclick = () => { replyingTo = null; const rBanner = document.getElementById('reply-banner'); if(rBanner) rBanner.classList.add('hidden'); };
 
 function scrollToBottom(containerId) {
     const container = document.getElementById(containerId);
@@ -895,7 +899,7 @@ function renderMessages() {
 }
 
 if(chatInput) {
-    chatInput.addEventListener('keyup', (e) => { 
+    chatInput.addEventListener('keyup', () => { 
         if(cmdMenu) {
             if(chatInput.value.startsWith('/')) { cmdMenu.classList.remove('hidden'); } 
             else { cmdMenu.classList.add('hidden'); } 
@@ -910,7 +914,7 @@ document.querySelectorAll('#command-list li').forEach(li => {
             chatInput.focus(); 
         }
         if(cmdMenu) cmdMenu.classList.add('hidden'); 
-    } 
+    };
 });
 
 async function sendAnyMessage(inputEl, channelStr) {
@@ -936,7 +940,7 @@ async function sendAnyMessage(inputEl, channelStr) {
         await addDoc(collection(db, "messages"), { text: botReply, senderName: "🤖 System Bot", channel: channelStr, timestamp: serverTimestamp() }); return;
     }
     
-    let isCorrect = false; let isAlmost = false;
+    let isCorrect = false, isAlmost = false;
     if (channelStr === 'game_draw' && currentDrawGame && currentDrawGame.isActive && currentDrawGame.drawerId !== currentUsername) {
         const guess = txt.toLowerCase(); 
         const answer = currentDrawGame.word ? currentDrawGame.word.toLowerCase() : "";
@@ -991,26 +995,24 @@ if(fileInput) {
 }
 
 // ==========================================
-// 🎨 10. ระบบวาดรูป และ เกมทายภาพ (แก้ไข Canvas Scale)
+// 🎨 9. ระบบวาดรูป และ เกมทายภาพ
 // ==========================================
-let isDrawing = false; let isGameDrawing = false; let isEraserMode = false; let wbSyncTimer = null; let gameWbSyncTimer = null;
+let isDrawing = false, isGameDrawing = false, isEraserMode = false, wbSyncTimer = null, gameWbSyncTimer = null;
 
-function resizeCanvasToDisplaySize(canvas) {
-    if(!canvas) return;
-    const parent = canvas.parentElement;
+function resizeCanvasToDisplaySize(targetCanvas) {
+    if(!targetCanvas) return;
+    const parent = targetCanvas.parentElement;
     if(!parent) return;
-    
     const width = parent.clientWidth;
     const height = parent.clientHeight;
-    
-    if (canvas.width !== width || canvas.height !== height) {
-        const tempImg = canvas.toDataURL();
-        canvas.width = width;
-        canvas.height = height;
+    if (width > 0 && height > 0 && (targetCanvas.width !== width || targetCanvas.height !== height)) {
+        const tempImg = targetCanvas.toDataURL();
+        targetCanvas.width = width;
+        targetCanvas.height = height;
         if(tempImg !== "data:,") { 
             const img = new Image(); 
             img.onload = () => { 
-                const context = canvas.getContext('2d');
+                const context = targetCanvas.getContext('2d');
                 if(context) context.drawImage(img, 0, 0, width, height); 
             }; 
             img.src = tempImg; 
@@ -1043,7 +1045,7 @@ function stopDrawing() {
 
 if(canvas) {
     canvas.onmousedown = startDrawing; canvas.onmousemove = draw; canvas.onmouseup = canvas.onmouseout = stopDrawing; 
-    canvas.addEventListener('touchstart', startDrawing, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchmove', function(e){ if(isDrawing) e.preventDefault(); }, {passive: false}); canvas.addEventListener('touchend', stopDrawing); 
+    canvas.addEventListener('touchstart', startDrawing, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchend', stopDrawing); 
 }
 
 const btnWbClear = document.getElementById('wb-clear');
@@ -1072,7 +1074,6 @@ if(btnGameEraser) {
 }
 
 function startGameDrawing(e) { if(!currentDrawGame.isActive || currentDrawGame.drawerId !== currentUsername) return; if(e.type === 'touchstart') e.preventDefault(); isGameDrawing = true; drawGame(e); } 
-
 function drawGame(e) { 
     if (!isGameDrawing || !gameCtx || !gameCanvas) return; 
     if(e.type === 'touchmove') e.preventDefault(); 
@@ -1092,7 +1093,7 @@ function stopGameDrawing() {
 
 if(gameCanvas) {
     gameCanvas.onmousedown = startGameDrawing; gameCanvas.onmousemove = drawGame; gameCanvas.onmouseup = gameCanvas.onmouseout = stopGameDrawing; 
-    gameCanvas.addEventListener('touchstart', startGameDrawing, {passive: false}); gameCanvas.addEventListener('touchmove', drawGame, {passive: false}); gameCanvas.addEventListener('touchmove', function(e){ if(isGameDrawing) e.preventDefault(); }, {passive: false}); gameCanvas.addEventListener('touchend', stopGameDrawing); 
+    gameCanvas.addEventListener('touchstart', startGameDrawing, {passive: false}); gameCanvas.addEventListener('touchmove', drawGame, {passive: false}); gameCanvas.addEventListener('touchend', stopGameDrawing); 
 }
 
 const btnGameClear = document.getElementById('game-clear-btn');
@@ -1126,7 +1127,7 @@ if(btnStartGameDraw) {
 }
 
 // ==========================================
-// 🕵️‍♂️ 11. เกมจับสปาย (Who is the Spy?)
+// 🕵️‍♂️ 10. เกมจับสปาย (Who is the Spy?)
 // ==========================================
 let currentSpyData = { status: 'waiting', players: {}, votes: {} };
 const lobbyUI = document.getElementById('spy-lobby-ui'); const playUI = document.getElementById('spy-play-ui'); const voteUI = document.getElementById('spy-vote-ui'); const playersListUI = document.getElementById('spy-players-list'); const joinSpyBtn = document.getElementById('spy-join-btn'); const startSpyBtn = document.getElementById('spy-start-btn'); const secretWordUI = document.getElementById('spy-secret-word');
@@ -1192,7 +1193,7 @@ if(spyEndBtn) {
 }
 
 // ==========================================
-// 🎙️ 12. ระบบเสียง (Agora WebRTC) & AI
+// 🎙️ 11. ระบบเสียง (Agora WebRTC) & AI
 // ==========================================
 window.changeUserVolume = (targetAgoraUid, targetDbId, volumeValue) => {
     const vol = parseInt(volumeValue);
@@ -1206,7 +1207,6 @@ window.changeUserVolume = (targetAgoraUid, targetDbId, volumeValue) => {
 async function getMicrophones() {
     const micSelect = document.getElementById('audio-input-select');
     if (!micSelect) return;
-    
     try {
         const mics = await AgoraRTC.getMicrophones();
         micSelect.innerHTML = '';
@@ -1216,10 +1216,8 @@ async function getMicrophones() {
             option.text = mic.label || `Microphone ${micSelect.length + 1}`;
             micSelect.appendChild(option);
         });
-        
         const savedMic = localStorage.getItem('hive_selected_mic');
         if (savedMic) micSelect.value = savedMic;
-
     } catch (error) {
         micSelect.innerHTML = '<option value="">กรุณาอนุญาตการเข้าถึงไมค์ก่อน</option>';
     }
@@ -1243,26 +1241,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if(micVolInput) {
         micVolInput.value = savedMicVolume;
         if(micVolDisplay) micVolDisplay.textContent = savedMicVolume + '%';
-        
         micVolInput.oninput = (e) => {
             const vol = parseInt(e.target.value);
             if(micVolDisplay) micVolDisplay.textContent = vol + '%';
             savedMicVolume = vol;
             localStorage.setItem('hive_my_mic_vol', vol);
-            if (localTracks.audioTrack) {
-                localTracks.audioTrack.setVolume(vol); 
-            }
+            if (localTracks.audioTrack) localTracks.audioTrack.setVolume(vol); 
         };
     }
 
     const noiseRadios = document.querySelectorAll('input[name="noise_setting"]');
     noiseRadios.forEach(radio => {
         if(radio.value === savedNoiseSetting) radio.checked = true;
-        
         radio.onchange = async (e) => {
             savedNoiseSetting = e.target.value;
             localStorage.setItem('hive_noise_setting', savedNoiseSetting);
-            
             document.querySelectorAll('input[name="noise_setting"]').forEach(r => {
                 const label = r.closest('label');
                 if(r.checked) {
@@ -1273,7 +1266,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     label.classList.add('border-transparent', 'hover:bg-[#2b2d31]');
                 }
             });
-
             if (denoiserProcessor) {
                 if (savedNoiseSetting === 'none') {
                     await denoiserProcessor.disable();
@@ -1303,7 +1295,7 @@ async function joinVoice() {
             }
             if (t === "video") { 
                 remoteVideoTracks[u.uid] = u.videoTrack;
-                let matchedUserId = null; let matchedUserName = "Unknown";
+                let matchedUserId = null, matchedUserName = "Unknown";
                 for(let k in usersData) { if(usersData[k].agoraUid === u.uid) { matchedUserId = usersData[k].id; matchedUserName = k; break; } }
                 if (matchedUserId) {
                     const uData = usersData[matchedUserName];
@@ -1315,7 +1307,6 @@ async function joinVoice() {
                     } else {
                         const targetContainerId = (camLayoutPreference === 'center') ? 'camera-stage' : 'sidebar-video-grid';
                         const container = document.getElementById(targetContainerId);
-
                         const ex = document.getElementById(`cam-wrap-${u.uid}`); if(ex) ex.remove();
                         let camCard = document.createElement("div"); 
                         camCard.id = `cam-wrap-${u.uid}`; 
@@ -1347,31 +1338,25 @@ async function joinVoice() {
                     const activeStreams = ssStage.querySelectorAll('div[id^="v-wrap-"]');
                     if (activeStreams.length === 0) ssStage.classList.add('hidden'); 
                 }
-                
                 const camWrap = document.getElementById(`cam-wrap-${u.uid}`); 
                 if (camWrap) camWrap.remove();
-                
                 const camStage = document.getElementById('camera-stage');
                 if(camStage && camStage.children.length === 0) { camStage.classList.add('hidden'); camStage.classList.remove('flex'); }
-
                 const sidebarGrid = document.getElementById('sidebar-video-grid');
                 const container = document.getElementById('sidebar-live-container');
-                if(container && sidebarGrid) {
-                    if (sidebarGrid.children.length === 0) { container.classList.add('hidden'); container.classList.remove('active'); container.style.display = 'none'; }
+                if(container && sidebarGrid && sidebarGrid.children.length === 0) {
+                    container.classList.add('hidden'); container.classList.remove('active'); container.style.display = 'none';
                 }
             } 
         }); 
         
         await rtcClient.join(AGORA_APP_ID, "DOSH_VOICE", null, myNumericUid); 
         
-        let micConnected = false;
         try {
             const savedMic = localStorage.getItem('hive_selected_mic');
             const micConfig = { AEC: true, ANS: true, AGC: true };
             if (savedMic) micConfig.microphoneId = savedMic;
-            
             localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack(micConfig); 
-            
             if (savedMicVolume !== 100) localTracks.audioTrack.setVolume(savedMicVolume);
 
             try {
@@ -1382,24 +1367,13 @@ async function joinVoice() {
                     AgoraRTC.registerExtension(denoiserExtension);
                 }
                 denoiserProcessor = denoiserExtension.createProcessor();
-                
                 localTracks.audioTrack.pipe(denoiserProcessor).pipe(localTracks.audioTrack.processorDestination);
-                
-                if (savedNoiseSetting === 'ai') {
-                    await denoiserProcessor.enable();
-                    console.log("✅ AI Noise Cancellation: ENABLED");
-                } else {
-                    console.log("ℹ️ AI Noise Cancellation: DISABLED (By User Setting)");
-                }
-            } catch (aiErr) {
-                console.warn("⚠️ AI Denoiser ไม่ทำงาน", aiErr);
-            }
+                if (savedNoiseSetting === 'ai') await denoiserProcessor.enable();
+            } catch (aiErr) {}
 
             await rtcClient.publish(localTracks.audioTrack); 
-            micConnected = true;
             await localTracks.audioTrack.setMuted(isMuted);
         } catch (micErr) { 
-            console.warn("ไม่สามารถเข้าถึงไมค์ได้", micErr); 
             isMuted = true; 
             showToast("เข้าร่วมแบบ 'ฟังอย่างเดียว' (เบราว์เซอร์บล็อกไมค์ / ไม่พบไมค์)", "info");
         }
@@ -1417,25 +1391,19 @@ async function joinVoice() {
         
         await updateDoc(doc(db, "users", currentUserId), { inVoice: true, voiceChannel: "DOSH_VOICE", agoraUid: myNumericUid, isMuted: isMuted, isSharingScreen: false, isVideoOn: false }); 
         localStorage.setItem('dosh_active_voice', 'true'); 
-        
         amIInVoice = true; 
 
-        if (ytPlayer && typeof ytPlayer.unMute === 'function') {
-            ytPlayer.unMute();
-        }
-
+        if (ytPlayer && typeof ytPlayer.unMute === 'function') ytPlayer.unMute();
         if(joinBtn) joinBtn.classList.add('hidden'); 
         const activeUI = document.getElementById('active-voice-ui'); if(activeUI) activeUI.classList.remove('hidden'); 
         if(bottomLeaveBtn) bottomLeaveBtn.classList.remove('hidden');
         startBackgroundAudioMode(); 
-        
     } catch (err) { 
-        console.error("Join Voice Error:", err); 
         localStorage.removeItem('dosh_active_voice'); 
         showToast("เชื่อมต่อห้องเสียงไม่สำเร็จ กรุณาลองใหม่", "error"); 
-        if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, voiceChannel: null, agoraUid: null }); }
+        if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { inVoice: false, voiceChannel: null, agoraUid: null });
         amIInVoice = false; 
-        if(joinBtn) { joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[20px] md:text-[22px] mr-1.5 md:mr-2"></i> <span class="hidden md:inline">เข้าร่วมการแชทด้วยเสียง</span><span class="md:hidden">เข้าร่วมห้องเสียง</span>'; joinBtn.classList.remove('hidden'); }
+        if(joinBtn) joinBtn.classList.remove('hidden');
     } 
 }
 
@@ -1453,7 +1421,6 @@ if(camBtn) {
                 
                 const targetContainerId = (camLayoutPreference === 'center') ? 'camera-stage' : 'sidebar-video-grid';
                 const container = document.getElementById(targetContainerId);
-                
                 const ex = document.getElementById(`cam-wrap-local`); if(ex) ex.remove();
                 let camCard = document.createElement("div"); 
                 camCard.id = `cam-wrap-local`; 
@@ -1471,9 +1438,8 @@ if(camBtn) {
                 camCard.innerHTML = `<div id="player-local" class="absolute inset-0 w-full h-full bg-black"></div><div class="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-[10px] md:text-[12px] font-bold text-white z-10 backdrop-blur-sm"><i class="ph-fill ph-video-camera text-[#23a559] mr-1"></i>คุณ (${currentUsername})</div>`;
                 container.prepend(camCard); 
                 localTracks.videoTrack.play(`player-local`, { fit: "cover" });
-                
                 showToast("เปิดกล้องแล้ว!", "success");
-            } catch(e) { console.log(e); showToast("ไม่สามารถเข้าถึงกล้องได้ หรือไม่มีกล้องครับ", "error"); }
+            } catch(e) { showToast("ไม่สามารถเข้าถึงกล้องได้ หรือไม่มีกล้องครับ", "error"); }
         } else { await stopCamera(); }
     };
 }
@@ -1483,17 +1449,13 @@ async function stopCamera() {
     isVideoOn = false; if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isVideoOn: false });
     if(camBtn) { camBtn.classList.add('bg-[#2b2d31]'); camBtn.classList.remove('bg-[#23a559]', 'text-white'); }
     if(camIcon) camIcon.className = "ph ph-video-camera text-[20px] md:text-[24px]";
-    
-    const camWrap = document.getElementById(`cam-wrap-local`); 
-    if (camWrap) camWrap.remove();
-    
+    const camWrap = document.getElementById(`cam-wrap-local`); if (camWrap) camWrap.remove();
     const camStage = document.getElementById('camera-stage');
     if(camStage && camStage.children.length === 0) { camStage.classList.add('hidden'); camStage.classList.remove('flex'); }
-
     const sidebarGrid = document.getElementById('sidebar-video-grid');
     const container = document.getElementById('sidebar-live-container');
-    if(container && sidebarGrid) {
-        if (sidebarGrid.children.length === 0) { container.classList.add('hidden'); container.classList.remove('active'); container.style.display = 'none'; }
+    if(container && sidebarGrid && sidebarGrid.children.length === 0) {
+        container.classList.add('hidden'); container.classList.remove('active'); container.style.display = 'none';
     }
 }
 
@@ -1502,7 +1464,7 @@ async function stopScreenShare() {
     if (screenTrack) { await rtcClient.unpublish(screenTrack); screenTrack.stop(); screenTrack.close(); screenTrack = null; } 
     if (screenAudioTrack) { await rtcClient.unpublish(screenAudioTrack); screenAudioTrack.stop(); screenAudioTrack.close(); screenAudioTrack = null; } 
     isSharingScreen = false; if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: false }); 
-    if (ssWrapper) ssWrapper.classList.replace('bg-[#23a559]', 'bg-[#2b2d31]'); else if(ssBtn) ssBtn.classList.replace('bg-[#23a559]', 'bg-[#23a559]');
+    if (ssWrapper) ssWrapper.classList.replace('bg-[#23a559]', 'bg-[#2b2d31]');
     if (sIco) sIco.className = "ph ph-screencast text-[20px] md:text-[24px] text-[#dbdee1]"; 
     if (qualitySelect) { qualitySelect.classList.replace('text-white', 'text-[#80848e]'); qualitySelect.disabled = false; }
     const pc = document.getElementById(`v-wrap-local`); if (pc) pc.remove(); 
@@ -1521,20 +1483,18 @@ if(ssBtn) {
                 const selectedVal = qualitySelect ? qualitySelect.value : "1080p_1";
                 let encoderConfig = { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 };
                 if (selectedVal.includes("720")) encoderConfig = { width: 1280, height: 720, frameRate: 30, bitrateMax: 2000 };
-                else if (selectedVal.includes("480")) encoderConfig = { width: 853, height: 480, frameRate: 30, bitrateMax: 1000 };
-                else if (selectedVal.includes("360")) encoderConfig = { width: 640, height: 360, frameRate: 30, bitrateMax: 800 };
                 else if (selectedVal === "1080p_60") encoderConfig = { width: 1920, height: 1080, frameRate: 60, bitrateMax: 4500 }; 
                 const res = await AgoraRTC.createScreenVideoTrack({ encoderConfig: encoderConfig, optimizationMode: "motion" }, "auto"); 
                 if (Array.isArray(res)) { screenTrack = res[0]; screenAudioTrack = res[1]; await rtcClient.publish([screenTrack, screenAudioTrack]); } else { screenTrack = res; await rtcClient.publish(screenTrack); } 
                 isSharingScreen = true; await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: true }); 
-                if (ssWrapper) ssWrapper.classList.replace('bg-[#2b2d31]', 'bg-[#23a559]'); else if(ssBtn) ssBtn.classList.replace('bg-[#2b2d31]', 'bg-[#23a559]');
+                if (ssWrapper) ssWrapper.classList.replace('bg-[#2b2d31]', 'bg-[#23a559]');
                 if(sIco) sIco.className = "ph-fill ph-screencast text-[20px] md:text-[24px] text-white"; 
                 if (qualitySelect) { qualitySelect.classList.replace('text-[#80848e]', 'text-white'); qualitySelect.disabled = true; }
                 if(ssStage) {
                     ssStage.classList.remove('hidden'); let pc = document.createElement("div"); pc.id = `v-wrap-local`; pc.style.cssText="width:100%;height:100%;"; pc.className = "rounded-lg overflow-hidden bg-black flex items-center justify-center"; ssStage.appendChild(pc); screenTrack.play(pc, { fit: "contain" }); 
                 }
                 screenTrack.on("track-ended", stopScreenShare); 
-            } catch (err) { console.log(err); showToast("แชร์หน้าจอไม่สำเร็จ", "error"); } 
+            } catch (err) { showToast("แชร์หน้าจอไม่สำเร็จ", "error"); } 
         } else { await stopScreenShare(); } 
     };
 }
@@ -1545,19 +1505,17 @@ async function leaveVoice() {
     if (localTracks.audioTrack) { localTracks.audioTrack.stop(); localTracks.audioTrack.close(); localTracks.audioTrack = null; } 
     await rtcClient.leave(); 
     connectedVoiceChannel = null;
-    if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { inVoice: false, voiceChannel: null, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false }); } 
+    if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { inVoice: false, voiceChannel: null, agoraUid: null, isMuted: false, isSharingScreen: false, isVideoOn: false }); 
     localStorage.removeItem('dosh_active_voice'); 
-    
     amIInVoice = false; 
 
-    if (ytPlayer && typeof ytPlayer.mute === 'function') {
-        ytPlayer.mute();
+    if (ytPlayer && typeof ytPlayer.mute === 'function') ytPlayer.mute();
+    if(joinBtn) {
+        joinBtn.innerHTML = `<div class="w-16 h-16 md:w-20 md:h-20 bg-white/20 rounded-full flex items-center justify-center mb-3 md:mb-4 group-hover:bg-white/30 transition-colors"><i class="ph-fill ph-phone-call text-[28px] md:text-[36px] animate-bounce"></i></div><span>กดเพื่อเข้าร่วมห้องเสียง</span><span class="text-[10px] md:text-[12px] font-normal text-green-100 mt-1.5 md:mt-2 opacity-80 text-center">เปิดไมค์พูดคุยและเปิดกล้องกับเพื่อนๆ</span>`;
+        joinBtn.classList.remove('hidden');
     }
-
-    if(joinBtn) { joinBtn.innerHTML = '<i class="ph-fill ph-phone-call text-[22px] mr-2 animate-pulse"></i> เข้าร่วมห้องเสียง'; joinBtn.classList.remove('hidden'); }
     const activeUI = document.getElementById('active-voice-ui'); if(activeUI) activeUI.classList.add('hidden'); 
     if(bottomLeaveBtn) bottomLeaveBtn.classList.add('hidden');
-    
     const sidebarLiveContainer = document.getElementById('sidebar-live-container');
     if(sidebarLiveContainer) { sidebarLiveContainer.classList.add('hidden'); sidebarLiveContainer.classList.remove('active'); sidebarLiveContainer.style.display = 'none'; }
     const sidebarGrid = document.getElementById('sidebar-video-grid'); if(sidebarGrid) sidebarGrid.innerHTML = ''; 
@@ -1572,8 +1530,7 @@ async function toggleMute() {
     if (!localTracks.audioTrack) { showToast("ไม่พบไมโครโฟน! คุณอยู่ในโหมดฟังอย่างเดียว", "error"); return; }
     isMuted = !isMuted; 
     await localTracks.audioTrack.setMuted(isMuted);
-    if(currentUserId) { await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted }); }
-    
+    if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isMuted: isMuted });
     const muteIcon = document.getElementById('mute-icon'); 
     if (isMuted) { 
         if(muteBtn) { muteBtn.classList.remove('bg-[#2b2d31]'); muteBtn.classList.add('bg-[#da373c]/20', 'text-[#da373c]'); }
@@ -1607,26 +1564,8 @@ function toggleDeafen() {
 if(bottomDeafenBtn) bottomDeafenBtn.onclick = toggleDeafen;
 
 // ==========================================
-// 📋 13. Task Board 
+// 📋 12. Task Board & Service Worker
 // ==========================================
-const zones = { 'todo': document.getElementById('todo'), 'in_progress': document.getElementById('in_progress'), 'done': document.getElementById('done') };
-onSnapshot(collection(db, "tasks"), (snapshot) => { 
-    Object.values(zones).forEach(z => { if(z) z.innerHTML = ''; }); 
-    snapshot.forEach((docSnap) => { 
-        const d = docSnap.data(), id = docSnap.id, s = d.status || 'todo'; 
-        let tC = "bg-[#1e1f22] text-[#dbdee1] border border-[#35373c]"; 
-        if(d.tag && d.tag.includes('Dev')) tC = "bg-blue-500/10 text-blue-400 border border-blue-500/20"; 
-        if(d.tag && d.tag.includes('Music')) tC = "bg-pink-500/10 text-pink-400 border border-pink-500/20"; 
-        if(d.tag && d.tag.includes('Video')) tC = "bg-purple-500/10 text-purple-400 border border-purple-500/20"; 
-        if(d.tag && d.tag.includes('Design')) tC = "bg-[#23a559]/10 text-[#23a559] border border-[#23a559]/20"; 
-        const cardHTML = `<div draggable="true" data-id="${id}" class="task-card bg-[#1e1f22] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${s === 'done' ? 'border-[#4e5058] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]"><div class="flex space-x-2 mb-2.5"><span class="${tC} text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center"><i class="ph-fill ph-tag text-[10px] mr-1"></i>${d.tag}</span></div><p class="text-[13px] md:text-[14px] font-medium text-[#dbdee1] ${s === 'done' ? 'line-through text-[#80848e]' : ''} leading-snug">${d.title}</p></div>`; 
-        if (zones[s]) zones[s].insertAdjacentHTML('beforeend', cardHTML); 
-    }); 
-    document.querySelectorAll('.task-card').forEach(c => { 
-        c.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', c.getAttribute('data-id')); setTimeout(() => c.classList.add('opacity-30'), 0); }); 
-        c.addEventListener('dragend', () => c.classList.remove('opacity-30')); 
-    }); 
-});
 Object.keys(zones).forEach(s => { 
     const z = zones[s]; 
     if(z) {
@@ -1639,17 +1578,14 @@ Object.keys(zones).forEach(s => {
 const btnAddTask = document.getElementById('add-task-btn');
 if(btnAddTask) {
     btnAddTask.addEventListener('click', () => { 
-        const tInput = document.getElementById('task-title-input');
-        if(tInput) tInput.value = ''; 
-        const tModal = document.getElementById('task-modal');
-        if(tModal) tModal.classList.remove('hidden'); 
+        const tInput = document.getElementById('task-title-input'); if(tInput) tInput.value = ''; 
+        const tModal = document.getElementById('task-modal'); if(tModal) tModal.classList.remove('hidden'); 
     }); 
 }
 const btnCloseTask = document.getElementById('close-task-modal');
 if(btnCloseTask) {
     btnCloseTask.addEventListener('click', () => { 
-        const tModal = document.getElementById('task-modal');
-        if(tModal) tModal.classList.add('hidden'); 
+        const tModal = document.getElementById('task-modal'); if(tModal) tModal.classList.add('hidden'); 
     }); 
 }
 const btnConfirmTask = document.getElementById('confirm-task-btn');
@@ -1661,23 +1597,22 @@ if(btnConfirmTask) {
         const tag = tagInput ? tagInput.value : ''; 
         if (!title) { showToast("กรุณากรอกชื่องานก่อนครับ!", "error"); return; } 
         await addDoc(collection(db, "tasks"), { title: title, tag: tag, status: 'todo', timestamp: serverTimestamp() }); 
-        const tModal = document.getElementById('task-modal');
-        if(tModal) tModal.classList.add('hidden'); 
+        const tModal = document.getElementById('task-modal'); if(tModal) tModal.classList.add('hidden'); 
         showToast("เพิ่มงานใหม่ลงในกระดานแล้ว!", "success"); 
     });
 }
 
 if ('serviceWorker' in navigator) { 
     window.addEventListener('load', () => { 
-        navigator.serviceWorker.register('sw.js').then(r => console.log('✅ HIVE SW Active')).catch(e => console.log('❌ SW Fail:', e)); 
+        navigator.serviceWorker.register('sw.js').then(() => console.log('✅ HIVE SW Active')).catch(e => console.log('❌ SW Fail:', e)); 
         navigator.serviceWorker.addEventListener('message', event => {
-            if (event.data && event.data.command === 'leave_voice') { leaveVoice(); }
+            if (event.data && event.data.command === 'leave_voice') leaveVoice();
         });
     }); 
 }
 
 // ==========================================
-// 🍿 14. ระบบ Watch Party
+// 🍿 13. ระบบ Watch Party
 // ==========================================
 const toggleWpBtn = document.getElementById('toggle-wp-input-btn');
 const wpControls = document.getElementById('wp-controls');
@@ -1688,34 +1623,22 @@ const ytContainer = document.getElementById('yt-player-container');
 const closeWpBtn = document.getElementById('close-wp-btn');
 const wpHost = document.getElementById('wp-host');
 
-let ytPlayer = null;
-let syncInterval = null;
-let isSettingState = false;
-let lastVideoId = "";
+let ytPlayer = null, syncInterval = null, isSettingState = false, lastVideoId = "";
 
-if (toggleWpBtn && wpControls) {
-    toggleWpBtn.onclick = () => wpControls.classList.toggle('hidden');
-}
+if (toggleWpBtn && wpControls) toggleWpBtn.onclick = () => wpControls.classList.toggle('hidden');
 
 if (startWpBtn) {
     startWpBtn.onclick = async () => {
         const url = wpLinkInput.value.trim();
         if (!url) { showToast("กรุณาใส่ลิงก์ YouTube ด้วยครับ", "error"); return; }
-        
         let videoId = "";
         if (url.includes("v=")) videoId = url.split("v=")[1].split("&")[0];
         else if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1].split("?")[0];
-        
         if (!videoId) { showToast("รูปแบบลิงก์ YouTube ไม่ถูกต้อง", "error"); return; }
 
         try {
             await setDoc(doc(db, "appData", "watchParty"), { 
-                videoId: videoId, 
-                hostName: currentUsername, 
-                isActive: true,
-                currentTime: 0,
-                isPlaying: true,
-                updatedAt: serverTimestamp() 
+                videoId: videoId, hostName: currentUsername, isActive: true, currentTime: 0, isPlaying: true, updatedAt: serverTimestamp() 
             });
             wpControls.classList.add('hidden');
             wpLinkInput.value = '';
@@ -1725,9 +1648,7 @@ if (startWpBtn) {
 
 if (closeWpBtn) {
     closeWpBtn.onclick = async () => {
-        try {
-            await setDoc(doc(db, "appData", "watchParty"), { isActive: false }, { merge: true });
-        } catch(err) {}
+        try { await setDoc(doc(db, "appData", "watchParty"), { isActive: false }, { merge: true }); } catch(err) {}
     };
 }
 
@@ -1737,12 +1658,7 @@ async function broadcastPlayerState() {
         const currentTime = ytPlayer.getCurrentTime();
         const playerState = ytPlayer.getPlayerState();
         const isPlaying = (playerState === YT.PlayerState.PLAYING);
-
-        await setDoc(doc(db, "appData", "watchParty"), {
-            currentTime: currentTime,
-            isPlaying: isPlaying,
-            updatedAt: serverTimestamp()
-        }, { merge: true });
+        await setDoc(doc(db, "appData", "watchParty"), { currentTime: currentTime, isPlaying: isPlaying, updatedAt: serverTimestamp() }, { merge: true });
     } catch(e) {}
 }
 
@@ -1751,79 +1667,627 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
         const data = d.data();
         currentWatchParty = data;
         if (data.isActive && data.videoId) {
-            if(wpStage) {
-                wpStage.classList.remove('hidden');
-                wpStage.classList.add('flex');
-            }
+            if(wpStage) { wpStage.classList.remove('hidden'); wpStage.classList.add('flex'); }
             if(wpHost) wpHost.textContent = data.hostName;
 
             if (!ytPlayer || lastVideoId !== data.videoId) {
                 lastVideoId = data.videoId;
                 ytContainer.innerHTML = `<div id="actual-yt-player" class="w-full h-full"></div>`;
-                
                 if (window.YT && window.YT.Player) {
                     ytPlayer = new YT.Player('actual-yt-player', {
-                        height: '100%',
-                        width: '100%',
-                        videoId: data.videoId,
-                        playerVars: { 'autoplay': 1, 'controls': 1 },
+                        height: '100%', width: '100%', videoId: data.videoId, playerVars: { 'autoplay': 1, 'controls': 1 },
                         events: {
                             'onReady': () => {
                                 ytPlayer.seekTo(data.currentTime || 0);
                                 if (data.isPlaying) ytPlayer.playVideo(); else ytPlayer.pauseVideo();
-                                
-                                if (!amIInVoice) {
-                                    ytPlayer.mute();
-                                } else {
-                                    ytPlayer.unMute();
-                                }
-                                
+                                if (!amIInVoice) ytPlayer.mute(); else ytPlayer.unMute();
                                 if (syncInterval) clearInterval(syncInterval);
                                 syncInterval = setInterval(() => {
-                                    if (ytPlayer && typeof ytPlayer.getPlayerState === 'function' && ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                                        broadcastPlayerState();
-                                    }
+                                    if (ytPlayer && typeof ytPlayer.getPlayerState === 'function' && ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) broadcastPlayerState();
                                 }, 2000);
                             },
                             'onStateChange': (event) => {
-                                if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED) {
-                                    broadcastPlayerState();
-                                }
+                                if (event.data === YT.PlayerState.PLAYING || event.data === YT.PlayerState.PAUSED) broadcastPlayerState();
                             }
                         }
                     });
                 }
-            } else {
-                if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
-                    
-                    if (!amIInVoice && !ytPlayer.isMuted()) ytPlayer.mute();
-                    else if (amIInVoice && ytPlayer.isMuted()) ytPlayer.unMute();
+            } else if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+                if (!amIInVoice && !ytPlayer.isMuted()) ytPlayer.mute();
+                else if (amIInVoice && ytPlayer.isMuted()) ytPlayer.unMute();
 
-                    const localTime = ytPlayer.getCurrentTime();
-                    const remoteTime = data.currentTime || 0;
-                    if (Math.abs(localTime - remoteTime) > 1.5) {
-                        isSettingState = true;
-                        ytPlayer.seekTo(remoteTime);
-                        setTimeout(() => { isSettingState = false; }, 1000);
-                    }
-
-                    const localState = ytPlayer.getPlayerState();
-                    if (data.isPlaying && localState !== YT.PlayerState.PLAYING) {
-                        ytPlayer.playVideo();
-                    } else if (!data.isPlaying && localState === YT.PlayerState.PLAYING) {
-                        ytPlayer.pauseVideo();
-                    }
+                const localTime = ytPlayer.getCurrentTime();
+                const remoteTime = data.currentTime || 0;
+                if (Math.abs(localTime - remoteTime) > 1.5) {
+                    isSettingState = true;
+                    ytPlayer.seekTo(remoteTime);
+                    setTimeout(() => { isSettingState = false; }, 1000);
                 }
+                const localState = ytPlayer.getPlayerState();
+                if (data.isPlaying && localState !== YT.PlayerState.PLAYING) ytPlayer.playVideo();
+                else if (!data.isPlaying && localState === YT.PlayerState.PLAYING) ytPlayer.pauseVideo();
             }
         } else {
-            if(wpStage) {
-                wpStage.classList.add('hidden');
-                wpStage.classList.remove('flex');
-            }
+            if(wpStage) { wpStage.classList.add('hidden'); wpStage.classList.remove('flex'); }
             if(ytContainer) ytContainer.innerHTML = '';
-            ytPlayer = null;
-            lastVideoId = "";
+            ytPlayer = null; lastVideoId = "";
             if (syncInterval) clearInterval(syncInterval);
         }
     }
 });
+
+// ==========================================
+// 🛍️ 14. ระบบร้านค้าตกแต่งโปรไฟล์ (HIVE Shop)
+// ==========================================
+// ฟังก์ชันแปลงโค้ด SVG เป็น URL (รองรับ Animation และป้องกันเครื่องหมายคำพูดพัง)
+const svgToUrl = (svg) => `data:image/svg+xml;utf8,${encodeURIComponent(svg.trim()).replace(/'/g, '%27')}`;
+
+const shopFrames = [
+    { name: 'ถอดกรอบรูป', desc: 'ใช้โปรไฟล์แบบคลีนๆ', url: '' },
+    { name: 'นีออนม่วง', desc: 'วงแหวนพลังงานสีม่วง', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='none' stroke='%23a855f7' stroke-width='6'/></svg>" },
+    { name: 'ทองคำ VIP', desc: 'กรอบทองคำสุดหรูหรา', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='none' stroke='%23eab308' stroke-width='8'/></svg>" },
+    { name: 'เพลิงโลกันตร์', desc: 'ออร่าไฟลุกโชนรอบโปรไฟล์', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='none' stroke='%23ef4444' stroke-width='4'/><circle cx='50' cy='50' r='48' fill='none' stroke='%23f97316' stroke-width='2' stroke-dasharray='5 5'/></svg>" },
+    { name: 'ไซเบอร์พังก์', desc: 'กรอบฟ้าเทคโนโลยีอนาคต', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='5' y='5' width='90' height='90' rx='45' fill='none' stroke='%2306b6d4' stroke-width='4'/><circle cx='50' cy='50' r='48' fill='none' stroke='%23ec4899' stroke-width='2' stroke-dasharray='12 8'/></svg>" },
+    { name: 'มรกตพิทักษ์', desc: 'วงแหวนเวทมนตร์สีเขียว', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='none' stroke='%2310b981' stroke-width='5' stroke-dasharray='20 5'/><circle cx='50' cy='50' r='41' fill='none' stroke='%2334d399' stroke-width='2'/></svg>" },
+    { name: 'ซากุระบาน', desc: 'กรอบสีชมพูพาสเทลสดใส', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='none' stroke='%23f472b6' stroke-width='6' stroke-dasharray='8 4'/><circle cx='50' cy='50' r='45' fill='none' stroke='%23fbcfe8' stroke-width='2'/></svg>" },
+    { name: 'ราชันย์มงกุฎทอง', desc: 'กรอบมงกุฎสำหรับผู้นำ', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='none' stroke='%23facc15' stroke-width='5'/><polygon points='35,12 42,4 50,10 58,4 65,12' fill='%23facc15'/></svg>" },
+
+    // ==========================================================
+    // 🔥 4 กรอบโปรไฟล์ระดับ LEGENDARY (มี Animation เคลื่อนไหว)
+    // ==========================================================
+    {
+        name: 'มหาเวทดาราจักร (Astral Halo)',
+        desc: 'วงแหวนเวท 2 ชั้นหมุนสวนทางกัน',
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="astralGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#38bdf8"/>
+                        <stop offset="50%" stop-color="#a855f7"/>
+                        <stop offset="100%" stop-color="#f472b6"/>
+                    </linearGradient>
+                </defs>
+                <!-- วงแหวนรูนชั้นนอกหมุนตามเข็ม -->
+                <g>
+                    <circle cx="50" cy="50" r="46" fill="none" stroke="url(#astralGrad)" stroke-width="2.5" stroke-dasharray="10 4 2 4"/>
+                    <polygon points="50,2 53,9 47,9" fill="#38bdf8"/>
+                    <polygon points="50,98 53,91 47,91" fill="#f472b6"/>
+                    <polygon points="2,50 9,53 9,47" fill="#a855f7"/>
+                    <polygon points="98,50 91,53 91,47" fill="#a855f7"/>
+                    <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="10s" repeatCount="indefinite"/>
+                </g>
+                <!-- วงแหวนพลังงานชั้นในหมุนทวนเข็ม -->
+                <g>
+                    <circle cx="50" cy="50" r="41" fill="none" stroke="#fde047" stroke-width="2" stroke-dasharray="6 6"/>
+                    <circle cx="50" cy="9" r="3" fill="#ffffff"/>
+                    <circle cx="50" cy="91" r="3" fill="#ffffff"/>
+                    <animateTransform attributeName="transform" type="rotate" from="360 50 50" to="0 50 50" dur="6s" repeatCount="indefinite"/>
+                </g>
+                <!-- อัญมณีดาราจักรด้านบน & ล่าง -->
+                <polygon points="50,1 55,8 50,15 45,8" fill="#38bdf8" stroke="#ffffff" stroke-width="1">
+                    <animate attributeName="opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite"/>
+                </polygon>
+                <polygon points="50,87 54,93 50,99 46,93" fill="#f472b6" stroke="#ffffff" stroke-width="1"/>
+            </svg>
+        `)
+    },
+    {
+        name: 'ราชันย์มังกรเพลิง (Dragon Lord)',
+        desc: 'เขามังกรทองคำและเกล็ดเพลิงโลกันตร์',
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="fireGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                        <stop offset="0%" stop-color="#991b1b"/>
+                        <stop offset="50%" stop-color="#ef4444"/>
+                        <stop offset="100%" stop-color="#facc15"/>
+                    </linearGradient>
+                </defs>
+                <!-- วงแหวนเพลิงหมุนวน -->
+                <g>
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="url(#fireGrad)" stroke-width="4.5" stroke-dasharray="14 4"/>
+                    <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="8s" repeatCount="indefinite"/>
+                </g>
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#facc15" stroke-width="1.5"/>
+                <!-- เขามังกรคู่ด้านบน -->
+                <path d="M26,20 Q12,6 6,14 Q12,26 22,28 Z" fill="url(#fireGrad)" stroke="#fef08a" stroke-width="1"/>
+                <path d="M74,20 Q88,6 94,14 Q88,26 78,28 Z" fill="url(#fireGrad)" stroke="#fef08a" stroke-width="1"/>
+                <!-- ครีบหนามมังกรด้านข้าง -->
+                <polygon points="4,44 11,38 9,52" fill="#ef4444" stroke="#facc15" stroke-width="0.8"/>
+                <polygon points="96,44 89,38 91,52" fill="#ef4444" stroke="#facc15" stroke-width="0.8"/>
+                <polygon points="7,62 13,56 12,68" fill="#ef4444" stroke="#facc15" stroke-width="0.8"/>
+                <polygon points="93,62 87,56 88,68" fill="#ef4444" stroke="#facc15" stroke-width="0.8"/>
+                <!-- ลูกแก้วหัวใจมังกรด้านล่าง -->
+                <circle cx="50" cy="91" r="6" fill="#ef4444" stroke="#fef08a" stroke-width="2">
+                    <animate attributeName="r" values="5.5;7;5.5" dur="1.2s" repeatCount="indefinite"/>
+                </circle>
+                <polygon points="50,86 52,91 50,96 48,91" fill="#fef08a"/>
+            </svg>
+        `)
+    },
+    {
+        name: 'ไซเบอร์โอเวอร์โหลด (Mecha HUD)',
+        desc: 'เกราะหูจักรกลพร้อมเรดาร์สแกนเป้าหมาย',
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <!-- วงแหวน HUD สแกนเนอร์หมุน -->
+                <g>
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#06b6d4" stroke-width="3" stroke-dasharray="22 8 4 8"/>
+                    <circle cx="50" cy="50" r="41" fill="none" stroke="#ec4899" stroke-width="1.5" stroke-dasharray="8 12"/>
+                    <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="5s" repeatCount="indefinite"/>
+                </g>
+                <!-- หูจักรกล (Mecha Ears) ด้านบนซ้าย-ขวา -->
+                <polygon points="14,30 6,8 28,16" fill="#090d16" stroke="#06b6d4" stroke-width="2"/>
+                <polygon points="14,25 10,13 23,18" fill="#ec4899"/>
+                <polygon points="86,30 94,8 72,16" fill="#090d16" stroke="#06b6d4" stroke-width="2"/>
+                <polygon points="86,25 90,13 77,18" fill="#ec4899"/>
+                <!-- ศูนย์เล็งเทคโนโลยีด้านล่าง -->
+                <polygon points="36,89 50,97 64,89 58,85 42,85" fill="#090d16" stroke="#06b6d4" stroke-width="1.5"/>
+                <circle cx="50" cy="90" r="3" fill="#22d3ee">
+                    <animate attributeName="opacity" values="1;0.2;1" dur="0.7s" repeatCount="indefinite"/>
+                </circle>
+            </svg>
+        `)
+    },
+    {
+        name: 'เนตรอสูรจันทราสีเลือด (Blood Demon)',
+        desc: 'ผนึกคำสาปสีเลือดและดวงตาปีศาจขยับได้',
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+                <!-- ออร่าทมิฬและวงแหวนผนึกหมุนวน -->
+                <circle cx="50" cy="50" r="44" fill="none" stroke="#09090b" stroke-width="6"/>
+                <g>
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="#dc2626" stroke-width="3" stroke-dasharray="9 5"/>
+                    <animateTransform attributeName="transform" type="rotate" from="360 50 50" to="0 50 50" dur="7s" repeatCount="indefinite"/>
+                </g>
+                <!-- กรงเล็บอสูรด้านข้าง -->
+                <path d="M4,35 Q12,50 4,65 Q10,50 4,35 Z" fill="#dc2626"/>
+                <path d="M96,35 Q88,50 96,65 Q90,50 96,35 Z" fill="#dc2626"/>
+                <!-- ดวงตาปีศาจด้านบน (กรอกตาซ้าย-ขวา) -->
+                <path d="M32,10 Q50,0 68,10 Q50,20 32,10 Z" fill="#18181b" stroke="#dc2626" stroke-width="2"/>
+                <path d="M36,10 Q50,3 64,10 Q50,17 36,10 Z" fill="#fef2f2"/>
+                <ellipse cx="50" cy="10" rx="3.5" ry="5" fill="#dc2626">
+                    <animate attributeName="cx" values="50;45;55;50" dur="3.5s" repeatCount="indefinite"/>
+                </ellipse>
+                <ellipse cx="50" cy="10" rx="1.2" ry="4" fill="#000000">
+                    <animate attributeName="cx" values="50;45;55;50" dur="3.5s" repeatCount="indefinite"/>
+                </ellipse>
+                <!-- เขี้ยวอสูรด้านล่าง -->
+                <polygon points="38,87 43,97 47,89" fill="#dc2626"/>
+                <polygon points="62,87 57,97 53,89" fill="#dc2626"/>
+            </svg>
+        `)
+    }
+];
+
+const shopBanners = [
+    { name: 'Cyberpunk City (GIF)', url: 'https://media.giphy.com/media/l0HlHFRbmaZtBRhXG/giphy.gif' },
+    { name: 'Pixel Chill Night (GIF)', url: 'https://media.giphy.com/media/RMwgs5kZqkRyhF24KK/giphy.gif' },
+    { name: 'Galaxy Nebula (GIF)', url: 'https://media.giphy.com/media/3o7buijTqhjxjbEqjK/giphy.gif' }
+];
+
+const shopDecos = [
+    {
+        id: '',
+        name: 'ถอดเอฟเฟกต์การ์ด',
+        price: 'ค่าเริ่มต้น',
+        isNew: false,
+        topSvg: '',
+        bottomSvg: ''
+    },
+    {
+        id: 'cursed_spirit',
+        name: 'ภูตวิญญาณ',
+        price: 'FREE (VIP)',
+        isNew: false,
+        topSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
+                <path d="M25,75 Q30,30 55,20 Q45,50 48,75 Z" fill="#18181b" stroke="#a1a1aa" stroke-width="1.5"/>
+                <path d="M45,75 Q52,25 75,18 Q65,48 66,75 Z" fill="#18181b" stroke="#a1a1aa" stroke-width="1.5"/>
+                <path d="M65,75 Q75,30 95,25 Q85,52 84,75 Z" fill="#18181b" stroke="#a1a1aa" stroke-width="1.5"/>
+                <path d="M95,70 Q130,30 180,35 Q230,30 275,65 L295,75 L260,78 Q230,55 180,55 Q130,55 95,70 Z" fill="#9ca3af" stroke="#18181b" stroke-width="2"/>
+                <path d="M140,75 Q150,20 185,15 Q220,20 230,75" fill="#d4d4d8" stroke="#27272a" stroke-width="1.5"/>
+                <ellipse cx="185" cy="46" rx="22" ry="28" fill="#f4f4f5" stroke="#18181b" stroke-width="2.5"/>
+                <circle cx="176" cy="38" r="6" fill="#09090b"/><circle cx="176" cy="38" r="2" fill="#ffffff"/>
+                <circle cx="194" cy="38" r="6" fill="#09090b"/><circle cx="194" cy="38" r="2" fill="#ffffff"/>
+                <ellipse cx="185" cy="58" rx="10" ry="12" fill="#09090b" stroke="#27272a" stroke-width="2"/>
+                <path d="M177,50 L193,50 M177,64 L193,64" stroke="#f4f4f5" stroke-width="2" stroke-dasharray="2 2"/>
+                <path d="M260,72 Q285,55 305,72 L295,80 L260,76 Z" fill="#d4d4d8" stroke="#18181b" stroke-width="2"/>
+            </svg>
+        `),
+        bottomSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
+                <path d="M40,15 Q180,65 320,10 Q300,45 180,50 Q70,48 40,15 Z" fill="#18181b" stroke="#52525b" stroke-width="2"/>
+                <path d="M70,25 L55,50 M100,32 L90,58 M135,38 L130,62 M170,40 L170,65 M205,38 L210,62 M240,32 L255,58 M275,25 L295,48" stroke="#27272a" stroke-width="3" stroke-linecap="round"/>
+                <path d="M80,26 Q180,55 290,18" fill="none" stroke="#71717a" stroke-width="2" stroke-dasharray="10 6"/>
+            </svg>
+        `)
+    },
+    {
+        id: 'all_seeing_eyes',
+        name: 'จับจ้องไม่คลาดสายตา',
+        price: 'FREE (VIP)',
+        isNew: false,
+        topSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
+                <path d="M15,85 Q10,30 60,25 Q110,5 180,10 Q250,5 300,25 Q350,30 345,85 Z" fill="#050505" stroke="#27272a" stroke-width="2"/>
+                <path d="M120,45 Q180,15 240,45 Q180,70 120,45 Z" fill="#ffffff" stroke="#000" stroke-width="3"/>
+                <ellipse cx="180" cy="43" rx="14" ry="16" fill="#09090b">
+                    <animate attributeName="cx" values="180;174;186;180" dur="4s" repeatCount="indefinite"/>
+                </ellipse>
+                <circle cx="176" cy="39" r="4" fill="#ffffff">
+                    <animate attributeName="cx" values="176;170;182;176" dur="4s" repeatCount="indefinite"/>
+                </circle>
+                <path d="M45,50 Q75,30 105,50 Q75,68 45,50 Z" fill="#ffffff"/><circle cx="75" cy="50" r="8" fill="#09090b"/><circle cx="73" cy="48" r="2.5" fill="#fff"/>
+                <path d="M255,50 Q285,30 315,50 Q285,68 255,50 Z" fill="#ffffff"/><circle cx="285" cy="50" r="8" fill="#09090b"/><circle cx="283" cy="48" r="2.5" fill="#fff"/>
+                <path d="M85,25 Q110,12 135,25 Q110,38 85,25 Z" fill="#ffffff"/><circle cx="110" cy="25" r="6" fill="#09090b"/>
+                <path d="M225,25 Q250,12 275,25 Q250,38 225,25 Z" fill="#ffffff"/><circle cx="250" cy="25" r="6" fill="#09090b"/>
+                <path d="M20,70 Q38,58 55,70 Q38,82 20,70 Z" fill="#ffffff"/><circle cx="38" cy="70" r="5" fill="#09090b"/>
+                <path d="M305,70 Q322,58 340,70 Q322,82 305,70 Z" fill="#ffffff"/><circle cx="322" cy="70" r="5" fill="#09090b"/>
+            </svg>
+        `),
+        bottomSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
+                <path d="M20,5 Q15,55 90,55 Q180,68 270,55 Q345,55 340,5 Z" fill="#050505" stroke="#27272a" stroke-width="2"/>
+                <path d="M70,30 Q105,15 140,30 Q105,45 70,30 Z" fill="#e4e4e7"/><circle cx="105" cy="30" r="7" fill="#09090b"/>
+                <path d="M150,42 Q180,28 210,42 Q180,56 150,42 Z" fill="#e4e4e7"/><circle cx="180" cy="42" r="7" fill="#09090b"/>
+                <path d="M225,30 Q260,15 295,30 Q260,45 225,30 Z" fill="#e4e4e7"/><circle cx="260" cy="30" r="7" fill="#09090b"/>
+            </svg>
+        `)
+    },
+    {
+        id: 'abyss_dragon',
+        name: 'เพลิงมังกรทมิฬ',
+        price: 'FREE (VIP)',
+        isNew: false,
+        topSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
+                <path d="M15,80 Q40,15 110,35 L95,10 L145,30 Q180,5 215,30 L265,10 L250,35 Q320,15 345,80 Z" fill="#450a0a" stroke="#ef4444" stroke-width="2"/>
+                <polygon points="160,35 180,10 200,35 180,60" fill="#f97316"/>
+                <circle cx="145" cy="48" r="6" fill="#fef08a"/><circle cx="215" cy="48" r="6" fill="#fef08a"/>
+            </svg>
+        `),
+        bottomSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
+                <path d="M25,10 Q90,60 180,55 Q270,60 335,10 Q280,40 180,38 Q80,40 25,10 Z" fill="#450a0a" stroke="#ef4444" stroke-width="2"/>
+            </svg>
+        `)
+    },
+
+    // ====================================================
+    // 🌟 4 ธีมการ์ดใหม่ระดับ LEGENDARY (อลังการ + มี Animation)
+    // ====================================================
+    {
+        id: 'celestial_seraph',
+        name: 'มหาเทวทูตสวรรค์นิรันดร์',
+        price: 'LEGENDARY',
+        isNew: true,
+        topSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
+                <defs>
+                    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#fef08a"/>
+                        <stop offset="50%" stop-color="#eab308"/>
+                        <stop offset="100%" stop-color="#a16207"/>
+                    </linearGradient>
+                    <linearGradient id="wingGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#ffffff"/>
+                        <stop offset="70%" stop-color="#fef9c3"/>
+                        <stop offset="100%" stop-color="#fde047"/>
+                    </linearGradient>
+                </defs>
+                <!-- วงแหวนสวรรค์ด้านหลัง -->
+                <circle cx="180" cy="48" r="36" fill="none" stroke="url(#goldGrad)" stroke-width="2" stroke-dasharray="6 4">
+                    <animateTransform attributeName="transform" type="rotate" from="0 180 48" to="360 180 48" dur="12s" repeatCount="indefinite"/>
+                </circle>
+                <!-- ปีกเทวทูต 3 ชั้น ฝั่งซ้าย -->
+                <path d="M160,65 Q90,5 10,20 Q45,45 30,55 Q80,45 145,72 Z" fill="url(#wingGrad)" stroke="#eab308" stroke-width="1.5"/>
+                <path d="M155,72 Q95,30 25,48 Q60,65 45,74 Q95,62 150,78 Z" fill="url(#wingGrad)" stroke="#ca8a04" stroke-width="1.5"/>
+                <path d="M160,76 Q110,55 60,72 Q95,82 155,82 Z" fill="url(#goldGrad)"/>
+                <!-- ปีกเทวทูต 3 ชั้น ฝั่งขวา -->
+                <path d="M200,65 Q270,5 350,20 Q315,45 330,55 Q280,45 215,72 Z" fill="url(#wingGrad)" stroke="#eab308" stroke-width="1.5"/>
+                <path d="M205,72 Q265,30 335,48 Q300,65 315,74 Q265,62 210,78 Z" fill="url(#wingGrad)" stroke="#ca8a04" stroke-width="1.5"/>
+                <path d="M200,76 Q250,55 300,72 Q265,82 205,82 Z" fill="url(#goldGrad)"/>
+                <!-- ตราสัญลักษณ์ดาราสวรรค์ตรงกลาง -->
+                <polygon points="180,6 188,32 215,40 188,48 180,74 172,48 145,40 172,32" fill="url(#goldGrad)" stroke="#ffffff" stroke-width="1.5">
+                    <animate attributeName="opacity" values="1;0.75;1" dur="2s" repeatCount="indefinite"/>
+                </polygon>
+                <circle cx="180" cy="40" r="7" fill="#ffffff"/>
+                <!-- ละอองดาวศักดิ์สิทธิ์ -->
+                <circle cx="65" cy="20" r="2.5" fill="#fef08a"><animate attributeName="opacity" values="0;1;0" dur="1.8s" repeatCount="indefinite"/></circle>
+                <circle cx="295" cy="20" r="2.5" fill="#fef08a"><animate attributeName="opacity" values="1;0;1" dur="2.2s" repeatCount="indefinite"/></circle>
+                <circle cx="125" cy="14" r="2" fill="#ffffff"/><circle cx="235" cy="14" r="2" fill="#ffffff"/>
+            </svg>
+        `),
+        bottomSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
+                <defs>
+                    <linearGradient id="goldGradB" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#ca8a04"/>
+                        <stop offset="50%" stop-color="#fef08a"/>
+                        <stop offset="100%" stop-color="#ca8a04"/>
+                    </linearGradient>
+                </defs>
+                <path d="M15,10 Q90,55 180,55 Q270,55 345,10 Q310,42 250,45 Q180,65 110,45 Q50,42 15,10 Z" fill="url(#goldGradB)" stroke="#ffffff" stroke-width="1.5"/>
+                <polygon points="180,22 192,42 180,64 168,42" fill="#ffffff" stroke="#eab308" stroke-width="2"/>
+                <circle cx="110" cy="36" r="4" fill="#fef08a"/><circle cx="250" cy="36" r="4" fill="#fef08a"/>
+            </svg>
+        `)
+    },
+    {
+        id: 'cyber_overdrive',
+        name: 'จักรกลสังหารไซเบอร์ (Mecha Overdrive)',
+        price: 'LEGENDARY',
+        isNew: true,
+        topSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
+                <defs>
+                    <linearGradient id="cyberNeon" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#06b6d4"/>
+                        <stop offset="50%" stop-color="#ec4899"/>
+                        <stop offset="100%" stop-color="#06b6d4"/>
+                    </linearGradient>
+                </defs>
+                <!-- เกราะเขาจักรกลซ้าย-ขวา -->
+                <polygon points="10,80 35,15 95,45 125,25 150,65 25,80" fill="#090d16" stroke="#06b6d4" stroke-width="2.5"/>
+                <polygon points="350,80 325,15 265,45 235,25 210,65 335,80" fill="#090d16" stroke="#06b6d4" stroke-width="2.5"/>
+                <!-- ลายเส้นวงจรเรืองแสง -->
+                <polyline points="35,28 70,55 115,40" fill="none" stroke="#ec4899" stroke-width="2"/>
+                <polyline points="325,28 290,55 245,40" fill="none" stroke="#ec4899" stroke-width="2"/>
+                <!-- แกนพลังงาน Reactor ตรงกลาง -->
+                <polygon points="135,72 155,20 205,20 225,72" fill="#111827" stroke="url(#cyberNeon)" stroke-width="2.5"/>
+                <!-- เลนส์สแกนเนอร์วิ่งไปมา -->
+                <rect x="150" y="38" width="60" height="10" rx="5" fill="#000000" stroke="#06b6d4" stroke-width="1"/>
+                <circle cx="180" cy="43" r="5" fill="#ec4899">
+                    <animate attributeName="cx" values="158;202;158" dur="1.6s" repeatCount="indefinite"/>
+                </circle>
+                <!-- ใบมีดพลังงานคู่ด้านบน -->
+                <polygon points="168,20 180,2 192,20" fill="#06b6d4">
+                    <animate attributeName="opacity" values="1;0.3;1" dur="0.8s" repeatCount="indefinite"/>
+                </polygon>
+            </svg>
+        `),
+        bottomSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
+                <!-- เกราะช่วงล่าง + ไอพ่นพลาสม่า -->
+                <polygon points="20,10 65,55 140,45 180,62 220,45 295,55 340,10 300,25 180,35 60,25" fill="#090d16" stroke="#06b6d4" stroke-width="2"/>
+                <polygon points="155,35 180,66 205,35" fill="#ec4899">
+                    <animate attributeName="opacity" values="0.6;1;0.6" dur="0.5s" repeatCount="indefinite"/>
+                </polygon>
+                <line x1="75" y1="38" x2="130" y2="33" stroke="#06b6d4" stroke-width="3"/>
+                <line x1="285" y1="38" x2="230" y2="33" stroke="#06b6d4" stroke-width="3"/>
+            </svg>
+        `)
+    },
+    {
+        id: 'cosmic_singularity',
+        name: 'จักรวาลหลุมดำมรณะ (Cosmic Void)',
+        price: 'LEGENDARY',
+        isNew: true,
+        topSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
+                <defs>
+                    <radialGradient id="voidCore" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#000000"/>
+                        <stop offset="55%" stop-color="#090514"/>
+                        <stop offset="75%" stop-color="#a855f7"/>
+                        <stop offset="90%" stop-color="#ec4899"/>
+                        <stop offset="100%" stop-color="transparent"/>
+                    </radialGradient>
+                    <linearGradient id="nebula" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#3b0764"/>
+                        <stop offset="30%" stop-color="#7e22ce"/>
+                        <stop offset="50%" stop-color="#f472b6"/>
+                        <stop offset="70%" stop-color="#7e22ce"/>
+                        <stop offset="100%" stop-color="#3b0764"/>
+                    </linearGradient>
+                </defs>
+                <!-- คลื่นเนบิวลาโอบล้อมขอบบน -->
+                <path d="M10,82 Q30,25 100,40 Q140,10 180,15 Q220,10 260,40 Q330,25 350,82 Q270,55 180,62 Q90,55 10,82 Z" fill="url(#nebula)" opacity="0.9" stroke="#f472b6" stroke-width="1.5"/>
+                <!-- วงแหวน Accretion Disk หมุนรอบหลุมดำ -->
+                <ellipse cx="180" cy="45" rx="65" ry="16" fill="none" stroke="#fde047" stroke-width="2.5" stroke-dasharray="18 8">
+                    <animateTransform attributeName="transform" type="rotate" from="0 180 45" to="360 180 45" dur="10s" repeatCount="indefinite"/>
+                </ellipse>
+                <!-- ใจกลางหลุมดำ (Black Hole) -->
+                <circle cx="180" cy="45" r="28" fill="url(#voidCore)" stroke="#ffffff" stroke-width="1"/>
+                <circle cx="180" cy="45" r="15" fill="#000000" stroke="#f472b6" stroke-width="2"/>
+                <!-- ดวงดาวและอุกกาบาตลอยรอบๆ -->
+                <circle cx="55" cy="42" r="3" fill="#ffffff"><animate attributeName="r" values="1.5;3.5;1.5" dur="2s" repeatCount="indefinite"/></circle>
+                <circle cx="305" cy="42" r="3" fill="#ffffff"><animate attributeName="r" values="3.5;1.5;3.5" dur="2s" repeatCount="indefinite"/></circle>
+                <circle cx="95" cy="25" r="2" fill="#fde047"/><circle cx="265" cy="25" r="2" fill="#fde047"/>
+            </svg>
+        `),
+        bottomSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
+                <path d="M20,8 Q90,62 180,58 Q270,62 340,8 Q290,42 180,42 Q70,42 20,8 Z" fill="#2e1065" stroke="#a855f7" stroke-width="2"/>
+                <ellipse cx="180" cy="42" rx="45" ry="10" fill="#000000" stroke="#f472b6" stroke-width="1.5"/>
+                <circle cx="110" cy="35" r="2.5" fill="#ffffff"/><circle cx="180" cy="42" r="4" fill="#fde047"/><circle cx="250" cy="35" r="2.5" fill="#ffffff"/>
+            </svg>
+        `)
+    },
+    {
+        id: 'thunder_shogun',
+        name: 'จอมทัพอสนีบาต (Thunder Raijin)',
+        price: 'LEGENDARY',
+        isNew: true,
+        topSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
+                <!-- เมฆพายุทมิฬ -->
+                <path d="M15,82 Q5,40 50,38 Q75,12 125,28 Q180,5 235,28 Q285,12 310,38 Q355,40 345,82 Q265,62 180,68 Q95,62 15,82 Z" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+                <!-- เขาโอนิทองคำคู่ -->
+                <path d="M115,60 Q85,15 55,10 Q75,42 95,65 Z" fill="#facc15" stroke="#ca8a04" stroke-width="2"/>
+                <path d="M245,60 Q275,15 305,10 Q285,42 265,65 Z" fill="#facc15" stroke="#ca8a04" stroke-width="2"/>
+                <!-- กลองสายฟ้าไรจินตรงกลาง -->
+                <circle cx="180" cy="42" r="22" fill="#1e1b4b" stroke="#facc15" stroke-width="3"/>
+                <g>
+                    <circle cx="180" cy="31" r="4.5" fill="#38bdf8"/>
+                    <circle cx="170" cy="48" r="4.5" fill="#38bdf8"/>
+                    <circle cx="190" cy="48" r="4.5" fill="#38bdf8"/>
+                    <animateTransform attributeName="transform" type="rotate" from="0 180 42" to="360 180 42" dur="4s" repeatCount="indefinite"/>
+                </g>
+                <!-- สายฟ้าฟาด (กระพริบ) -->
+                <polyline points="40,22 65,45 52,48 85,78" fill="none" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round">
+                    <animate attributeName="opacity" values="1;0.1;1;0.8;0;1" dur="1.2s" repeatCount="indefinite"/>
+                </polyline>
+                <polyline points="320,22 295,45 308,48 275,78" fill="none" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round">
+                    <animate attributeName="opacity" values="0.1;1;0;1;0.8;0.1" dur="1.2s" repeatCount="indefinite"/>
+                </polyline>
+            </svg>
+        `),
+        bottomSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
+                <path d="M20,12 Q95,62 180,56 Q265,62 340,12 Q280,42 180,40 Q80,42 20,12 Z" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+                <polyline points="60,28 115,48 140,32 180,55 220,32 245,48 300,28" fill="none" stroke="#facc15" stroke-width="2.5">
+                    <animate attributeName="opacity" values="1;0.3;1" dur="0.9s" repeatCount="indefinite"/>
+                </polyline>
+            </svg>
+        `)
+    }
+];
+
+const shopThemes = [
+    // 🎨 ธีมสีพื้นและไล่เฉดสี
+    { name: 'Dark Obsidian (ค่าเริ่มต้น)', bg: 'rgba(17, 18, 20, 0.90)' },
+    { name: 'Royal Purple (ม่วงจักรพรรดิ)', bg: 'linear-gradient(145deg, rgba(46,16,101,0.95) 0%, rgba(17,18,20,0.95) 100%)' },
+    { name: 'Crimson Blood (แดงแอดมิน)', bg: 'linear-gradient(145deg, rgba(127,29,29,0.95) 0%, rgba(17,18,20,0.95) 100%)' },
+    { name: 'Cyber Ocean (น้ำเงินนีออน)', bg: 'linear-gradient(145deg, rgba(12,74,110,0.95) 0%, rgba(17,18,20,0.95) 100%)' },
+    { name: 'Emerald Forest (เขียวมรกต)', bg: 'linear-gradient(145deg, rgba(6,78,59,0.95) 0%, rgba(17,18,20,0.95) 100%)' },
+    { name: 'Sunset Gold (ทองอัสดง)', bg: 'linear-gradient(145deg, rgba(120,53,15,0.95) 0%, rgba(17,18,20,0.95) 100%)' },
+
+    // ✨ ธีมแบบมีลวดลายกราฟิก
+    { 
+        name: 'Cyber Grid (ลายตารางไซเบอร์)', 
+        bg: 'linear-gradient(rgba(6, 182, 212, 0.12) 1px, transparent 1px) 0 0 / 18px 18px, linear-gradient(90deg, rgba(6, 182, 212, 0.12) 1px, transparent 1px) 0 0 / 18px 18px, linear-gradient(145deg, #082f49 0%, #090d16 100%)' 
+    },
+    { 
+        name: 'Luxury Diamond (ลายเพชรทองคำ)', 
+        bg: 'repeating-linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0px, rgba(234, 179, 8, 0.08) 2px, transparent 2px, transparent 12px), repeating-linear-gradient(45deg, rgba(234, 179, 8, 0.08) 0px, rgba(234, 179, 8, 0.08) 2px, transparent 2px, transparent 12px), linear-gradient(145deg, #422006 0%, #111214 100%)' 
+    },
+    { 
+        name: 'Crimson Hazard (ลายเฉียงแอดมิน)', 
+        bg: 'repeating-linear-gradient(-45deg, rgba(239, 68, 68, 0.10) 0px, rgba(239, 68, 68, 0.10) 10px, transparent 10px, transparent 20px), radial-gradient(circle at top right, rgba(220, 38, 38, 0.35), transparent 60%), linear-gradient(145deg, #450a0a 0%, #111214 100%)' 
+    },
+    { 
+        name: 'Starry Pink (ลายจุดพิกเซลชมพู)', 
+        bg: 'radial-gradient(rgba(244, 114, 182, 0.22) 1.5px, transparent 1.5px) 0 0 / 14px 14px, linear-gradient(145deg, #500724 0%, #111214 100%)' 
+    },
+    { 
+        name: 'Royal Carbon (ลายคาร์บอนม่วง)', 
+        bg: 'repeating-linear-gradient(45deg, rgba(168, 85, 247, 0.07) 0px, rgba(168, 85, 247, 0.07) 6px, transparent 6px, transparent 12px), linear-gradient(145deg, #3b0764 0%, #111214 100%)' 
+    },
+    { 
+        name: 'Emerald Matrix (ลายดิจิทัลเรืองแสง)', 
+        bg: 'radial-gradient(rgba(16, 185, 129, 0.22) 1px, transparent 1px) 0 0 / 12px 12px, radial-gradient(circle at bottom left, rgba(5, 150, 105, 0.3), transparent 70%), linear-gradient(145deg, #022c22 0%, #111214 100%)' 
+    },
+    { 
+        name: 'Synthwave Retro (ลายคลื่นเรโทร)', 
+        bg: 'repeating-linear-gradient(0deg, rgba(236, 72, 153, 0.10) 0px, rgba(236, 72, 153, 0.10) 1px, transparent 1px, transparent 6px), radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.45), transparent 70%), linear-gradient(180deg, #2e1065 0%, #090d16 100%)' 
+    },
+    { 
+        name: 'Checkerboard Dark (ลายหมากรุกโมเดิร์น)', 
+        bg: 'repeating-conic-gradient(rgba(255, 255, 255, 0.03) 0% 25%, transparent 0% 50%) 0 0 / 24px 24px, linear-gradient(145deg, #1e1b4b 0%, #0f172a 100%)' 
+    }
+];
+
+window.equipShopItem = async (type, value, itemName) => {
+    if (!currentUserId) return;
+    try {
+        if (type === 'frame') await updateDoc(doc(db, "users", currentUserId), { profileFrame: value });
+        else if (type === 'banner') await updateDoc(doc(db, "users", currentUserId), { bannerURL: value });
+        else if (type === 'theme') await updateDoc(doc(db, "users", currentUserId), { cardTheme: value });
+        else if (type === 'deco') await updateDoc(doc(db, "users", currentUserId), { cardDeco: value });
+        showToast(`สวมใส่ "${itemName}" เรียบร้อยแล้ว! ✨`, "success");
+    } catch (e) {
+        showToast("เกิดข้อผิดพลาดในการสวมใส่ไอเทม", "error");
+    }
+};
+
+function renderHiveShop() {
+    const framesGrid = document.getElementById('shop-frames-grid');
+    const bannersGrid = document.getElementById('shop-banners-grid');
+    const themesGrid = document.getElementById('shop-themes-grid');
+    const myAvatar = document.getElementById('current-user-avatar')?.src || 'https://ui-avatars.com/api/?name=U';
+
+    if (framesGrid) {
+        framesGrid.innerHTML = shopFrames.map(f => `
+            <div class="bg-[#2b2d31] border border-white/5 hover:border-[#5865F2] rounded-2xl p-4 flex flex-col items-center text-center transition group shadow-md">
+                <div class="relative w-16 h-16 flex items-center justify-center mb-3 mt-1">
+                    <img src="${myAvatar}" class="w-14 h-14 rounded-full object-cover">
+                    ${f.url ? `<img src="${f.url}" class="absolute w-[130%] h-[130%] max-w-none pointer-events-none drop-shadow-md">` : ''}
+                </div>
+                <p class="font-bold text-white text-[14px]">${f.name}</p>
+                <p class="text-[11px] text-[#949ba4] mb-4">${f.desc}</p>
+                <button onclick="equipShopItem('frame', &quot;${f.url}&quot;, '${f.name}')" class="mt-auto w-full bg-[#5865F2] hover:bg-[#4752C4] text-white text-[12px] font-bold py-2 rounded-xl transition">
+                    สวมใส่ทันที
+                </button>
+            </div>
+        `).join('');
+    }
+
+    if (bannersGrid) {
+        bannersGrid.innerHTML = shopBanners.map(b => `
+            <div class="bg-[#2b2d31] border border-white/5 hover:border-purple-500 rounded-2xl overflow-hidden flex flex-col transition shadow-md">
+                <div class="h-24 bg-black relative">
+                    <img src="${b.url}" class="w-full h-full object-cover">
+                    <span class="absolute top-2 right-2 bg-black/60 text-pink-400 text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm">GIF</span>
+                </div>
+                <div class="p-3.5 flex items-center justify-between">
+                    <span class="font-bold text-white text-[13px] truncate mr-2">${b.name}</span>
+                    <button onclick="equipShopItem('banner', '${b.url}', '${b.name}')" class="bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition flex-shrink-0">
+                        ใช้ภาพปกนี้
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    if (themesGrid) {
+        const decoCardsHTML = shopDecos.map(d => `
+            <div onclick="equipShopItem('deco', '${d.id}', '${d.name}')" class="bg-[#18191c] hover:bg-[#1e1f24] border border-white/10 hover:border-white/30 rounded-2xl p-5 flex flex-col justify-between relative cursor-pointer transition-all duration-300 group min-h-[290px] shadow-xl">
+                ${d.isNew ? `<span class="absolute top-4 left-4 bg-white text-black text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow">NEW</span>` : ''}
+                
+                <div class="my-auto mx-auto w-[155px] h-[165px] bg-[#232428] rounded-xl relative shadow-2xl border border-white/5 flex flex-col group-hover:scale-105 transition-transform duration-300 mt-8 mb-6">
+                    ${d.topSvg ? `<img src="${d.topSvg}" class="absolute -top-7 left-1/2 -translate-x-1/2 w-[114%] max-w-none pointer-events-none z-20">` : ''}
+                    ${d.bottomSvg ? `<img src="${d.bottomSvg}" class="absolute -bottom-5 left-1/2 -translate-x-1/2 w-[112%] max-w-none pointer-events-none z-20">` : ''}
+                    
+                    <div class="h-12 bg-[#35373c] rounded-t-xl w-full"></div>
+                    <div class="px-3 pt-5 pb-3 flex-1 flex flex-col relative">
+                        <div class="w-10 h-10 rounded-full bg-[#35373c] border-[4px] border-[#232428] absolute -top-5 left-3 flex items-center justify-center">
+                            <i class="ph-fill ph-discord-logo text-[#80848e] text-[18px]"></i>
+                            <div class="w-3 h-3 rounded-full bg-[#232428] absolute -bottom-0.5 -right-0.5"></div>
+                        </div>
+                        <div class="w-16 h-2.5 bg-[#35373c] rounded-full mt-2"></div>
+                        <div class="w-24 h-2 bg-[#2b2d31] rounded-full mt-2"></div>
+                        <div class="w-10 h-2 bg-[#2b2d31] rounded-full mt-auto"></div>
+                        <div class="w-28 h-2 bg-[#2b2d31] rounded-full mt-1.5"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-end justify-between mt-2 z-10">
+                    <div>
+                        <p class="font-bold text-white text-[15px]">${d.name}</p>
+                        <p class="font-extrabold text-[#dbdee1] text-[13px] mt-0.5">${d.price}</p>
+                    </div>
+                    <span class="bg-[#5865F2] group-hover:bg-[#4752C4] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition">
+                        สวมใส่
+                    </span>
+                </div>
+            </div>
+        `).join('');
+
+        const themeCardsHTML = shopThemes.map(t => `
+            <div class="rounded-2xl p-4 border border-white/10 flex flex-col justify-between h-28 shadow-lg" style="background: ${t.bg}">
+                <div>
+                    <span class="text-[10px] uppercase tracking-wider font-extrabold text-white/60">Card Background</span>
+                    <p class="font-bold text-white text-[14px] mt-0.5">${t.name}</p>
+                </div>
+                <button onclick="equipShopItem('theme', '${t.bg}', '${t.name}')" class="self-end bg-white/15 hover:bg-white/25 text-white text-[11px] font-bold px-4 py-1.5 rounded-lg backdrop-blur-md transition border border-white/10">
+                    ใช้พื้นหลังนี้
+                </button>
+            </div>
+        `).join('');
+
+        themesGrid.innerHTML = decoCardsHTML + themeCardsHTML;
+    }
+}
+// === END OF FILE ===
