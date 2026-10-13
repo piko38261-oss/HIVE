@@ -95,12 +95,10 @@ function stopBackgroundAudioMode() {
 
 async function getWordFromAI(gameType = "draw") {
     try {
-        // เพิ่มเลขสุ่ม (Seed) เพื่อไม่ให้ AI ขี้เกียจและจำเจกับคำเดิมๆ
         const randomSeed = Math.floor(Math.random() * 100000);
         let promptText = `สุ่มคำศัพท์ภาษาไทย 1 คำ สำหรับเกมทายภาพ (วาดรูป) ขอคำแปลกๆ สร้างสรรค์ ไม่ซ้ำเดิม (Seed: ${randomSeed}) ห้ามมีเครื่องหมายใดๆ ตอบมาแค่คำศัพท์เพียวๆ 1 คำ`;
         
         if (gameType === "spy") { 
-            // สุ่มหมวดหมู่เพื่อบังคับให้ AI คิดคำกว้างขึ้น
             const categories = ["อาหาร", "ของใช้ในบ้าน", "สัตว์โลก", "สถานที่", "อาชีพ", "ยานพาหนะ", "ผลไม้", "เครื่องใช้ไฟฟ้า", "เครื่องแต่งกาย"];
             const randomCat = categories[Math.floor(Math.random() * categories.length)];
             promptText = `สุ่มคำศัพท์ภาษาไทย 1 คำ ในหมวดหมู่ "${randomCat}" สำหรับเล่นเกม Spyfall ขอคำที่คนทั่วไปรู้จักดี (Seed: ${randomSeed}) ห้ามมีเครื่องหมายใดๆ ตอบมาแค่คำศัพท์เพียวๆ 1 คำ`; 
@@ -116,15 +114,13 @@ async function getWordFromAI(gameType = "draw") {
         });
         
         const data = await res.json(); 
-        // เช็คว่ามีข้อมูลตอบกลับมาจริงๆ ก่อนนำไปใช้
         if(data.candidates && data.candidates[0]) {
             return data.candidates[0].content.parts[0].text.replace(/[\r\n.]/g, "").trim();
         } else {
-            throw new Error("API Limit"); // บังคับลง catch ถ้า API ส่งข้อผิดพลาดกลับมา
+            throw new Error("API Limit");
         }
         
     } catch (err) { 
-        // กรณีคีย์ AI ตาย, โควต้าเต็ม, หรือเน็ตหลุด จะสลับมาใช้คลังคำศัพท์สำรองชุดใหญ่ (แยกตามประเภทเกม)
         const drawBackup = [
             "ไดโนเสาร์", "ชาบู", "มนุษย์ต่างดาว", "แฮมเบอร์เกอร์", "หมูกระทะ", "โรงหนัง", 
             "นางเงือก", "จรวด", "ผีดิบ", "กล้องถ่ายรูป", "แว่นตาว่ายน้ำ", "รถพยาบาล", 
@@ -158,7 +154,6 @@ onAuthStateChanged(auth, async (user) => {
         const myNameUI = document.getElementById('current-user-name');
         if(myNameUI) myNameUI.textContent = currentUsername;
         
-        // 🌟 แก้ไข: ตรวจสอบรูปล่าสุดของผู้ใช้ ป้องกันรูปหาย
         const myAvatarUI = document.getElementById('current-user-avatar');
         if(myAvatarUI) {
             myAvatarUI.src = (user.photoURL && user.photoURL !== "null" && user.photoURL !== "undefined" && user.photoURL.trim() !== "") 
@@ -235,7 +230,6 @@ function startDatabaseListeners() {
         snapshot.forEach((docSnap) => {
             const u = docSnap.data(), id = docSnap.id, userName = u.username || 'Unknown';
             
-            // 🌟 แก้ไข: ตรวจสอบลิงก์รูปและรองรับชื่อที่มีเว้นวรรค
             let userAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=5865F2&color=fff&bold=true`;
             if (u.photoURL && u.photoURL !== "undefined" && u.photoURL !== "null" && u.photoURL.trim() !== "") {
                 userAvatar = u.photoURL;
@@ -352,7 +346,6 @@ function startDatabaseListeners() {
             const display = document.getElementById('game-word-display');
             const toolbar = document.getElementById('game-toolbar');
             if(currentDrawGame.isActive) {
-                // 🌟 แก้ไข: ใช้ชื่อผู้ใช้แทนไอดี
                 if(currentDrawGame.drawerId === currentUsername) { 
                     if(display) display.innerHTML = `🎨 คำปริศนาของคุณคือ: <span class="text-yellow-400 ml-2 font-bold tracking-wider">${currentDrawGame.word}</span>`; 
                     if(toolbar) toolbar.classList.remove('hidden'); 
@@ -449,7 +442,6 @@ window.showUserProfile = (userName) => {
     }
     const pBadges = document.getElementById('profile-card-badges'); if(pBadges) pBadges.innerHTML = badges; 
     
-    // 🌟 ระบบแสดงกิจกรรม (Rich Presence - Watch Party)
     const activitySection = document.getElementById('profile-card-activity');
     if (activitySection) {
         if (currentWatchParty && currentWatchParty.isActive && currentWatchParty.videoId && u && u.inVoice) {
@@ -466,7 +458,7 @@ window.showUserProfile = (userName) => {
                 if(activityDetail) activityDetail.innerHTML = `เปิดคลิปโดย ${currentWatchParty.hostName}`;
             }
         } else {
-            activitySection.classList.add('hidden');
+            activitySection.classList.add('hidden'); 
         }
     }
     
@@ -508,18 +500,8 @@ const frameOptions = [
     { id: 'neon', name: 'นีออนม่วง', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='none' stroke='%23a855f7' stroke-width='6'/></svg>" },
     { id: 'gold', name: 'ทองคำ VIP', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='none' stroke='%23eab308' stroke-width='8'/></svg>" },
     { id: 'cow', name: 'ลายวัว (ชั่วคราว)', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='none' stroke='%23ffffff' stroke-width='8'/><circle cx='50' cy='50' r='46' fill='none' stroke='%23111111' stroke-width='8' stroke-dasharray='15 20'/></svg>" },
-    
-    // ✨ เพิ่มกรอบใหม่ตรงนี้ครับ!
-    { 
-        id: 'fire', 
-        name: 'ไฟลุก', 
-        url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='none' stroke='%23ef4444' stroke-width='4'/><circle cx='50' cy='50' r='48' fill='none' stroke='%23f97316' stroke-width='2' stroke-dasharray='5 5'/></svg>" 
-    },
-    { 
-        id: 'cyber', 
-        name: 'ไซเบอร์', 
-        url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='5' y='5' width='90' height='90' rx='45' fill='none' stroke='%2306b6d4' stroke-width='4'/><path d='M 10 50 L 90 50' stroke='%2306b6d4' stroke-width='1' opacity='0.5'/></svg>" 
-    }
+    { id: 'fire', name: 'ไฟลุก', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='none' stroke='%23ef4444' stroke-width='4'/><circle cx='50' cy='50' r='48' fill='none' stroke='%23f97316' stroke-width='2' stroke-dasharray='5 5'/></svg>" },
+    { id: 'cyber', name: 'ไซเบอร์', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='5' y='5' width='90' height='90' rx='45' fill='none' stroke='%2306b6d4' stroke-width='4'/><path d='M 10 50 L 90 50' stroke='%2306b6d4' stroke-width='1' opacity='0.5'/></svg>" }
 ];
 
 window.renderFrameOptions = (currentUrl) => {
@@ -576,18 +558,13 @@ function handleImageSelect(e, type) {
     const file = e.target.files[0];
     if (!file) return;
 
-    // 🌟 ดักจับไฟล์ GIF ให้วิ่งเข้าฟังก์ชันอัปโหลดตรงๆ เลย ไม่ต้องผ่านระบบครอบตัด
     if (file.type === 'image/gif') { 
         showToast("ว้าว! ตรวจพบรูปเคลื่อนไหว (GIF) กำลังอัปโหลดแบบ VIP!", "info"); 
-        
-        // ส่งไฟล์จริงไปอัปโหลดแบบดิบๆ (Bypass)
         uploadImageRaw(file, type); 
-        
         e.target.value = ""; 
         return; 
     }
 
-    // โค้ดเดิมสำหรับการครอบตัดรูปภาพปกติ (JPG, PNG)
     const reader = new FileReader();
     reader.onload = (event) => {
         const cropTarget = document.getElementById('crop-image-target');
@@ -686,6 +663,43 @@ async function uploadImage(file, type) {
         }
     } catch(err) { 
         showToast("เกิดข้อผิดพลาดในการอัปโหลด", "error"); 
+    } finally { 
+        if(wrap) wrap.classList.remove('opacity-50', 'pointer-events-none'); 
+    } 
+}
+
+async function uploadImageRaw(file, type) { 
+    showToast(`กำลังอัปโหลดไฟล์ GIF ${type === 'avatar' ? 'โปรไฟล์' : 'ภาพปก'}... ⏳`, "info"); 
+    const wrap = document.getElementById(`settings-${type}-wrapper`);
+    if(wrap) wrap.classList.add('opacity-50', 'pointer-events-none'); 
+
+    try { 
+        const fd = new FormData(); 
+        fd.append("image", file); 
+        
+        const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); 
+        const r = await res.json(); 
+        
+        if (r.success) { 
+            if(type === 'avatar') { 
+                await updateProfile(auth.currentUser, { photoURL: r.data.url }); 
+                await updateDoc(doc(db, "users", currentUserId), { photoURL: r.data.url }); 
+                const p1 = document.getElementById('settings-avatar-preview'); if(p1) p1.src = r.data.url; 
+                const p2 = document.getElementById('current-user-avatar'); if(p2) p2.src = r.data.url; 
+            } else { 
+                await updateDoc(doc(db, "users", currentUserId), { bannerURL: r.data.url }); 
+                const p1 = document.getElementById('settings-banner-preview'); 
+                if(p1) { 
+                    p1.src = r.data.url; 
+                    p1.classList.remove('hidden'); 
+                }
+            } 
+            showToast("อัปโหลดภาพเคลื่อนไหวสำเร็จ!", "success"); 
+        } else {
+            showToast("อัปโหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", "error");
+        }
+    } catch(err) { 
+        showToast("เกิดข้อผิดพลาดในการอัปโหลดไฟล์ GIF", "error"); 
     } finally { 
         if(wrap) wrap.classList.remove('opacity-50', 'pointer-events-none'); 
     } 
@@ -835,7 +849,6 @@ function renderMessages() {
             lastSender = "system_bot"; return; 
         }
 
-        // 🌟 อัปเดต: เข้ารหัสชื่อผู้ใช้สำหรับ Fallback Avatar ป้องกันรูปภาพหาย
         let msgAvatarUrl = usersData[m.senderName] ? usersData[m.senderName].avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(m.senderName)}&background=5865F2&color=fff&rounded=true&bold=true`;
         let msgFrameUrl = usersData[m.senderName] ? usersData[m.senderName].profileFrame : '';
         let frameHTML = msgFrameUrl ? `<img src="${msgFrameUrl}" class="absolute w-[135%] h-[135%] max-w-none pointer-events-none z-10 drop-shadow-sm">` : '';
@@ -917,8 +930,6 @@ async function sendAnyMessage(inputEl, channelStr) {
             const randomWord = await getWordFromAI("draw");
             if(gameCanvas && gameCtx) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
             await setDoc(doc(db, "appData", "gameWhiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
-            
-            // 🌟 แก้ไข: ใช้ currentUsername แทน currentUserId ป้องกันปัญหา AI ไม่ให้วาด
             await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUsername, drawerName: currentUsername, word: randomWord, channel: activeChannel, timestamp: serverTimestamp() });
             botReply = `🎨 **${currentUsername}** ท้าประลองเกมทายภาพ!\nรีบสลับหน้าจอไปดูที่แท็บ **"🎮 ทายคำจากภาพ"** แล้วพิมพ์คำตอบเลย! (AI เป็นคนคิดคำนะรอบนี้)`; 
         } else { showToast("ไม่รู้จักคำสั่งนี้", "error"); return; }
@@ -926,7 +937,6 @@ async function sendAnyMessage(inputEl, channelStr) {
     }
     
     let isCorrect = false; let isAlmost = false;
-    // 🌟 แก้ไข: ตรวจสอบจากชื่อผู้ใช้ว่าไม่ใช่คนวาด จึงจะให้ทายได้
     if (channelStr === 'game_draw' && currentDrawGame && currentDrawGame.isActive && currentDrawGame.drawerId !== currentUsername) {
         const guess = txt.toLowerCase(); 
         const answer = currentDrawGame.word ? currentDrawGame.word.toLowerCase() : "";
@@ -990,13 +1000,11 @@ function resizeCanvasToDisplaySize(canvas) {
     const parent = canvas.parentElement;
     if(!parent) return;
     
-    // ดึงขนาดจริงของกล่องแม่
     const width = parent.clientWidth;
     const height = parent.clientHeight;
     
-    // ถ้าย่อขยายจอ ให้ปรับสัดส่วนภาพเดิมให้ตรง
     if (canvas.width !== width || canvas.height !== height) {
-        const tempImg = canvas.toDataURL(); // เก็บภาพเดิมไว้ก่อน
+        const tempImg = canvas.toDataURL();
         canvas.width = width;
         canvas.height = height;
         if(tempImg !== "data:,") { 
@@ -1063,7 +1071,6 @@ if(btnGameEraser) {
     }; 
 }
 
-// 🌟 แก้ไข: ใช้ชื่อผู้ใช้แทนไอดี เพื่อป้องกันบักจาก AI ให้วาดได้
 function startGameDrawing(e) { if(!currentDrawGame.isActive || currentDrawGame.drawerId !== currentUsername) return; if(e.type === 'touchstart') e.preventDefault(); isGameDrawing = true; drawGame(e); } 
 
 function drawGame(e) { 
@@ -1075,8 +1082,6 @@ function drawGame(e) {
     if(gSize) gameCtx.lineWidth = gSize.value; 
     gameCtx.lineCap = 'round'; gameCtx.globalCompositeOperation = isEraserMode ? 'destination-out' : 'source-over'; 
     if(gColor) gameCtx.strokeStyle = gColor.value; 
-    
-    // 🌟 แก้ไข: เปลี่ยนจาก ctx เป็น gameCtx เพื่อให้ลากเส้นได้อย่างถูกต้อง
     gameCtx.lineTo(p.x, p.y); gameCtx.stroke(); gameCtx.beginPath(); gameCtx.moveTo(p.x, p.y); 
 } 
 function stopGameDrawing() { 
@@ -1112,8 +1117,6 @@ if(btnStartGameDraw) {
         if(gameCtx && gameCanvas) gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height); 
         
         await setDoc(doc(db, "appData", "gameWhiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
-        
-        // 🌟 แก้ไข: ใช้ currentUsername แทนไอดี
         await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUsername, drawerName: currentUsername, word: randomWord, channel: "game_draw", timestamp: serverTimestamp() });
         await addDoc(collection(db, "messages"), { text: `🎨 **${currentUsername}** เริ่มเกมทายภาพแล้ว! (คำศัพท์รอบนี้สุ่มโดย AI 🧠)`, senderName: "🤖 System Bot", channel: "game_draw", timestamp: serverTimestamp() });
         
@@ -1499,7 +1502,7 @@ async function stopScreenShare() {
     if (screenTrack) { await rtcClient.unpublish(screenTrack); screenTrack.stop(); screenTrack.close(); screenTrack = null; } 
     if (screenAudioTrack) { await rtcClient.unpublish(screenAudioTrack); screenAudioTrack.stop(); screenAudioTrack.close(); screenAudioTrack = null; } 
     isSharingScreen = false; if(currentUserId) await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: false }); 
-    if (ssWrapper) ssWrapper.classList.replace('bg-[#23a559]', 'bg-[#2b2d31]'); else if(ssBtn) ssBtn.classList.replace('bg-[#23a559]', 'bg-[#2b2d31]');
+    if (ssWrapper) ssWrapper.classList.replace('bg-[#23a559]', 'bg-[#2b2d31]'); else if(ssBtn) ssBtn.classList.replace('bg-[#23a559]', 'bg-[#23a559]');
     if (sIco) sIco.className = "ph ph-screencast text-[20px] md:text-[24px] text-[#dbdee1]"; 
     if (qualitySelect) { qualitySelect.classList.replace('text-white', 'text-[#80848e]'); qualitySelect.disabled = false; }
     const pc = document.getElementById(`v-wrap-local`); if (pc) pc.remove(); 
