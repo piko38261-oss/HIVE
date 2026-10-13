@@ -497,6 +497,10 @@ window.showUserProfile = (userName) => {
         if(cardBox) {
             cardBox.style.background = u.cardTheme || 'rgba(17, 18, 20, 0.92)';
             cardBox.classList.remove('overflow-hidden');
+            
+            const closeBtn = document.getElementById('close-profile-card');
+            if(closeBtn) closeBtn.classList.replace('z-20', 'z-40');
+
             const bannerWrap = document.getElementById('profile-card-banner')?.parentElement;
             if(bannerWrap) bannerWrap.classList.add('overflow-hidden', 'rounded-t-2xl', 'md:rounded-t-3xl');
 
@@ -505,8 +509,8 @@ window.showUserProfile = (userName) => {
             const decoItem = shopDecos.find(d => d.id === u.cardDeco);
             if(decoItem && decoItem.topSvg) {
                 cardBox.insertAdjacentHTML('beforeend', `
-                    <img src="${decoItem.topSvg}" class="card-deco-overlay absolute -top-11 left-1/2 -translate-x-1/2 w-[108%] max-w-none pointer-events-none z-30 drop-shadow-[0_6px_12px_rgba(0,0,0,0.8)]">
-                    <img src="${decoItem.bottomSvg}" class="card-deco-overlay absolute -bottom-8 left-1/2 -translate-x-1/2 w-[106%] max-w-none pointer-events-none z-30 drop-shadow-[0_6px_12px_rgba(0,0,0,0.8)]">
+                    <img src="${decoItem.topSvg}" class="card-deco-overlay absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[78%] w-[106%] max-w-none pointer-events-none z-30 drop-shadow-[0_6px_12px_rgba(0,0,0,0.8)]">
+                    <img src="${decoItem.bottomSvg}" class="card-deco-overlay absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[82%] w-[106%] max-w-none pointer-events-none z-30 drop-shadow-[0_6px_12px_rgba(0,0,0,0.8)]">
                 `);
             }
         }
@@ -1719,7 +1723,6 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
 // ==========================================
 // 🛍️ 14. ระบบร้านค้าตกแต่งโปรไฟล์ (HIVE Shop)
 // ==========================================
-// ฟังก์ชันแปลงโค้ด SVG เป็น URL (รองรับ Animation และป้องกันเครื่องหมายคำพูดพัง)
 const svgToUrl = (svg) => `data:image/svg+xml;utf8,${encodeURIComponent(svg.trim()).replace(/'/g, '%27')}`;
 
 const shopFrames = [
@@ -1731,10 +1734,6 @@ const shopFrames = [
     { name: 'มรกตพิทักษ์', desc: 'วงแหวนเวทมนตร์สีเขียว', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='none' stroke='%2310b981' stroke-width='5' stroke-dasharray='20 5'/><circle cx='50' cy='50' r='41' fill='none' stroke='%2334d399' stroke-width='2'/></svg>" },
     { name: 'ซากุระบาน', desc: 'กรอบสีชมพูพาสเทลสดใส', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='none' stroke='%23f472b6' stroke-width='6' stroke-dasharray='8 4'/><circle cx='50' cy='50' r='45' fill='none' stroke='%23fbcfe8' stroke-width='2'/></svg>" },
     { name: 'ราชันย์มงกุฎทอง', desc: 'กรอบมงกุฎสำหรับผู้นำ', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='none' stroke='%23facc15' stroke-width='5'/><polygon points='35,12 42,4 50,10 58,4 65,12' fill='%23facc15'/></svg>" },
-
-    // ==========================================================
-    // 🔥 4 กรอบโปรไฟล์ระดับ LEGENDARY (มี Animation เคลื่อนไหว)
-    // ==========================================================
     {
         name: 'มหาเวทดาราจักร (Astral Halo)',
         desc: 'วงแหวนเวท 2 ชั้นหมุนสวนทางกัน',
@@ -1742,28 +1741,20 @@ const shopFrames = [
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
                 <defs>
                     <linearGradient id="astralGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#38bdf8"/>
-                        <stop offset="50%" stop-color="#a855f7"/>
-                        <stop offset="100%" stop-color="#f472b6"/>
+                        <stop offset="0%" stop-color="#38bdf8"/><stop offset="50%" stop-color="#a855f7"/><stop offset="100%" stop-color="#f472b6"/>
                     </linearGradient>
                 </defs>
-                <!-- วงแหวนรูนชั้นนอกหมุนตามเข็ม -->
                 <g>
                     <circle cx="50" cy="50" r="46" fill="none" stroke="url(#astralGrad)" stroke-width="2.5" stroke-dasharray="10 4 2 4"/>
-                    <polygon points="50,2 53,9 47,9" fill="#38bdf8"/>
-                    <polygon points="50,98 53,91 47,91" fill="#f472b6"/>
-                    <polygon points="2,50 9,53 9,47" fill="#a855f7"/>
-                    <polygon points="98,50 91,53 91,47" fill="#a855f7"/>
+                    <polygon points="50,2 53,9 47,9" fill="#38bdf8"/><polygon points="50,98 53,91 47,91" fill="#f472b6"/>
+                    <polygon points="2,50 9,53 9,47" fill="#a855f7"/><polygon points="98,50 91,53 91,47" fill="#a855f7"/>
                     <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="10s" repeatCount="indefinite"/>
                 </g>
-                <!-- วงแหวนพลังงานชั้นในหมุนทวนเข็ม -->
                 <g>
                     <circle cx="50" cy="50" r="41" fill="none" stroke="#fde047" stroke-width="2" stroke-dasharray="6 6"/>
-                    <circle cx="50" cy="9" r="3" fill="#ffffff"/>
-                    <circle cx="50" cy="91" r="3" fill="#ffffff"/>
+                    <circle cx="50" cy="9" r="3" fill="#ffffff"/><circle cx="50" cy="91" r="3" fill="#ffffff"/>
                     <animateTransform attributeName="transform" type="rotate" from="360 50 50" to="0 50 50" dur="6s" repeatCount="indefinite"/>
                 </g>
-                <!-- อัญมณีดาราจักรด้านบน & ล่าง -->
                 <polygon points="50,1 55,8 50,15 45,8" fill="#38bdf8" stroke="#ffffff" stroke-width="1">
                     <animate attributeName="opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite"/>
                 </polygon>
@@ -1778,26 +1769,20 @@ const shopFrames = [
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
                 <defs>
                     <linearGradient id="fireGrad" x1="0%" y1="100%" x2="0%" y2="0%">
-                        <stop offset="0%" stop-color="#991b1b"/>
-                        <stop offset="50%" stop-color="#ef4444"/>
-                        <stop offset="100%" stop-color="#facc15"/>
+                        <stop offset="0%" stop-color="#991b1b"/><stop offset="50%" stop-color="#ef4444"/><stop offset="100%" stop-color="#facc15"/>
                     </linearGradient>
                 </defs>
-                <!-- วงแหวนเพลิงหมุนวน -->
                 <g>
                     <circle cx="50" cy="50" r="44" fill="none" stroke="url(#fireGrad)" stroke-width="4.5" stroke-dasharray="14 4"/>
                     <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="8s" repeatCount="indefinite"/>
                 </g>
                 <circle cx="50" cy="50" r="40" fill="none" stroke="#facc15" stroke-width="1.5"/>
-                <!-- เขามังกรคู่ด้านบน -->
                 <path d="M26,20 Q12,6 6,14 Q12,26 22,28 Z" fill="url(#fireGrad)" stroke="#fef08a" stroke-width="1"/>
                 <path d="M74,20 Q88,6 94,14 Q88,26 78,28 Z" fill="url(#fireGrad)" stroke="#fef08a" stroke-width="1"/>
-                <!-- ครีบหนามมังกรด้านข้าง -->
                 <polygon points="4,44 11,38 9,52" fill="#ef4444" stroke="#facc15" stroke-width="0.8"/>
                 <polygon points="96,44 89,38 91,52" fill="#ef4444" stroke="#facc15" stroke-width="0.8"/>
                 <polygon points="7,62 13,56 12,68" fill="#ef4444" stroke="#facc15" stroke-width="0.8"/>
                 <polygon points="93,62 87,56 88,68" fill="#ef4444" stroke="#facc15" stroke-width="0.8"/>
-                <!-- ลูกแก้วหัวใจมังกรด้านล่าง -->
                 <circle cx="50" cy="91" r="6" fill="#ef4444" stroke="#fef08a" stroke-width="2">
                     <animate attributeName="r" values="5.5;7;5.5" dur="1.2s" repeatCount="indefinite"/>
                 </circle>
@@ -1810,18 +1795,15 @@ const shopFrames = [
         desc: 'เกราะหูจักรกลพร้อมเรดาร์สแกนเป้าหมาย',
         url: svgToUrl(`
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                <!-- วงแหวน HUD สแกนเนอร์หมุน -->
                 <g>
                     <circle cx="50" cy="50" r="45" fill="none" stroke="#06b6d4" stroke-width="3" stroke-dasharray="22 8 4 8"/>
                     <circle cx="50" cy="50" r="41" fill="none" stroke="#ec4899" stroke-width="1.5" stroke-dasharray="8 12"/>
                     <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="5s" repeatCount="indefinite"/>
                 </g>
-                <!-- หูจักรกล (Mecha Ears) ด้านบนซ้าย-ขวา -->
                 <polygon points="14,30 6,8 28,16" fill="#090d16" stroke="#06b6d4" stroke-width="2"/>
                 <polygon points="14,25 10,13 23,18" fill="#ec4899"/>
                 <polygon points="86,30 94,8 72,16" fill="#090d16" stroke="#06b6d4" stroke-width="2"/>
                 <polygon points="86,25 90,13 77,18" fill="#ec4899"/>
-                <!-- ศูนย์เล็งเทคโนโลยีด้านล่าง -->
                 <polygon points="36,89 50,97 64,89 58,85 42,85" fill="#090d16" stroke="#06b6d4" stroke-width="1.5"/>
                 <circle cx="50" cy="90" r="3" fill="#22d3ee">
                     <animate attributeName="opacity" values="1;0.2;1" dur="0.7s" repeatCount="indefinite"/>
@@ -1834,16 +1816,13 @@ const shopFrames = [
         desc: 'ผนึกคำสาปสีเลือดและดวงตาปีศาจขยับได้',
         url: svgToUrl(`
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                <!-- ออร่าทมิฬและวงแหวนผนึกหมุนวน -->
                 <circle cx="50" cy="50" r="44" fill="none" stroke="#09090b" stroke-width="6"/>
                 <g>
                     <circle cx="50" cy="50" r="44" fill="none" stroke="#dc2626" stroke-width="3" stroke-dasharray="9 5"/>
                     <animateTransform attributeName="transform" type="rotate" from="360 50 50" to="0 50 50" dur="7s" repeatCount="indefinite"/>
                 </g>
-                <!-- กรงเล็บอสูรด้านข้าง -->
                 <path d="M4,35 Q12,50 4,65 Q10,50 4,35 Z" fill="#dc2626"/>
                 <path d="M96,35 Q88,50 96,65 Q90,50 96,35 Z" fill="#dc2626"/>
-                <!-- ดวงตาปีศาจด้านบน (กรอกตาซ้าย-ขวา) -->
                 <path d="M32,10 Q50,0 68,10 Q50,20 32,10 Z" fill="#18181b" stroke="#dc2626" stroke-width="2"/>
                 <path d="M36,10 Q50,3 64,10 Q50,17 36,10 Z" fill="#fef2f2"/>
                 <ellipse cx="50" cy="10" rx="3.5" ry="5" fill="#dc2626">
@@ -1852,7 +1831,6 @@ const shopFrames = [
                 <ellipse cx="50" cy="10" rx="1.2" ry="4" fill="#000000">
                     <animate attributeName="cx" values="50;45;55;50" dur="3.5s" repeatCount="indefinite"/>
                 </ellipse>
-                <!-- เขี้ยวอสูรด้านล่าง -->
                 <polygon points="38,87 43,97 47,89" fill="#dc2626"/>
                 <polygon points="62,87 57,97 53,89" fill="#dc2626"/>
             </svg>
@@ -1861,6 +1839,7 @@ const shopFrames = [
 ];
 
 const shopBanners = [
+    { name: 'Pastel Yellow (เหลืองพาสเทล)', url: svgToUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200"><rect width="600" height="200" fill="#fef08a"/></svg>`) },
     { name: 'Cyberpunk City (GIF)', url: 'https://media.giphy.com/media/l0HlHFRbmaZtBRhXG/giphy.gif' },
     { name: 'Pixel Chill Night (GIF)', url: 'https://media.giphy.com/media/RMwgs5kZqkRyhF24KK/giphy.gif' },
     { name: 'Galaxy Nebula (GIF)', url: 'https://media.giphy.com/media/3o7buijTqhjxjbEqjK/giphy.gif' }
@@ -1881,25 +1860,25 @@ const shopDecos = [
         price: 'FREE (VIP)',
         isNew: false,
         topSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
-                <path d="M25,75 Q30,30 55,20 Q45,50 48,75 Z" fill="#18181b" stroke="#a1a1aa" stroke-width="1.5"/>
-                <path d="M45,75 Q52,25 75,18 Q65,48 66,75 Z" fill="#18181b" stroke="#a1a1aa" stroke-width="1.5"/>
-                <path d="M65,75 Q75,30 95,25 Q85,52 84,75 Z" fill="#18181b" stroke="#a1a1aa" stroke-width="1.5"/>
-                <path d="M95,70 Q130,30 180,35 Q230,30 275,65 L295,75 L260,78 Q230,55 180,55 Q130,55 95,70 Z" fill="#9ca3af" stroke="#18181b" stroke-width="2"/>
-                <path d="M140,75 Q150,20 185,15 Q220,20 230,75" fill="#d4d4d8" stroke="#27272a" stroke-width="1.5"/>
-                <ellipse cx="185" cy="46" rx="22" ry="28" fill="#f4f4f5" stroke="#18181b" stroke-width="2.5"/>
-                <circle cx="176" cy="38" r="6" fill="#09090b"/><circle cx="176" cy="38" r="2" fill="#ffffff"/>
-                <circle cx="194" cy="38" r="6" fill="#09090b"/><circle cx="194" cy="38" r="2" fill="#ffffff"/>
-                <ellipse cx="185" cy="58" rx="10" ry="12" fill="#09090b" stroke="#27272a" stroke-width="2"/>
-                <path d="M177,50 L193,50 M177,64 L193,64" stroke="#f4f4f5" stroke-width="2" stroke-dasharray="2 2"/>
-                <path d="M260,72 Q285,55 305,72 L295,80 L260,76 Z" fill="#d4d4d8" stroke="#18181b" stroke-width="2"/>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 105">
+                <path d="M25,85 Q30,40 55,30 Q45,60 48,85 Z" fill="#18181b" stroke="#a1a1aa" stroke-width="1.5"/>
+                <path d="M45,85 Q52,35 75,28 Q65,58 66,85 Z" fill="#18181b" stroke="#a1a1aa" stroke-width="1.5"/>
+                <path d="M65,85 Q75,40 95,35 Q85,62 84,85 Z" fill="#18181b" stroke="#a1a1aa" stroke-width="1.5"/>
+                <path d="M95,80 Q130,40 180,45 Q230,40 275,75 L295,85 L260,88 Q230,65 180,65 Q130,65 95,80 Z" fill="#9ca3af" stroke="#18181b" stroke-width="2"/>
+                <path d="M140,85 Q150,30 185,25 Q220,30 230,85" fill="#d4d4d8" stroke="#27272a" stroke-width="1.5"/>
+                <ellipse cx="185" cy="56" rx="22" ry="28" fill="#f4f4f5" stroke="#18181b" stroke-width="2.5"/>
+                <circle cx="176" cy="48" r="6" fill="#09090b"/><circle cx="176" cy="48" r="2" fill="#ffffff"/>
+                <circle cx="194" cy="48" r="6" fill="#09090b"/><circle cx="194" cy="48" r="2" fill="#ffffff"/>
+                <ellipse cx="185" cy="68" rx="10" ry="12" fill="#09090b" stroke="#27272a" stroke-width="2"/>
+                <path d="M177,60 L193,60 M177,74 L193,74" stroke="#f4f4f5" stroke-width="2" stroke-dasharray="2 2"/>
+                <path d="M260,82 Q285,65 305,82 L295,90 L260,86 Z" fill="#d4d4d8" stroke="#18181b" stroke-width="2"/>
             </svg>
         `),
         bottomSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
-                <path d="M40,15 Q180,65 320,10 Q300,45 180,50 Q70,48 40,15 Z" fill="#18181b" stroke="#52525b" stroke-width="2"/>
-                <path d="M70,25 L55,50 M100,32 L90,58 M135,38 L130,62 M170,40 L170,65 M205,38 L210,62 M240,32 L255,58 M275,25 L295,48" stroke="#27272a" stroke-width="3" stroke-linecap="round"/>
-                <path d="M80,26 Q180,55 290,18" fill="none" stroke="#71717a" stroke-width="2" stroke-dasharray="10 6"/>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 85">
+                <path d="M30,15 Q180,70 330,12 Q305,50 180,55 Q65,52 30,15 Z" fill="#18181b" stroke="#52525b" stroke-width="2"/>
+                <path d="M70,25 L55,55 M100,32 L90,62 M135,38 L130,66 M170,40 L170,68 M205,38 L210,66 M240,32 L255,62 M275,25 L295,52" stroke="#27272a" stroke-width="3" stroke-linecap="round"/>
+                <path d="M75,28 Q180,58 295,20" fill="none" stroke="#71717a" stroke-width="2" stroke-dasharray="10 6"/>
             </svg>
         `)
     },
@@ -1909,29 +1888,27 @@ const shopDecos = [
         price: 'FREE (VIP)',
         isNew: false,
         topSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
-                <path d="M15,85 Q10,30 60,25 Q110,5 180,10 Q250,5 300,25 Q350,30 345,85 Z" fill="#050505" stroke="#27272a" stroke-width="2"/>
-                <path d="M120,45 Q180,15 240,45 Q180,70 120,45 Z" fill="#ffffff" stroke="#000" stroke-width="3"/>
-                <ellipse cx="180" cy="43" rx="14" ry="16" fill="#09090b">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 105">
+                <path d="M10,95 Q8,38 60,32 Q110,12 180,18 Q250,12 300,32 Q352,38 350,95 Q335,84 320,82 L40,82 Q25,84 10,95 Z" fill="#050505" stroke="#27272a" stroke-width="2"/>
+                <path d="M120,52 Q180,22 240,52 Q180,77 120,52 Z" fill="#ffffff" stroke="#000" stroke-width="3"/>
+                <ellipse cx="180" cy="50" rx="14" ry="16" fill="#09090b">
                     <animate attributeName="cx" values="180;174;186;180" dur="4s" repeatCount="indefinite"/>
                 </ellipse>
-                <circle cx="176" cy="39" r="4" fill="#ffffff">
+                <circle cx="176" cy="46" r="4" fill="#ffffff">
                     <animate attributeName="cx" values="176;170;182;176" dur="4s" repeatCount="indefinite"/>
                 </circle>
-                <path d="M45,50 Q75,30 105,50 Q75,68 45,50 Z" fill="#ffffff"/><circle cx="75" cy="50" r="8" fill="#09090b"/><circle cx="73" cy="48" r="2.5" fill="#fff"/>
-                <path d="M255,50 Q285,30 315,50 Q285,68 255,50 Z" fill="#ffffff"/><circle cx="285" cy="50" r="8" fill="#09090b"/><circle cx="283" cy="48" r="2.5" fill="#fff"/>
-                <path d="M85,25 Q110,12 135,25 Q110,38 85,25 Z" fill="#ffffff"/><circle cx="110" cy="25" r="6" fill="#09090b"/>
-                <path d="M225,25 Q250,12 275,25 Q250,38 225,25 Z" fill="#ffffff"/><circle cx="250" cy="25" r="6" fill="#09090b"/>
-                <path d="M20,70 Q38,58 55,70 Q38,82 20,70 Z" fill="#ffffff"/><circle cx="38" cy="70" r="5" fill="#09090b"/>
-                <path d="M305,70 Q322,58 340,70 Q322,82 305,70 Z" fill="#ffffff"/><circle cx="322" cy="70" r="5" fill="#09090b"/>
+                <path d="M45,58 Q75,38 105,58 Q75,76 45,58 Z" fill="#ffffff"/><circle cx="75" cy="58" r="8" fill="#09090b"/><circle cx="73" cy="56" r="2.5" fill="#fff"/>
+                <path d="M255,58 Q285,38 315,58 Q285,76 255,58 Z" fill="#ffffff"/><circle cx="285" cy="58" r="8" fill="#09090b"/><circle cx="283" cy="56" r="2.5" fill="#fff"/>
+                <path d="M85,32 Q110,19 135,32 Q110,45 85,32 Z" fill="#ffffff"/><circle cx="110" cy="32" r="6" fill="#09090b"/>
+                <path d="M225,32 Q250,19 275,32 Q250,45 225,32 Z" fill="#ffffff"/><circle cx="250" cy="32" r="6" fill="#09090b"/>
             </svg>
         `),
         bottomSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
-                <path d="M20,5 Q15,55 90,55 Q180,68 270,55 Q345,55 340,5 Z" fill="#050505" stroke="#27272a" stroke-width="2"/>
-                <path d="M70,30 Q105,15 140,30 Q105,45 70,30 Z" fill="#e4e4e7"/><circle cx="105" cy="30" r="7" fill="#09090b"/>
-                <path d="M150,42 Q180,28 210,42 Q180,56 150,42 Z" fill="#e4e4e7"/><circle cx="180" cy="42" r="7" fill="#09090b"/>
-                <path d="M225,30 Q260,15 295,30 Q260,45 225,30 Z" fill="#e4e4e7"/><circle cx="260" cy="30" r="7" fill="#09090b"/>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 85">
+                <path d="M12,8 Q10,60 90,60 Q180,74 270,60 Q350,60 348,8 Q335,16 320,15 L40,15 Q25,16 12,8 Z" fill="#050505" stroke="#27272a" stroke-width="2"/>
+                <path d="M70,35 Q105,20 140,35 Q105,50 70,35 Z" fill="#e4e4e7"/><circle cx="105" cy="35" r="7" fill="#09090b"/>
+                <path d="M150,46 Q180,32 210,46 Q180,60 150,46 Z" fill="#e4e4e7"/><circle cx="180" cy="46" r="7" fill="#09090b"/>
+                <path d="M225,35 Q260,20 295,35 Q260,50 225,35 Z" fill="#e4e4e7"/><circle cx="260" cy="35" r="7" fill="#09090b"/>
             </svg>
         `)
     },
@@ -1941,76 +1918,55 @@ const shopDecos = [
         price: 'FREE (VIP)',
         isNew: false,
         topSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
-                <path d="M15,80 Q40,15 110,35 L95,10 L145,30 Q180,5 215,30 L265,10 L250,35 Q320,15 345,80 Z" fill="#450a0a" stroke="#ef4444" stroke-width="2"/>
-                <polygon points="160,35 180,10 200,35 180,60" fill="#f97316"/>
-                <circle cx="145" cy="48" r="6" fill="#fef08a"/><circle cx="215" cy="48" r="6" fill="#fef08a"/>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 105">
+                <path d="M10,92 Q35,22 110,42 L95,16 L145,38 Q180,12 215,38 L265,16 L250,42 Q325,22 350,92 Q335,82 320,82 L40,82 Q25,82 10,92 Z" fill="#450a0a" stroke="#ef4444" stroke-width="2"/>
+                <polygon points="160,42 180,16 200,42 180,68" fill="#f97316"/>
+                <circle cx="145" cy="56" r="6" fill="#fef08a"/><circle cx="215" cy="56" r="6" fill="#fef08a"/>
             </svg>
         `),
         bottomSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
-                <path d="M25,10 Q90,60 180,55 Q270,60 335,10 Q280,40 180,38 Q80,40 25,10 Z" fill="#450a0a" stroke="#ef4444" stroke-width="2"/>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 85">
+                <path d="M15,12 Q90,68 180,62 Q270,68 345,12 Q285,42 180,40 Q75,42 15,12 Z" fill="#450a0a" stroke="#ef4444" stroke-width="2"/>
             </svg>
         `)
     },
-
-    // ====================================================
-    // 🌟 4 ธีมการ์ดใหม่ระดับ LEGENDARY (อลังการ + มี Animation)
-    // ====================================================
     {
         id: 'celestial_seraph',
         name: 'มหาเทวทูตสวรรค์นิรันดร์',
         price: 'LEGENDARY',
-        isNew: true,
+        isNew: false,
         topSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 105">
                 <defs>
                     <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#fef08a"/>
-                        <stop offset="50%" stop-color="#eab308"/>
-                        <stop offset="100%" stop-color="#a16207"/>
+                        <stop offset="0%" stop-color="#fef08a"/><stop offset="50%" stop-color="#eab308"/><stop offset="100%" stop-color="#a16207"/>
                     </linearGradient>
                     <linearGradient id="wingGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stop-color="#ffffff"/>
-                        <stop offset="70%" stop-color="#fef9c3"/>
-                        <stop offset="100%" stop-color="#fde047"/>
+                        <stop offset="0%" stop-color="#ffffff"/><stop offset="70%" stop-color="#fef9c3"/><stop offset="100%" stop-color="#fde047"/>
                     </linearGradient>
                 </defs>
-                <!-- วงแหวนสวรรค์ด้านหลัง -->
-                <circle cx="180" cy="48" r="36" fill="none" stroke="url(#goldGrad)" stroke-width="2" stroke-dasharray="6 4">
-                    <animateTransform attributeName="transform" type="rotate" from="0 180 48" to="360 180 48" dur="12s" repeatCount="indefinite"/>
+                <circle cx="180" cy="54" r="36" fill="none" stroke="url(#goldGrad)" stroke-width="2" stroke-dasharray="6 4">
+                    <animateTransform attributeName="transform" type="rotate" from="0 180 54" to="360 180 54" dur="12s" repeatCount="indefinite"/>
                 </circle>
-                <!-- ปีกเทวทูต 3 ชั้น ฝั่งซ้าย -->
-                <path d="M160,65 Q90,5 10,20 Q45,45 30,55 Q80,45 145,72 Z" fill="url(#wingGrad)" stroke="#eab308" stroke-width="1.5"/>
-                <path d="M155,72 Q95,30 25,48 Q60,65 45,74 Q95,62 150,78 Z" fill="url(#wingGrad)" stroke="#ca8a04" stroke-width="1.5"/>
-                <path d="M160,76 Q110,55 60,72 Q95,82 155,82 Z" fill="url(#goldGrad)"/>
-                <!-- ปีกเทวทูต 3 ชั้น ฝั่งขวา -->
-                <path d="M200,65 Q270,5 350,20 Q315,45 330,55 Q280,45 215,72 Z" fill="url(#wingGrad)" stroke="#eab308" stroke-width="1.5"/>
-                <path d="M205,72 Q265,30 335,48 Q300,65 315,74 Q265,62 210,78 Z" fill="url(#wingGrad)" stroke="#ca8a04" stroke-width="1.5"/>
-                <path d="M200,76 Q250,55 300,72 Q265,82 205,82 Z" fill="url(#goldGrad)"/>
-                <!-- ตราสัญลักษณ์ดาราสวรรค์ตรงกลาง -->
-                <polygon points="180,6 188,32 215,40 188,48 180,74 172,48 145,40 172,32" fill="url(#goldGrad)" stroke="#ffffff" stroke-width="1.5">
+                <path d="M160,73 Q90,12 10,28 Q45,52 30,62 Q80,52 145,80 Z" fill="url(#wingGrad)" stroke="#eab308" stroke-width="1.5"/>
+                <path d="M155,80 Q95,38 25,56 Q60,73 45,82 Q95,70 150,86 Z" fill="url(#wingGrad)" stroke="#ca8a04" stroke-width="1.5"/>
+                <path d="M200,73 Q270,12 350,28 Q315,52 330,62 Q280,52 215,80 Z" fill="url(#wingGrad)" stroke="#eab308" stroke-width="1.5"/>
+                <path d="M205,80 Q265,38 335,56 Q300,73 315,82 Q265,70 210,86 Z" fill="url(#wingGrad)" stroke="#ca8a04" stroke-width="1.5"/>
+                <polygon points="180,14 188,40 215,48 188,56 180,82 172,56 145,48 172,40" fill="url(#goldGrad)" stroke="#ffffff" stroke-width="1.5">
                     <animate attributeName="opacity" values="1;0.75;1" dur="2s" repeatCount="indefinite"/>
                 </polygon>
-                <circle cx="180" cy="40" r="7" fill="#ffffff"/>
-                <!-- ละอองดาวศักดิ์สิทธิ์ -->
-                <circle cx="65" cy="20" r="2.5" fill="#fef08a"><animate attributeName="opacity" values="0;1;0" dur="1.8s" repeatCount="indefinite"/></circle>
-                <circle cx="295" cy="20" r="2.5" fill="#fef08a"><animate attributeName="opacity" values="1;0;1" dur="2.2s" repeatCount="indefinite"/></circle>
-                <circle cx="125" cy="14" r="2" fill="#ffffff"/><circle cx="235" cy="14" r="2" fill="#ffffff"/>
+                <circle cx="180" cy="48" r="7" fill="#ffffff"/>
             </svg>
         `),
         bottomSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 85">
                 <defs>
                     <linearGradient id="goldGradB" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stop-color="#ca8a04"/>
-                        <stop offset="50%" stop-color="#fef08a"/>
-                        <stop offset="100%" stop-color="#ca8a04"/>
+                        <stop offset="0%" stop-color="#ca8a04"/><stop offset="50%" stop-color="#fef08a"/><stop offset="100%" stop-color="#ca8a04"/>
                     </linearGradient>
                 </defs>
-                <path d="M15,10 Q90,55 180,55 Q270,55 345,10 Q310,42 250,45 Q180,65 110,45 Q50,42 15,10 Z" fill="url(#goldGradB)" stroke="#ffffff" stroke-width="1.5"/>
-                <polygon points="180,22 192,42 180,64 168,42" fill="#ffffff" stroke="#eab308" stroke-width="2"/>
-                <circle cx="110" cy="36" r="4" fill="#fef08a"/><circle cx="250" cy="36" r="4" fill="#fef08a"/>
+                <path d="M12,12 Q90,60 180,60 Q270,60 348,12 Q310,45 250,48 Q180,68 110,48 Q50,45 12,12 Z" fill="url(#goldGradB)" stroke="#ffffff" stroke-width="1.5"/>
+                <polygon points="180,26 192,46 180,68 168,46" fill="#ffffff" stroke="#eab308" stroke-width="2"/>
             </svg>
         `)
     },
@@ -2018,44 +1974,29 @@ const shopDecos = [
         id: 'cyber_overdrive',
         name: 'จักรกลสังหารไซเบอร์ (Mecha Overdrive)',
         price: 'LEGENDARY',
-        isNew: true,
+        isNew: false,
         topSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
-                <defs>
-                    <linearGradient id="cyberNeon" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stop-color="#06b6d4"/>
-                        <stop offset="50%" stop-color="#ec4899"/>
-                        <stop offset="100%" stop-color="#06b6d4"/>
-                    </linearGradient>
-                </defs>
-                <!-- เกราะเขาจักรกลซ้าย-ขวา -->
-                <polygon points="10,80 35,15 95,45 125,25 150,65 25,80" fill="#090d16" stroke="#06b6d4" stroke-width="2.5"/>
-                <polygon points="350,80 325,15 265,45 235,25 210,65 335,80" fill="#090d16" stroke="#06b6d4" stroke-width="2.5"/>
-                <!-- ลายเส้นวงจรเรืองแสง -->
-                <polyline points="35,28 70,55 115,40" fill="none" stroke="#ec4899" stroke-width="2"/>
-                <polyline points="325,28 290,55 245,40" fill="none" stroke="#ec4899" stroke-width="2"/>
-                <!-- แกนพลังงาน Reactor ตรงกลาง -->
-                <polygon points="135,72 155,20 205,20 225,72" fill="#111827" stroke="url(#cyberNeon)" stroke-width="2.5"/>
-                <!-- เลนส์สแกนเนอร์วิ่งไปมา -->
-                <rect x="150" y="38" width="60" height="10" rx="5" fill="#000000" stroke="#06b6d4" stroke-width="1"/>
-                <circle cx="180" cy="43" r="5" fill="#ec4899">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 105">
+                <polygon points="10,90 35,22 95,52 125,32 150,75 25,90" fill="#090d16" stroke="#06b6d4" stroke-width="2.5"/>
+                <polygon points="350,90 325,22 265,52 235,32 210,75 335,90" fill="#090d16" stroke="#06b6d4" stroke-width="2.5"/>
+                <polyline points="35,35 70,62 115,48" fill="none" stroke="#ec4899" stroke-width="2"/>
+                <polyline points="325,35 290,62 245,48" fill="none" stroke="#ec4899" stroke-width="2"/>
+                <polygon points="135,82 155,28 205,28 225,82" fill="#111827" stroke="#06b6d4" stroke-width="2.5"/>
+                <rect x="150" y="46" width="60" height="10" rx="5" fill="#000000" stroke="#06b6d4" stroke-width="1"/>
+                <circle cx="180" cy="51" r="5" fill="#ec4899">
                     <animate attributeName="cx" values="158;202;158" dur="1.6s" repeatCount="indefinite"/>
                 </circle>
-                <!-- ใบมีดพลังงานคู่ด้านบน -->
-                <polygon points="168,20 180,2 192,20" fill="#06b6d4">
+                <polygon points="168,28 180,8 192,28" fill="#06b6d4">
                     <animate attributeName="opacity" values="1;0.3;1" dur="0.8s" repeatCount="indefinite"/>
                 </polygon>
             </svg>
         `),
         bottomSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
-                <!-- เกราะช่วงล่าง + ไอพ่นพลาสม่า -->
-                <polygon points="20,10 65,55 140,45 180,62 220,45 295,55 340,10 300,25 180,35 60,25" fill="#090d16" stroke="#06b6d4" stroke-width="2"/>
-                <polygon points="155,35 180,66 205,35" fill="#ec4899">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 85">
+                <polygon points="15,12 65,60 140,50 180,68 220,50 295,60 345,12 300,28 180,38 60,28" fill="#090d16" stroke="#06b6d4" stroke-width="2"/>
+                <polygon points="155,38 180,72 205,38" fill="#ec4899">
                     <animate attributeName="opacity" values="0.6;1;0.6" dur="0.5s" repeatCount="indefinite"/>
                 </polygon>
-                <line x1="75" y1="38" x2="130" y2="33" stroke="#06b6d4" stroke-width="3"/>
-                <line x1="285" y1="38" x2="230" y2="33" stroke="#06b6d4" stroke-width="3"/>
             </svg>
         `)
     },
@@ -2063,45 +2004,26 @@ const shopDecos = [
         id: 'cosmic_singularity',
         name: 'จักรวาลหลุมดำมรณะ (Cosmic Void)',
         price: 'LEGENDARY',
-        isNew: true,
+        isNew: false,
         topSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 105">
                 <defs>
                     <radialGradient id="voidCore" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stop-color="#000000"/>
-                        <stop offset="55%" stop-color="#090514"/>
-                        <stop offset="75%" stop-color="#a855f7"/>
-                        <stop offset="90%" stop-color="#ec4899"/>
-                        <stop offset="100%" stop-color="transparent"/>
+                        <stop offset="0%" stop-color="#000000"/><stop offset="55%" stop-color="#090514"/><stop offset="75%" stop-color="#a855f7"/><stop offset="90%" stop-color="#ec4899"/><stop offset="100%" stop-color="transparent"/>
                     </radialGradient>
-                    <linearGradient id="nebula" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stop-color="#3b0764"/>
-                        <stop offset="30%" stop-color="#7e22ce"/>
-                        <stop offset="50%" stop-color="#f472b6"/>
-                        <stop offset="70%" stop-color="#7e22ce"/>
-                        <stop offset="100%" stop-color="#3b0764"/>
-                    </linearGradient>
                 </defs>
-                <!-- คลื่นเนบิวลาโอบล้อมขอบบน -->
-                <path d="M10,82 Q30,25 100,40 Q140,10 180,15 Q220,10 260,40 Q330,25 350,82 Q270,55 180,62 Q90,55 10,82 Z" fill="url(#nebula)" opacity="0.9" stroke="#f472b6" stroke-width="1.5"/>
-                <!-- วงแหวน Accretion Disk หมุนรอบหลุมดำ -->
-                <ellipse cx="180" cy="45" rx="65" ry="16" fill="none" stroke="#fde047" stroke-width="2.5" stroke-dasharray="18 8">
-                    <animateTransform attributeName="transform" type="rotate" from="0 180 45" to="360 180 45" dur="10s" repeatCount="indefinite"/>
+                <path d="M10,92 Q30,32 100,48 Q140,18 180,22 Q220,18 260,48 Q330,32 350,92 Q270,65 180,72 Q90,65 10,92 Z" fill="#3b0764" stroke="#f472b6" stroke-width="1.5"/>
+                <ellipse cx="180" cy="52" rx="65" ry="16" fill="none" stroke="#fde047" stroke-width="2.5" stroke-dasharray="18 8">
+                    <animateTransform attributeName="transform" type="rotate" from="0 180 52" to="360 180 52" dur="10s" repeatCount="indefinite"/>
                 </ellipse>
-                <!-- ใจกลางหลุมดำ (Black Hole) -->
-                <circle cx="180" cy="45" r="28" fill="url(#voidCore)" stroke="#ffffff" stroke-width="1"/>
-                <circle cx="180" cy="45" r="15" fill="#000000" stroke="#f472b6" stroke-width="2"/>
-                <!-- ดวงดาวและอุกกาบาตลอยรอบๆ -->
-                <circle cx="55" cy="42" r="3" fill="#ffffff"><animate attributeName="r" values="1.5;3.5;1.5" dur="2s" repeatCount="indefinite"/></circle>
-                <circle cx="305" cy="42" r="3" fill="#ffffff"><animate attributeName="r" values="3.5;1.5;3.5" dur="2s" repeatCount="indefinite"/></circle>
-                <circle cx="95" cy="25" r="2" fill="#fde047"/><circle cx="265" cy="25" r="2" fill="#fde047"/>
+                <circle cx="180" cy="52" r="28" fill="url(#voidCore)" stroke="#ffffff" stroke-width="1"/>
+                <circle cx="180" cy="52" r="15" fill="#000000" stroke="#f472b6" stroke-width="2"/>
             </svg>
         `),
         bottomSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
-                <path d="M20,8 Q90,62 180,58 Q270,62 340,8 Q290,42 180,42 Q70,42 20,8 Z" fill="#2e1065" stroke="#a855f7" stroke-width="2"/>
-                <ellipse cx="180" cy="42" rx="45" ry="10" fill="#000000" stroke="#f472b6" stroke-width="1.5"/>
-                <circle cx="110" cy="35" r="2.5" fill="#ffffff"/><circle cx="180" cy="42" r="4" fill="#fde047"/><circle cx="250" cy="35" r="2.5" fill="#ffffff"/>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 85">
+                <path d="M15,12 Q90,68 180,62 Q270,68 345,12 Q290,45 180,45 Q70,45 15,12 Z" fill="#2e1065" stroke="#a855f7" stroke-width="2"/>
+                <ellipse cx="180" cy="45" rx="45" ry="10" fill="#000000" stroke="#f472b6" stroke-width="1.5"/>
             </svg>
         `)
     },
@@ -2109,104 +2031,74 @@ const shopDecos = [
         id: 'thunder_shogun',
         name: 'จอมทัพอสนีบาต (Thunder Raijin)',
         price: 'LEGENDARY',
-        isNew: true,
+        isNew: false,
         topSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90">
-                <!-- เมฆพายุทมิฬ -->
-                <path d="M15,82 Q5,40 50,38 Q75,12 125,28 Q180,5 235,28 Q285,12 310,38 Q355,40 345,82 Q265,62 180,68 Q95,62 15,82 Z" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
-                <!-- เขาโอนิทองคำคู่ -->
-                <path d="M115,60 Q85,15 55,10 Q75,42 95,65 Z" fill="#facc15" stroke="#ca8a04" stroke-width="2"/>
-                <path d="M245,60 Q275,15 305,10 Q285,42 265,65 Z" fill="#facc15" stroke="#ca8a04" stroke-width="2"/>
-                <!-- กลองสายฟ้าไรจินตรงกลาง -->
-                <circle cx="180" cy="42" r="22" fill="#1e1b4b" stroke="#facc15" stroke-width="3"/>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 105">
+                <path d="M12,92 Q5,48 50,45 Q75,18 125,35 Q180,12 235,35 Q285,18 310,45 Q355,48 348,92 Q265,72 180,78 Q95,72 12,92 Z" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+                <path d="M115,68 Q85,22 55,16 Q75,48 95,72 Z" fill="#facc15" stroke="#ca8a04" stroke-width="2"/>
+                <path d="M245,68 Q275,22 305,16 Q285,48 265,72 Z" fill="#facc15" stroke="#ca8a04" stroke-width="2"/>
+                <circle cx="180" cy="50" r="22" fill="#1e1b4b" stroke="#facc15" stroke-width="3"/>
                 <g>
-                    <circle cx="180" cy="31" r="4.5" fill="#38bdf8"/>
-                    <circle cx="170" cy="48" r="4.5" fill="#38bdf8"/>
-                    <circle cx="190" cy="48" r="4.5" fill="#38bdf8"/>
-                    <animateTransform attributeName="transform" type="rotate" from="0 180 42" to="360 180 42" dur="4s" repeatCount="indefinite"/>
+                    <circle cx="180" cy="39" r="4.5" fill="#38bdf8"/><circle cx="170" cy="56" r="4.5" fill="#38bdf8"/><circle cx="190" cy="56" r="4.5" fill="#38bdf8"/>
+                    <animateTransform attributeName="transform" type="rotate" from="0 180 50" to="360 180 50" dur="4s" repeatCount="indefinite"/>
                 </g>
-                <!-- สายฟ้าฟาด (กระพริบ) -->
-                <polyline points="40,22 65,45 52,48 85,78" fill="none" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round">
+                <polyline points="40,28 65,52 52,55 85,84" fill="none" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round">
                     <animate attributeName="opacity" values="1;0.1;1;0.8;0;1" dur="1.2s" repeatCount="indefinite"/>
                 </polyline>
-                <polyline points="320,22 295,45 308,48 275,78" fill="none" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round">
+                <polyline points="320,28 295,52 308,55 275,84" fill="none" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round">
                     <animate attributeName="opacity" values="0.1;1;0;1;0.8;0.1" dur="1.2s" repeatCount="indefinite"/>
                 </polyline>
             </svg>
         `),
         bottomSvg: svgToUrl(`
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70">
-                <path d="M20,12 Q95,62 180,56 Q265,62 340,12 Q280,42 180,40 Q80,42 20,12 Z" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
-                <polyline points="60,28 115,48 140,32 180,55 220,32 245,48 300,28" fill="none" stroke="#facc15" stroke-width="2.5">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 85">
+                <path d="M15,12 Q95,68 180,62 Q265,68 345,12 Q280,45 180,42 Q80,45 15,12 Z" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+                <polyline points="60,30 115,52 140,35 180,58 220,35 245,52 300,30" fill="none" stroke="#facc15" stroke-width="2.5">
                     <animate attributeName="opacity" values="1;0.3;1" dur="0.9s" repeatCount="indefinite"/>
                 </polyline>
             </svg>
         `)
     },
-    // ====================================================
-    // 🐱☀️💀 3 ธีมการ์ดโปรไฟล์ใหม่ตามแบบต้นฉบับ
-    // ====================================================
     {
         id: 'orange_cat_hug',
         name: 'เหมียวส้มเกาะการ์ด (Nekobread)',
         price: 'LEGENDARY',
         isNew: true,
-        // 🐱 ด้านบน: แมวส้มขนฟูเกาะขอบการ์ด + อุ้งเท้าห้อย + ดาววิบวับ
         topSvg: svgToUrl(`
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 105">
-                <!-- ประกายดาวด้านบนขวา & ซ้าย -->
-                <path d="M265,8 L268,16 L276,19 L268,22 L265,30 L262,22 L254,19 L262,16 Z" fill="#fef08a" stroke="#ca8a04" stroke-width="1">
+                <path d="M275,6 L278,14 L286,17 L278,20 L275,28 L272,20 L264,17 L272,14 Z" fill="#fef08a" stroke="#ca8a04" stroke-width="1">
                     <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
                 </path>
-                <path d="M282,16 L284,22 L290,24 L284,26 L282,32 L280,26 L274,24 L280,22 Z" fill="#ffffff" stroke="#ca8a04" stroke-width="1">
+                <path d="M292,14 L294,20 L300,22 L294,24 L292,30 L290,24 L284,22 L290,20 Z" fill="#ffffff" stroke="#ca8a04" stroke-width="1">
                     <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite"/>
                 </path>
-                <!-- ลำตัวและหัวแมวส้มขนฟู -->
-                <path d="M22,98 C10,85 12,68 22,62 C14,52 22,42 32,42 C28,22 36,15 55,18 C75,21 95,28 115,25 C155,20 205,20 245,25 C265,28 285,21 305,18 C324,15 332,22 328,42 C338,42 346,52 338,62 C348,68 350,85 338,98 Q325,75 300,72 L60,72 Q35,75 22,98 Z" fill="#fdba74" stroke="#9a3412" stroke-width="2.5" stroke-linejoin="round"/>
-                <!-- หูชมพูด้านใน ซ้าย-ขวา -->
-                <path d="M40,38 Q42,24 56,26 Q68,28 72,38 Z" fill="#fda4af" stroke="#e11d48" stroke-width="1"/>
-                <path d="M320,38 Q318,24 304,26 Q292,28 288,38 Z" fill="#fda4af" stroke="#e11d48" stroke-width="1"/>
-                <!-- ลายสลิดสีส้มเข้มบนหน้าผากและข้างแก้ม -->
-                <path d="M166,22 L168,34 M180,21 L180,36 M194,22 L192,34" stroke="#ea580c" stroke-width="4.5" stroke-linecap="round"/>
-                <path d="M24,52 L42,54 M20,64 L38,65 M336,52 L318,54 M340,64 L322,65" stroke="#ea580c" stroke-width="4" stroke-linecap="round"/>
-                <!-- ขนหน้าอกสีครีมฟูๆ ทับขอบการ์ด -->
-                <path d="M45,72 Q65,52 105,54 Q140,42 180,42 Q220,42 255,54 Q295,52 315,72 Q295,78 275,72 Q255,79 235,72 Q215,79 195,73 Q180,78 165,73 Q145,79 125,72 Q105,79 85,72 Q65,78 45,72 Z" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
-                <!-- ตา แก้มแดง และปาก :3 -->
-                <circle cx="152" cy="44" r="5" fill="#78350f"/>
-                <circle cx="208" cy="44" r="5" fill="#78350f"/>
-                <path d="M168,46 Q174,53 180,46 Q186,53 192,46" fill="none" stroke="#78350f" stroke-width="2.8" stroke-linecap="round"/>
-                <ellipse cx="130" cy="48" rx="12" ry="6" fill="#fda4af" opacity="0.7"/>
-                <ellipse cx="230" cy="48" rx="12" ry="6" fill="#fda4af" opacity="0.7"/>
-                <path d="M126,46 L124,50 M130,46 L128,50 M134,46 L132,50 M226,46 L224,50 M230,46 L228,50 M234,46 L232,50" stroke="#f43f5e" stroke-width="1.2" stroke-linecap="round"/>
-                <!-- อุ้งเท้าคู่หน้าเกาะขอบการ์ด -->
-                <ellipse cx="92" cy="68" rx="22" ry="13" transform="rotate(-10 92 68)" fill="#fffbeb" stroke="#9a3412" stroke-width="2"/>
-                <path d="M82,73 Q85,66 86,64 M92,75 Q94,67 94,65" stroke="#d97706" stroke-width="1.8" stroke-linecap="round"/>
-                <ellipse cx="268" cy="68" rx="22" ry="13" transform="rotate(10 268 68)" fill="#fffbeb" stroke="#9a3412" stroke-width="2"/>
-                <path d="M278,73 Q275,66 274,64 M268,75 Q266,67 266,65" stroke="#d97706" stroke-width="1.8" stroke-linecap="round"/>
-                <!-- ประกายดาวฝั่งซ้าย -->
-                <path d="M22,60 L25,67 L32,70 L25,73 L22,80 L19,73 L12,70 L19,67 Z" fill="#ffffff" stroke="#eab308" stroke-width="1">
-                    <animate attributeName="transform" type="scale" values="1;1.15;1" dur="2s" repeatCount="indefinite"/>
-                </path>
+                <path d="M10,102 C2,88 4,72 14,65 C6,54 14,44 24,44 C20,24 30,16 50,19 C72,22 95,30 115,27 C155,22 205,22 245,27 C265,30 288,22 310,19 C330,16 340,24 336,44 C346,44 354,54 346,65 C356,72 358,88 350,102 Q342,82 325,80 L35,80 Q18,82 10,102 Z" fill="#fdba74" stroke="#9a3412" stroke-width="2.5" stroke-linejoin="round"/>
+                <path d="M32,40 Q35,25 50,27 Q62,29 66,40 Z" fill="#fda4af" stroke="#e11d48" stroke-width="1"/>
+                <path d="M328,40 Q325,25 310,27 Q298,29 294,40 Z" fill="#fda4af" stroke="#e11d48" stroke-width="1"/>
+                <path d="M166,24 L168,36 M180,23 L180,38 M194,24 L192,36" stroke="#ea580c" stroke-width="4.5" stroke-linecap="round"/>
+                <path d="M16,54 L34,56 M12,66 L30,67 M344,54 L326,56 M348,66 L330,67" stroke="#ea580c" stroke-width="4" stroke-linecap="round"/>
+                <path d="M32,80 Q58,56 102,58 Q140,46 180,46 Q220,46 258,58 Q302,56 328,80 Q305,86 282,80 Q260,87 238,80 Q215,87 195,81 Q180,86 165,81 Q145,87 122,80 Q100,87 78,80 Q55,86 32,80 Z" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
+                <circle cx="152" cy="48" r="5" fill="#78350f"/>
+                <circle cx="208" cy="48" r="5" fill="#78350f"/>
+                <path d="M168,50 Q174,57 180,50 Q186,57 192,50" fill="none" stroke="#78350f" stroke-width="2.8" stroke-linecap="round"/>
+                <ellipse cx="130" cy="52" rx="12" ry="6" fill="#fda4af" opacity="0.7"/>
+                <ellipse cx="230" cy="52" rx="12" ry="6" fill="#fda4af" opacity="0.7"/>
+                <ellipse cx="86" cy="78" rx="22" ry="13" transform="rotate(-8 86 78)" fill="#fffbeb" stroke="#9a3412" stroke-width="2"/>
+                <path d="M76,83 Q79,76 80,74 M86,85 Q88,77 88,75" stroke="#d97706" stroke-width="1.8" stroke-linecap="round"/>
+                <ellipse cx="274" cy="78" rx="22" ry="13" transform="rotate(8 274 78)" fill="#fffbeb" stroke="#9a3412" stroke-width="2"/>
+                <path d="M284,83 Q281,76 280,74 M274,85 Q272,77 272,75" stroke="#d97706" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M14,64 L17,71 L24,74 L17,77 L14,84 L11,77 L4,74 L11,71 Z" fill="#ffffff" stroke="#eab308" stroke-width="1"/>
             </svg>
         `),
-        // 🐱 ด้านล่าง: หางแมวส้มลายสลิดพันรอบขอบล่าง + ดาววิบวับ
         bottomSvg: svgToUrl(`
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 85">
-                <g>
-                    <!-- โครงหางแมวยาวโค้ง -->
-                    <path d="M24,8 C5,25 10,55 45,62 C110,75 220,62 305,72 C325,75 332,62 315,54 C235,44 120,56 55,44 C32,40 28,22 36,10 Z" fill="#fdba74" stroke="#9a3412" stroke-width="2.5" stroke-linejoin="round"/>
-                    <!-- ปลายหางสีครีม -->
-                    <path d="M292,51 C305,52 315,54 320,58 C328,64 322,74 305,72 C298,71 292,70 288,69 Q295,60 292,51 Z" fill="#fffbeb" stroke="#9a3412" stroke-width="2"/>
-                    <!-- ลายปล้องบนหาง -->
-                    <path d="M48,44 L44,60 M75,47 L72,64 M105,49 L102,66 M135,50 L133,67 M165,50 L163,67 M195,50 L193,66 M225,50 L223,66 M255,50 L253,67 M280,51 L278,68" stroke="#ea580c" stroke-width="6" stroke-linecap="round"/>
-                </g>
-                <!-- ประกายดาวด้านล่าง -->
-                <path d="M42,58 L45,66 L53,69 L45,72 L42,80 L39,72 L31,69 L39,66 Z" fill="#fef08a" stroke="#ca8a04" stroke-width="1">
+                <path d="M12,4 C0,22 6,52 42,60 C110,74 225,60 312,70 C332,73 338,60 320,52 C240,42 120,54 52,42 C26,38 20,18 26,6 Z" fill="#fdba74" stroke="#9a3412" stroke-width="2.5" stroke-linejoin="round"/>
+                <path d="M296,49 C310,50 320,52 325,56 C333,62 327,72 310,70 C302,69 296,68 292,67 Q299,58 296,49 Z" fill="#fffbeb" stroke="#9a3412" stroke-width="2"/>
+                <path d="M45,42 L41,58 M75,45 L72,62 M105,47 L102,64 M135,48 L133,65 M165,48 L163,65 M195,48 L193,64 M225,48 L223,64 M255,48 L253,65 M282,49 L280,66" stroke="#ea580c" stroke-width="6" stroke-linecap="round"/>
+                <path d="M38,56 L41,64 L49,67 L41,70 L38,78 L35,70 L27,67 L35,64 Z" fill="#fef08a" stroke="#ca8a04" stroke-width="1">
                     <animate attributeName="opacity" values="1;0.2;1" dur="1.8s" repeatCount="indefinite"/>
                 </path>
-                <path d="M335,38 L337,44 L343,46 L337,48 L335,54 L333,48 L327,46 L333,44 Z" fill="#ffffff" stroke="#ca8a04" stroke-width="1">
-                    <animate attributeName="opacity" values="0.2;1;0.2" dur="1.8s" repeatCount="indefinite"/>
-                </path>
+                <path d="M342,34 L344,40 L350,42 L344,44 L342,50 L340,44 L334,42 L340,40 Z" fill="#ffffff" stroke="#ca8a04" stroke-width="1"/>
             </svg>
         `)
     },
@@ -2215,77 +2107,55 @@ const shopDecos = [
         name: 'มงกุฎสุริยันกระจกสี (Solar Cathedral)',
         price: 'LEGENDARY',
         isNew: true,
-        // ☀️ ด้านบน: ซุ้มกระจกสีทองคำ + หอกแสงสุริยัน + ตราดวงอาทิตย์และสายมุก
         topSvg: svgToUrl(`
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 110">
                 <defs>
                     <linearGradient id="sunGold" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#fef08a"/>
-                        <stop offset="50%" stop-color="#f59e0b"/>
-                        <stop offset="100%" stop-color="#92400e"/>
+                        <stop offset="0%" stop-color="#fef08a"/><stop offset="50%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#92400e"/>
                     </linearGradient>
                     <linearGradient id="stainedGlass" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stop-color="#ea580c"/>
-                        <stop offset="25%" stop-color="#f59e0b"/>
-                        <stop offset="50%" stop-color="#fef08a"/>
-                        <stop offset="75%" stop-color="#f59e0b"/>
-                        <stop offset="100%" stop-color="#ea580c"/>
+                        <stop offset="0%" stop-color="#ea580c"/><stop offset="25%" stop-color="#f59e0b"/><stop offset="50%" stop-color="#fef08a"/><stop offset="75%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#ea580c"/>
                     </linearGradient>
                 </defs>
-                <!-- หอกรัศมีทองคำซ้าย-ขวา -->
                 <g stroke="url(#sunGold)" stroke-width="2" fill="#fde047">
-                    <line x1="95" y1="45" x2="55" y2="8"/><polygon points="55,8 64,12 58,18"/>
-                    <line x1="80" y1="55" x2="35" y2="24"/><polygon points="35,24 45,26 40,33"/>
-                    <line x1="265" y1="45" x2="305" y2="8"/><polygon points="305,8 296,12 302,18"/>
-                    <line x1="280" y1="55" x2="325" y2="24"/><polygon points="325,24 315,26 320,33"/>
+                    <line x1="90" y1="55" x2="48" y2="12"/><polygon points="48,12 58,16 52,22"/>
+                    <line x1="72" y1="65" x2="25" y2="28"/><polygon points="25,28 35,30 30,37"/>
+                    <line x1="270" y1="55" x2="312" y2="12"/><polygon points="312,12 302,16 308,22"/>
+                    <line x1="288" y1="65" x2="335" y2="28"/><polygon points="335,28 325,30 330,37"/>
                 </g>
-                <!-- ซุ้มโค้งกระจกสีด้านหลัง -->
-                <path d="M35,72 Q90,10 180,10 Q270,10 325,72 Z" fill="url(#stainedGlass)" stroke="url(#sunGold)" stroke-width="3.5"/>
-                <!-- เส้นแบ่งช่องกระจกสี -->
-                <path d="M75,72 L105,32 M110,72 L135,20 M145,72 L160,15 M215,72 L200,15 M250,72 L225,20 M285,72 L255,32" stroke="#78350f" stroke-width="2"/>
-                <path d="M55,72 Q115,25 180,25 Q245,25 305,72" fill="none" stroke="url(#sunGold)" stroke-width="3"/>
-                <!-- กรอบเสาทองคำครอบขอบบนของการ์ด -->
-                <path d="M18,105 L18,75 Q18,66 28,66 L332,66 Q342,66 342,75 L342,105" fill="none" stroke="url(#sunGold)" stroke-width="5"/>
-                <path d="M23,105 L23,77 Q23,71 30,71 L330,71 Q337,71 337,77 L337,105" fill="none" stroke="#fef08a" stroke-width="1.5"/>
-                <!-- สายสร้อยไข่มุกประดับซุ้ม -->
-                <path d="M115,42 Q145,62 180,48 Q215,62 245,42" fill="none" stroke="#fef08a" stroke-width="1.5" stroke-dasharray="3 3"/>
-                <circle cx="135" cy="51" r="3" fill="#ffffff"/><circle cx="225" cy="51" r="3" fill="#ffffff"/>
-                <circle cx="155" cy="54" r="3.5" fill="#ffffff"/><circle cx="205" cy="54" r="3.5" fill="#ffffff"/>
-                <!-- ตราสัญลักษณ์สุริยัน-จันทราตรงกลาง -->
-                <circle cx="180" cy="34" r="24" fill="#451a03" stroke="url(#sunGold)" stroke-width="4"/>
-                <circle cx="180" cy="34" r="18" fill="#fbbf24" stroke="#fef08a" stroke-width="1.5"/>
-                <path d="M166,28 A16,16 0 1,0 194,28 A14,12 0 1,1 166,28 Z" fill="#d97706"/>
-                <polygon points="180,18 183,30 195,33 183,36 180,48 177,36 165,33 177,30" fill="#ffffff">
-                    <animateTransform attributeName="transform" type="scale" values="1;1.1;1" additive="sum" dur="2s" repeatCount="indefinite"/>
-                </polygon>
-                <!-- อัญมณีห้อยกลางหน้าผาก -->
-                <polygon points="180,58 185,65 180,72 175,65" fill="#f97316" stroke="#fef08a" stroke-width="1.2"/>
+                <path d="M24,84 Q85,14 180,14 Q275,14 336,84 Z" fill="url(#stainedGlass)" stroke="url(#sunGold)" stroke-width="3.5"/>
+                <path d="M68,84 L100,38 M106,84 L132,24 M144,84 L160,18 M216,84 L200,18 M254,84 L228,24 M292,84 L260,38" stroke="#78350f" stroke-width="2"/>
+                <path d="M46,84 Q110,30 180,30 Q250,30 314,84" fill="none" stroke="url(#sunGold)" stroke-width="3"/>
+                <path d="M10,108 L10,90 Q10,82 20,82 L340,82 Q350,82 350,90 L350,108" fill="none" stroke="url(#sunGold)" stroke-width="5"/>
+                <path d="M14,108 L14,91 Q14,85 22,85 L338,85 Q346,85 346,91 L346,108" fill="none" stroke="#fef08a" stroke-width="1.5"/>
+                <path d="M110,50 Q145,70 180,56 Q215,70 250,50" fill="none" stroke="#fef08a" stroke-width="1.5" stroke-dasharray="3 3"/>
+                <circle cx="132" cy="59" r="3" fill="#ffffff"/><circle cx="228" cy="59" r="3" fill="#ffffff"/>
+                <circle cx="154" cy="62" r="3.5" fill="#ffffff"/><circle cx="206" cy="62" r="3.5" fill="#ffffff"/>
+                <circle cx="180" cy="40" r="24" fill="#451a03" stroke="url(#sunGold)" stroke-width="4"/>
+                <circle cx="180" cy="40" r="18" fill="#fbbf24" stroke="#fef08a" stroke-width="1.5"/>
+                <path d="M166,34 A16,16 0 1,0 194,34 A14,12 0 1,1 166,34 Z" fill="#d97706"/>
+                <polygon points="180,24 183,36 195,39 183,42 180,54 177,42 165,39 177,36" fill="#ffffff"/>
+                <polygon points="180,68 185,75 180,82 175,75" fill="#f97316" stroke="#fef08a" stroke-width="1.2"/>
             </svg>
         `),
-        // ☀️ ด้านล่าง: ฐานกระจกสีทองคำ + ตราดวงดาวและมุกคู่
         bottomSvg: svgToUrl(`
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 85">
                 <defs>
                     <linearGradient id="sunGoldB" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stop-color="#92400e"/>
-                        <stop offset="50%" stop-color="#fef08a"/>
-                        <stop offset="100%" stop-color="#92400e"/>
+                        <stop offset="0%" stop-color="#92400e"/><stop offset="50%" stop-color="#fef08a"/><stop offset="100%" stop-color="#92400e"/>
                     </linearGradient>
                 </defs>
-                <!-- โค้งกระจกสีด้านล่าง -->
-                <path d="M55,18 Q180,82 305,18 Z" fill="#ea580c" stroke="url(#sunGoldB)" stroke-width="3.5"/>
-                <path d="M85,18 Q180,66 275,18 Z" fill="#f59e0b" stroke="#fef08a" stroke-width="2"/>
-                <line x1="120" y1="18" x2="140" y2="55" stroke="#78350f" stroke-width="2"/>
-                <line x1="240" y1="18" x2="220" y2="55" stroke="#78350f" stroke-width="2"/>
-                <!-- ขอบทองคำรับตัวการ์ด + อัญมณีข้าง -->
-                <path d="M18,2 L18,14 Q18,20 26,20 L334,20 Q342,20 342,14 L342,2" fill="none" stroke="url(#sunGoldB)" stroke-width="4.5"/>
-                <polygon points="10,2 16,10 10,18 4,10" fill="#f97316" stroke="#fef08a" stroke-width="1.2"/>
-                <polygon points="350,2 356,10 350,18 344,10" fill="#f97316" stroke="#fef08a" stroke-width="1.2"/>
-                <!-- ตรา मุกคู่ซ้าย-ขวา และตราหลักตรงกลาง -->
-                <circle cx="112" cy="34" r="11" fill="#271206" stroke="#fef08a" stroke-width="2.5"/>
-                <circle cx="112" cy="34" r="4" fill="#ffffff"/>
-                <circle cx="248" cy="34" r="11" fill="#271206" stroke="#fef08a" stroke-width="2.5"/>
-                <circle cx="248" cy="34" r="4" fill="#ffffff"/>
+                <path d="M42,15 Q180,82 318,15 Z" fill="#ea580c" stroke="url(#sunGoldB)" stroke-width="3.5"/>
+                <path d="M75,15 Q180,66 285,15 Z" fill="#f59e0b" stroke="#fef08a" stroke-width="2"/>
+                <line x1="115" y1="15" x2="138" y2="55" stroke="#78350f" stroke-width="2"/>
+                <line x1="245" y1="15" x2="222" y2="55" stroke="#78350f" stroke-width="2"/>
+                <path d="M10,0 L10,10 Q10,16 20,16 L340,16 Q350,16 350,10 L350,0" fill="none" stroke="url(#sunGoldB)" stroke-width="5"/>
+                <polygon points="5,2 10,9 5,16 0,9" fill="#f97316" stroke="#fef08a" stroke-width="1.2"/>
+                <polygon points="355,2 360,9 355,16 350,9" fill="#f97316" stroke="#fef08a" stroke-width="1.2"/>
+                <circle cx="108" cy="34" r="11" fill="#271206" stroke="#fef08a" stroke-width="2.5"/>
+                <circle cx="108" cy="34" r="4" fill="#ffffff"/>
+                <circle cx="252" cy="34" r="11" fill="#271206" stroke="#fef08a" stroke-width="2.5"/>
+                <circle cx="252" cy="34" r="4" fill="#ffffff"/>
                 <circle cx="180" cy="46" r="20" fill="#f59e0b" stroke="#fef08a" stroke-width="3.5"/>
                 <polygon points="180,29 185,41 197,46 185,51 180,63 175,51 163,46 175,41" fill="#ffffff" stroke="#b45309" stroke-width="1"/>
             </svg>
@@ -2296,67 +2166,51 @@ const shopDecos = [
         name: 'บัลลังก์กะโหลกเพลิงทมิฬ (Skull Inferno)',
         price: 'LEGENDARY',
         isNew: true,
-        // 💀 ด้านบน: เปลวเพลิงสีแดงอมชมพู + กะโหลก 7 หัวเรียงกัน ดวงตาเรืองแสง
         topSvg: svgToUrl(`
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 105">
                 <defs>
                     <linearGradient id="hellFlame" x1="0%" y1="100%" x2="0%" y2="0%">
-                        <stop offset="0%" stop-color="#be123c"/>
-                        <stop offset="60%" stop-color="#f43f5e"/>
-                        <stop offset="100%" stop-color="#fda4af"/>
+                        <stop offset="0%" stop-color="#be123c"/><stop offset="60%" stop-color="#f43f5e"/><stop offset="100%" stop-color="#fda4af"/>
                     </linearGradient>
                     <linearGradient id="skullBone" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stop-color="#d1d5db"/>
-                        <stop offset="60%" stop-color="#6b7280"/>
-                        <stop offset="100%" stop-color="#1f2937"/>
+                        <stop offset="0%" stop-color="#d1d5db"/><stop offset="60%" stop-color="#6b7280"/><stop offset="100%" stop-color="#1f2937"/>
                     </linearGradient>
                 </defs>
-                <!-- เปลวเพลิงนรกด้านหลัง (กระพริบไหว) -->
-                <path d="M12,95 Q8,60 22,55 Q18,35 38,48 Q45,25 65,42 Q80,15 105,35 Q125,8 148,28 Q165,2 180,18 Q195,2 212,28 Q235,8 255,35 Q280,15 295,42 Q315,25 322,48 Q342,35 338,55 Q352,60 348,95 Q335,72 320,70 L40,70 Q25,72 12,95 Z" fill="url(#hellFlame)" opacity="0.9">
+                <path d="M6,102 Q2,65 18,58 Q14,38 35,50 Q42,28 65,45 Q80,18 105,38 Q125,10 148,30 Q165,4 180,20 Q195,4 212,30 Q235,10 255,38 Q280,18 295,45 Q318,28 325,50 Q346,38 342,58 Q358,65 354,102 Q345,84 335,82 L25,82 Q15,84 6,102 Z" fill="url(#hellFlame)" opacity="0.9">
                     <animate attributeName="opacity" values="0.95;0.75;0.95" dur="1.4s" repeatCount="indefinite"/>
                 </path>
-                <!-- คานกระดูกหินทมิฬเกาะขอบการ์ด -->
-                <path d="M16,92 L20,66 L340,66 L344,92 L334,72 L26,72 Z" fill="#4b5563" stroke="#111827" stroke-width="2"/>
-                <!-- กะโหลกซ้ายสุด & ขวาสุด (คู่ที่ 3) -->
+                <path d="M10,100 L12,76 L348,76 L350,100 L342,83 L18,83 Z" fill="#4b5563" stroke="#111827" stroke-width="2"/>
                 <g fill="url(#skullBone)" stroke="#111827" stroke-width="1.8">
-                    <ellipse cx="95" cy="54" rx="13" ry="14"/><rect x="89" y="62" width="12" height="6" rx="2"/>
-                    <ellipse cx="265" cy="54" rx="13" ry="14"/><rect x="259" y="62" width="12" height="6" rx="2"/>
-                    <!-- กะโหลกคู่ที่ 2 -->
-                    <ellipse cx="120" cy="50" rx="15" ry="16"/><rect x="113" y="60" width="14" height="7" rx="2"/>
-                    <ellipse cx="240" cy="50" rx="15" ry="16"/><rect x="233" y="60" width="14" height="7" rx="2"/>
-                    <!-- กะโหลกคู่ใน (คู่ที่ 1) -->
-                    <ellipse cx="148" cy="46" rx="17" ry="19"/><rect x="139" y="58" width="18" height="9" rx="2"/>
-                    <ellipse cx="212" cy="46" rx="17" ry="19"/><rect x="203" y="58" width="18" height="9" rx="2"/>
+                    <ellipse cx="95" cy="64" rx="13" ry="14"/><rect x="89" y="72" width="12" height="6" rx="2"/>
+                    <ellipse cx="265" cy="64" rx="13" ry="14"/><rect x="259" y="72" width="12" height="6" rx="2"/>
+                    <ellipse cx="120" cy="60" rx="15" ry="16"/><rect x="113" y="70" width="14" height="7" rx="2"/>
+                    <ellipse cx="240" cy="60" rx="15" ry="16"/><rect x="233" y="70" width="14" height="7" rx="2"/>
+                    <ellipse cx="148" cy="56" rx="17" ry="19"/><rect x="139" y="68" width="18" height="9" rx="2"/>
+                    <ellipse cx="212" cy="56" rx="17" ry="19"/><rect x="203" y="68" width="18" height="9" rx="2"/>
                 </g>
-                <!-- กะโหลกจอมมารตรงกลาง (มีรอยบากเขาแตก) -->
-                <path d="M160,48 C156,28 164,16 172,18 L176,28 L184,16 C194,16 204,28 200,48 L194,68 L166,68 Z" fill="url(#skullBone)" stroke="#09090b" stroke-width="2.2"/>
-                <path d="M172,62 L172,68 M180,62 L180,69 M188,62 L188,68" stroke="#09090b" stroke-width="2"/>
-                <!-- ดวงตาเรืองแสงสีแดงของกะโหลกทั้ง 7 -->
+                <path d="M160,58 C156,38 164,26 172,28 L176,38 L184,26 C194,26 204,38 200,58 L194,78 L166,78 Z" fill="url(#skullBone)" stroke="#09090b" stroke-width="2.2"/>
+                <path d="M172,72 L172,78 M180,72 L180,79 M188,72 L188,78" stroke="#09090b" stroke-width="2"/>
                 <g fill="#f43f5e">
-                    <circle cx="91" cy="54" r="2.5"/><circle cx="99" cy="54" r="2.5"/>
-                    <circle cx="115" cy="50" r="3"/><circle cx="125" cy="50" r="3"/>
-                    <circle cx="142" cy="47" r="3.5"/><circle cx="153" cy="47" r="3.5"/>
-                    <circle cx="207" cy="47" r="3.5"/><circle cx="218" cy="47" r="3.5"/>
-                    <circle cx="235" cy="50" r="3"/><circle cx="245" cy="50" r="3"/>
-                    <circle cx="261" cy="54" r="2.5"/><circle cx="269" cy="54" r="2.5"/>
-                    <!-- ตากะโหลกกลางพร้อมไฟลุก -->
-                    <circle cx="171" cy="46" r="4.5"/><circle cx="189" cy="46" r="4.5"/>
+                    <circle cx="91" cy="64" r="2.5"/><circle cx="99" cy="64" r="2.5"/>
+                    <circle cx="115" cy="60" r="3"/><circle cx="125" cy="60" r="3"/>
+                    <circle cx="142" cy="57" r="3.5"/><circle cx="153" cy="57" r="3.5"/>
+                    <circle cx="207" cy="57" r="3.5"/><circle cx="218" cy="57" r="3.5"/>
+                    <circle cx="235" cy="60" r="3"/><circle cx="245" cy="60" r="3"/>
+                    <circle cx="261" cy="64" r="2.5"/><circle cx="269" cy="64" r="2.5"/>
+                    <circle cx="171" cy="56" r="4.5"/><circle cx="189" cy="56" r="4.5"/>
                     <animate attributeName="opacity" values="1;0.4;1" dur="1.1s" repeatCount="indefinite"/>
                 </g>
-                <polygon points="178,52 182,52 180,58" fill="#09090b"/>
+                <polygon points="178,62 182,62 180,68" fill="#09090b"/>
             </svg>
         `),
-        // 💀 ด้านล่าง: เปลวไฟนรกสีแดงอมชมพูเกาะรอบขอบล่างการ์ด
         bottomSvg: svgToUrl(`
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 75">
                 <defs>
                     <linearGradient id="hellFlameB" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stop-color="#be123c"/>
-                        <stop offset="55%" stop-color="#f43f5e"/>
-                        <stop offset="100%" stop-color="#fda4af"/>
+                        <stop offset="0%" stop-color="#be123c"/><stop offset="55%" stop-color="#f43f5e"/><stop offset="100%" stop-color="#fda4af"/>
                     </linearGradient>
                 </defs>
-                <path d="M12,5 Q5,32 22,28 Q25,52 42,34 Q55,58 72,36 Q90,62 110,36 Q130,58 150,35 Q172,64 185,36 Q205,58 225,35 Q248,66 262,36 Q285,58 302,34 Q322,55 335,28 Q352,32 348,5 Q335,24 315,22 L45,22 Q25,24 12,5 Z" fill="url(#hellFlameB)">
+                <path d="M8,2 Q4,28 22,25 Q25,48 42,30 Q55,54 72,32 Q90,58 110,32 Q130,54 150,31 Q172,60 185,32 Q205,54 225,31 Q248,62 262,32 Q285,54 302,30 Q322,50 335,25 Q356,28 352,2 Q342,15 330,14 L30,14 Q18,15 8,2 Z" fill="url(#hellFlameB)">
                     <animate attributeName="opacity" values="0.95;0.7;0.95" dur="1.2s" repeatCount="indefinite"/>
                 </path>
             </svg>
@@ -2365,48 +2219,20 @@ const shopDecos = [
 ];
 
 const shopThemes = [
-    // 🎨 ธีมสีพื้นและไล่เฉดสี
     { name: 'Dark Obsidian (ค่าเริ่มต้น)', bg: 'rgba(17, 18, 20, 0.90)' },
     { name: 'Royal Purple (ม่วงจักรพรรดิ)', bg: 'linear-gradient(145deg, rgba(46,16,101,0.95) 0%, rgba(17,18,20,0.95) 100%)' },
     { name: 'Crimson Blood (แดงแอดมิน)', bg: 'linear-gradient(145deg, rgba(127,29,29,0.95) 0%, rgba(17,18,20,0.95) 100%)' },
     { name: 'Cyber Ocean (น้ำเงินนีออน)', bg: 'linear-gradient(145deg, rgba(12,74,110,0.95) 0%, rgba(17,18,20,0.95) 100%)' },
     { name: 'Emerald Forest (เขียวมรกต)', bg: 'linear-gradient(145deg, rgba(6,78,59,0.95) 0%, rgba(17,18,20,0.95) 100%)' },
     { name: 'Sunset Gold (ทองอัสดง)', bg: 'linear-gradient(145deg, rgba(120,53,15,0.95) 0%, rgba(17,18,20,0.95) 100%)' },
-
-    // ✨ ธีมแบบมีลวดลายกราฟิก
-    { 
-        name: 'Cyber Grid (ลายตารางไซเบอร์)', 
-        bg: 'linear-gradient(rgba(6, 182, 212, 0.12) 1px, transparent 1px) 0 0 / 18px 18px, linear-gradient(90deg, rgba(6, 182, 212, 0.12) 1px, transparent 1px) 0 0 / 18px 18px, linear-gradient(145deg, #082f49 0%, #090d16 100%)' 
-    },
-    { 
-        name: 'Luxury Diamond (ลายเพชรทองคำ)', 
-        bg: 'repeating-linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0px, rgba(234, 179, 8, 0.08) 2px, transparent 2px, transparent 12px), repeating-linear-gradient(45deg, rgba(234, 179, 8, 0.08) 0px, rgba(234, 179, 8, 0.08) 2px, transparent 2px, transparent 12px), linear-gradient(145deg, #422006 0%, #111214 100%)' 
-    },
-    { 
-        name: 'Crimson Hazard (ลายเฉียงแอดมิน)', 
-        bg: 'repeating-linear-gradient(-45deg, rgba(239, 68, 68, 0.10) 0px, rgba(239, 68, 68, 0.10) 10px, transparent 10px, transparent 20px), radial-gradient(circle at top right, rgba(220, 38, 38, 0.35), transparent 60%), linear-gradient(145deg, #450a0a 0%, #111214 100%)' 
-    },
-    { 
-        name: 'Starry Pink (ลายจุดพิกเซลชมพู)', 
-        bg: 'radial-gradient(rgba(244, 114, 182, 0.22) 1.5px, transparent 1.5px) 0 0 / 14px 14px, linear-gradient(145deg, #500724 0%, #111214 100%)' 
-    },
-    { 
-        name: 'Royal Carbon (ลายคาร์บอนม่วง)', 
-        bg: 'repeating-linear-gradient(45deg, rgba(168, 85, 247, 0.07) 0px, rgba(168, 85, 247, 0.07) 6px, transparent 6px, transparent 12px), linear-gradient(145deg, #3b0764 0%, #111214 100%)' 
-    },
-    { 
-        name: 'Emerald Matrix (ลายดิจิทัลเรืองแสง)', 
-        bg: 'radial-gradient(rgba(16, 185, 129, 0.22) 1px, transparent 1px) 0 0 / 12px 12px, radial-gradient(circle at bottom left, rgba(5, 150, 105, 0.3), transparent 70%), linear-gradient(145deg, #022c22 0%, #111214 100%)' 
-    },
-    { 
-        name: 'Synthwave Retro (ลายคลื่นเรโทร)', 
-        bg: 'repeating-linear-gradient(0deg, rgba(236, 72, 153, 0.10) 0px, rgba(236, 72, 153, 0.10) 1px, transparent 1px, transparent 6px), radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.45), transparent 70%), linear-gradient(180deg, #2e1065 0%, #090d16 100%)' 
-    },
-    { 
-        name: 'Checkerboard Dark (ลายหมากรุกโมเดิร์น)', 
-        bg: 'repeating-conic-gradient(rgba(255, 255, 255, 0.03) 0% 25%, transparent 0% 50%) 0 0 / 24px 24px, linear-gradient(145deg, #1e1b4b 0%, #0f172a 100%)' 
-    }
-    
+    { name: 'Cyber Grid (ลายตารางไซเบอร์)', bg: 'linear-gradient(rgba(6, 182, 212, 0.12) 1px, transparent 1px) 0 0 / 18px 18px, linear-gradient(90deg, rgba(6, 182, 212, 0.12) 1px, transparent 1px) 0 0 / 18px 18px, linear-gradient(145deg, #082f49 0%, #090d16 100%)' },
+    { name: 'Luxury Diamond (ลายเพชรทองคำ)', bg: 'repeating-linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0px, rgba(234, 179, 8, 0.08) 2px, transparent 2px, transparent 12px), repeating-linear-gradient(45deg, rgba(234, 179, 8, 0.08) 0px, rgba(234, 179, 8, 0.08) 2px, transparent 2px, transparent 12px), linear-gradient(145deg, #422006 0%, #111214 100%)' },
+    { name: 'Crimson Hazard (ลายเฉียงแอดมิน)', bg: 'repeating-linear-gradient(-45deg, rgba(239, 68, 68, 0.10) 0px, rgba(239, 68, 68, 0.10) 10px, transparent 10px, transparent 20px), radial-gradient(circle at top right, rgba(220, 38, 38, 0.35), transparent 60%), linear-gradient(145deg, #450a0a 0%, #111214 100%)' },
+    { name: 'Starry Pink (ลายจุดพิกเซลชมพู)', bg: 'radial-gradient(rgba(244, 114, 182, 0.22) 1.5px, transparent 1.5px) 0 0 / 14px 14px, linear-gradient(145deg, #500724 0%, #111214 100%)' },
+    { name: 'Royal Carbon (ลายคาร์บอนม่วง)', bg: 'repeating-linear-gradient(45deg, rgba(168, 85, 247, 0.07) 0px, rgba(168, 85, 247, 0.07) 6px, transparent 6px, transparent 12px), linear-gradient(145deg, #3b0764 0%, #111214 100%)' },
+    { name: 'Emerald Matrix (ลายดิจิทัลเรืองแสง)', bg: 'radial-gradient(rgba(16, 185, 129, 0.22) 1px, transparent 1px) 0 0 / 12px 12px, radial-gradient(circle at bottom left, rgba(5, 150, 105, 0.3), transparent 70%), linear-gradient(145deg, #022c22 0%, #111214 100%)' },
+    { name: 'Synthwave Retro (ลายคลื่นเรโทร)', bg: 'repeating-linear-gradient(0deg, rgba(236, 72, 153, 0.10) 0px, rgba(236, 72, 153, 0.10) 1px, transparent 1px, transparent 6px), radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.45), transparent 70%), linear-gradient(180deg, #2e1065 0%, #090d16 100%)' },
+    { name: 'Checkerboard Dark (ลายหมากรุกโมเดิร์น)', bg: 'repeating-conic-gradient(rgba(255, 255, 255, 0.03) 0% 25%, transparent 0% 50%) 0 0 / 24px 24px, linear-gradient(145deg, #1e1b4b 0%, #0f172a 100%)' }
 ];
 
 window.equipShopItem = async (type, value, itemName) => {
@@ -2449,7 +2275,7 @@ function renderHiveShop() {
             <div class="bg-[#2b2d31] border border-white/5 hover:border-purple-500 rounded-2xl overflow-hidden flex flex-col transition shadow-md">
                 <div class="h-24 bg-black relative">
                     <img src="${b.url}" class="w-full h-full object-cover">
-                    <span class="absolute top-2 right-2 bg-black/60 text-pink-400 text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm">GIF</span>
+                    <span class="absolute top-2 right-2 bg-black/60 text-pink-400 text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm">PRESET</span>
                 </div>
                 <div class="p-3.5 flex items-center justify-between">
                     <span class="font-bold text-white text-[13px] truncate mr-2">${b.name}</span>
@@ -2463,16 +2289,15 @@ function renderHiveShop() {
 
     if (themesGrid) {
         const decoCardsHTML = shopDecos.map(d => `
-            <div onclick="equipShopItem('deco', '${d.id}', '${d.name}')" class="bg-[#18191c] hover:bg-[#1e1f24] border border-white/10 hover:border-white/30 rounded-2xl p-5 flex flex-col justify-between relative cursor-pointer transition-all duration-300 group min-h-[290px] shadow-xl">
-                ${d.isNew ? `<span class="absolute top-4 left-4 bg-white text-black text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow">NEW</span>` : ''}
+            <div onclick="equipShopItem('deco', '${d.id}', '${d.name}')" class="bg-[#18191c] hover:bg-[#1e1f24] border border-white/10 hover:border-white/30 rounded-2xl p-5 flex flex-col justify-between relative cursor-pointer transition-all duration-300 group min-h-[300px] shadow-xl">
+                ${d.isNew ? `<span class="absolute top-4 left-4 bg-white text-black text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow z-30">NEW</span>` : ''}
                 
-                <div class="my-auto mx-auto w-[155px] h-[165px] bg-[#232428] rounded-xl relative shadow-2xl border border-white/5 flex flex-col group-hover:scale-105 transition-transform duration-300 mt-8 mb-6">
-                    ${d.topSvg ? `<img src="${d.topSvg}" class="absolute -top-7 left-1/2 -translate-x-1/2 w-[114%] max-w-none pointer-events-none z-20">` : ''}
-                    ${d.bottomSvg ? `<img src="${d.bottomSvg}" class="absolute -bottom-5 left-1/2 -translate-x-1/2 w-[112%] max-w-none pointer-events-none z-20">` : ''}
+                <div class="my-auto mx-auto w-[155px] h-[165px] bg-[#232428] rounded-xl relative shadow-2xl border border-white/5 flex flex-col group-hover:scale-105 transition-transform duration-300 mt-10 mb-7">
+                    ${d.topSvg ? `<img src="${d.topSvg}" class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[78%] w-[106%] max-w-none pointer-events-none z-20">` : ''}
+                    ${d.bottomSvg ? `<img src="${d.bottomSvg}" class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[82%] w-[106%] max-w-none pointer-events-none z-20">` : ''}
                     
                     <div class="h-12 bg-[#35373c] rounded-t-xl w-full"></div>
                     <div class="px-3 pt-5 pb-3 flex-1 flex flex-col relative">
-                        <!-- 🌟 เปลี่ยนโลโก้เป็นตัว H โทนสีเทาของการ์ดจำลอง -->
                         <div class="w-10 h-10 rounded-full bg-[#35373c] border-[4px] border-[#232428] absolute -top-5 left-3 flex items-center justify-center">
                             <span class="font-extrabold text-[#80848e] text-[16px] leading-none select-none">H</span>
                             <div class="w-3 h-3 rounded-full bg-[#232428] absolute -bottom-0.5 -right-0.5"></div>
@@ -2485,9 +2310,9 @@ function renderHiveShop() {
                 </div>
 
                 <div class="flex items-end justify-between mt-2 z-10">
-                    <div>
-                        <p class="font-bold text-white text-[15px]">${d.name}</p>
-                        <p class="font-extrabold text-[#dbdee1] text-[13px] mt-0.5">${d.price}</p>
+                    <div class="pr-2">
+                        <p class="font-bold text-white text-[14px] leading-snug">${d.name}</p>
+                        <p class="font-extrabold text-[#dbdee1] text-[12px] mt-0.5">${d.price}</p>
                     </div>
                     <span class="bg-[#5865F2] group-hover:bg-[#4752C4] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition flex-shrink-0">
                         สวมใส่
