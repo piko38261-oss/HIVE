@@ -2142,6 +2142,225 @@ const shopDecos = [
                 </polyline>
             </svg>
         `)
+    },
+    // ====================================================
+    // 🐱☀️💀 3 ธีมการ์ดโปรไฟล์ใหม่ตามแบบต้นฉบับ
+    // ====================================================
+    {
+        id: 'orange_cat_hug',
+        name: 'เหมียวส้มเกาะการ์ด (Nekobread)',
+        price: 'LEGENDARY',
+        isNew: true,
+        // 🐱 ด้านบน: แมวส้มขนฟูเกาะขอบการ์ด + อุ้งเท้าห้อย + ดาววิบวับ
+        topSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 105">
+                <!-- ประกายดาวด้านบนขวา & ซ้าย -->
+                <path d="M265,8 L268,16 L276,19 L268,22 L265,30 L262,22 L254,19 L262,16 Z" fill="#fef08a" stroke="#ca8a04" stroke-width="1">
+                    <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
+                </path>
+                <path d="M282,16 L284,22 L290,24 L284,26 L282,32 L280,26 L274,24 L280,22 Z" fill="#ffffff" stroke="#ca8a04" stroke-width="1">
+                    <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" repeatCount="indefinite"/>
+                </path>
+                <!-- ลำตัวและหัวแมวส้มขนฟู -->
+                <path d="M22,98 C10,85 12,68 22,62 C14,52 22,42 32,42 C28,22 36,15 55,18 C75,21 95,28 115,25 C155,20 205,20 245,25 C265,28 285,21 305,18 C324,15 332,22 328,42 C338,42 346,52 338,62 C348,68 350,85 338,98 Q325,75 300,72 L60,72 Q35,75 22,98 Z" fill="#fdba74" stroke="#9a3412" stroke-width="2.5" stroke-linejoin="round"/>
+                <!-- หูชมพูด้านใน ซ้าย-ขวา -->
+                <path d="M40,38 Q42,24 56,26 Q68,28 72,38 Z" fill="#fda4af" stroke="#e11d48" stroke-width="1"/>
+                <path d="M320,38 Q318,24 304,26 Q292,28 288,38 Z" fill="#fda4af" stroke="#e11d48" stroke-width="1"/>
+                <!-- ลายสลิดสีส้มเข้มบนหน้าผากและข้างแก้ม -->
+                <path d="M166,22 L168,34 M180,21 L180,36 M194,22 L192,34" stroke="#ea580c" stroke-width="4.5" stroke-linecap="round"/>
+                <path d="M24,52 L42,54 M20,64 L38,65 M336,52 L318,54 M340,64 L322,65" stroke="#ea580c" stroke-width="4" stroke-linecap="round"/>
+                <!-- ขนหน้าอกสีครีมฟูๆ ทับขอบการ์ด -->
+                <path d="M45,72 Q65,52 105,54 Q140,42 180,42 Q220,42 255,54 Q295,52 315,72 Q295,78 275,72 Q255,79 235,72 Q215,79 195,73 Q180,78 165,73 Q145,79 125,72 Q105,79 85,72 Q65,78 45,72 Z" fill="#fffbeb" stroke="#d97706" stroke-width="2"/>
+                <!-- ตา แก้มแดง และปาก :3 -->
+                <circle cx="152" cy="44" r="5" fill="#78350f"/>
+                <circle cx="208" cy="44" r="5" fill="#78350f"/>
+                <path d="M168,46 Q174,53 180,46 Q186,53 192,46" fill="none" stroke="#78350f" stroke-width="2.8" stroke-linecap="round"/>
+                <ellipse cx="130" cy="48" rx="12" ry="6" fill="#fda4af" opacity="0.7"/>
+                <ellipse cx="230" cy="48" rx="12" ry="6" fill="#fda4af" opacity="0.7"/>
+                <path d="M126,46 L124,50 M130,46 L128,50 M134,46 L132,50 M226,46 L224,50 M230,46 L228,50 M234,46 L232,50" stroke="#f43f5e" stroke-width="1.2" stroke-linecap="round"/>
+                <!-- อุ้งเท้าคู่หน้าเกาะขอบการ์ด -->
+                <ellipse cx="92" cy="68" rx="22" ry="13" transform="rotate(-10 92 68)" fill="#fffbeb" stroke="#9a3412" stroke-width="2"/>
+                <path d="M82,73 Q85,66 86,64 M92,75 Q94,67 94,65" stroke="#d97706" stroke-width="1.8" stroke-linecap="round"/>
+                <ellipse cx="268" cy="68" rx="22" ry="13" transform="rotate(10 268 68)" fill="#fffbeb" stroke="#9a3412" stroke-width="2"/>
+                <path d="M278,73 Q275,66 274,64 M268,75 Q266,67 266,65" stroke="#d97706" stroke-width="1.8" stroke-linecap="round"/>
+                <!-- ประกายดาวฝั่งซ้าย -->
+                <path d="M22,60 L25,67 L32,70 L25,73 L22,80 L19,73 L12,70 L19,67 Z" fill="#ffffff" stroke="#eab308" stroke-width="1">
+                    <animate attributeName="transform" type="scale" values="1;1.15;1" dur="2s" repeatCount="indefinite"/>
+                </path>
+            </svg>
+        `),
+        // 🐱 ด้านล่าง: หางแมวส้มลายสลิดพันรอบขอบล่าง + ดาววิบวับ
+        bottomSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 85">
+                <g>
+                    <!-- โครงหางแมวยาวโค้ง -->
+                    <path d="M24,8 C5,25 10,55 45,62 C110,75 220,62 305,72 C325,75 332,62 315,54 C235,44 120,56 55,44 C32,40 28,22 36,10 Z" fill="#fdba74" stroke="#9a3412" stroke-width="2.5" stroke-linejoin="round"/>
+                    <!-- ปลายหางสีครีม -->
+                    <path d="M292,51 C305,52 315,54 320,58 C328,64 322,74 305,72 C298,71 292,70 288,69 Q295,60 292,51 Z" fill="#fffbeb" stroke="#9a3412" stroke-width="2"/>
+                    <!-- ลายปล้องบนหาง -->
+                    <path d="M48,44 L44,60 M75,47 L72,64 M105,49 L102,66 M135,50 L133,67 M165,50 L163,67 M195,50 L193,66 M225,50 L223,66 M255,50 L253,67 M280,51 L278,68" stroke="#ea580c" stroke-width="6" stroke-linecap="round"/>
+                </g>
+                <!-- ประกายดาวด้านล่าง -->
+                <path d="M42,58 L45,66 L53,69 L45,72 L42,80 L39,72 L31,69 L39,66 Z" fill="#fef08a" stroke="#ca8a04" stroke-width="1">
+                    <animate attributeName="opacity" values="1;0.2;1" dur="1.8s" repeatCount="indefinite"/>
+                </path>
+                <path d="M335,38 L337,44 L343,46 L337,48 L335,54 L333,48 L327,46 L333,44 Z" fill="#ffffff" stroke="#ca8a04" stroke-width="1">
+                    <animate attributeName="opacity" values="0.2;1;0.2" dur="1.8s" repeatCount="indefinite"/>
+                </path>
+            </svg>
+        `)
+    },
+    {
+        id: 'solar_stained_glass',
+        name: 'มงกุฎสุริยันกระจกสี (Solar Cathedral)',
+        price: 'LEGENDARY',
+        isNew: true,
+        // ☀️ ด้านบน: ซุ้มกระจกสีทองคำ + หอกแสงสุริยัน + ตราดวงอาทิตย์และสายมุก
+        topSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 110">
+                <defs>
+                    <linearGradient id="sunGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#fef08a"/>
+                        <stop offset="50%" stop-color="#f59e0b"/>
+                        <stop offset="100%" stop-color="#92400e"/>
+                    </linearGradient>
+                    <linearGradient id="stainedGlass" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#ea580c"/>
+                        <stop offset="25%" stop-color="#f59e0b"/>
+                        <stop offset="50%" stop-color="#fef08a"/>
+                        <stop offset="75%" stop-color="#f59e0b"/>
+                        <stop offset="100%" stop-color="#ea580c"/>
+                    </linearGradient>
+                </defs>
+                <!-- หอกรัศมีทองคำซ้าย-ขวา -->
+                <g stroke="url(#sunGold)" stroke-width="2" fill="#fde047">
+                    <line x1="95" y1="45" x2="55" y2="8"/><polygon points="55,8 64,12 58,18"/>
+                    <line x1="80" y1="55" x2="35" y2="24"/><polygon points="35,24 45,26 40,33"/>
+                    <line x1="265" y1="45" x2="305" y2="8"/><polygon points="305,8 296,12 302,18"/>
+                    <line x1="280" y1="55" x2="325" y2="24"/><polygon points="325,24 315,26 320,33"/>
+                </g>
+                <!-- ซุ้มโค้งกระจกสีด้านหลัง -->
+                <path d="M35,72 Q90,10 180,10 Q270,10 325,72 Z" fill="url(#stainedGlass)" stroke="url(#sunGold)" stroke-width="3.5"/>
+                <!-- เส้นแบ่งช่องกระจกสี -->
+                <path d="M75,72 L105,32 M110,72 L135,20 M145,72 L160,15 M215,72 L200,15 M250,72 L225,20 M285,72 L255,32" stroke="#78350f" stroke-width="2"/>
+                <path d="M55,72 Q115,25 180,25 Q245,25 305,72" fill="none" stroke="url(#sunGold)" stroke-width="3"/>
+                <!-- กรอบเสาทองคำครอบขอบบนของการ์ด -->
+                <path d="M18,105 L18,75 Q18,66 28,66 L332,66 Q342,66 342,75 L342,105" fill="none" stroke="url(#sunGold)" stroke-width="5"/>
+                <path d="M23,105 L23,77 Q23,71 30,71 L330,71 Q337,71 337,77 L337,105" fill="none" stroke="#fef08a" stroke-width="1.5"/>
+                <!-- สายสร้อยไข่มุกประดับซุ้ม -->
+                <path d="M115,42 Q145,62 180,48 Q215,62 245,42" fill="none" stroke="#fef08a" stroke-width="1.5" stroke-dasharray="3 3"/>
+                <circle cx="135" cy="51" r="3" fill="#ffffff"/><circle cx="225" cy="51" r="3" fill="#ffffff"/>
+                <circle cx="155" cy="54" r="3.5" fill="#ffffff"/><circle cx="205" cy="54" r="3.5" fill="#ffffff"/>
+                <!-- ตราสัญลักษณ์สุริยัน-จันทราตรงกลาง -->
+                <circle cx="180" cy="34" r="24" fill="#451a03" stroke="url(#sunGold)" stroke-width="4"/>
+                <circle cx="180" cy="34" r="18" fill="#fbbf24" stroke="#fef08a" stroke-width="1.5"/>
+                <path d="M166,28 A16,16 0 1,0 194,28 A14,12 0 1,1 166,28 Z" fill="#d97706"/>
+                <polygon points="180,18 183,30 195,33 183,36 180,48 177,36 165,33 177,30" fill="#ffffff">
+                    <animateTransform attributeName="transform" type="scale" values="1;1.1;1" additive="sum" dur="2s" repeatCount="indefinite"/>
+                </polygon>
+                <!-- อัญมณีห้อยกลางหน้าผาก -->
+                <polygon points="180,58 185,65 180,72 175,65" fill="#f97316" stroke="#fef08a" stroke-width="1.2"/>
+            </svg>
+        `),
+        // ☀️ ด้านล่าง: ฐานกระจกสีทองคำ + ตราดวงดาวและมุกคู่
+        bottomSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 85">
+                <defs>
+                    <linearGradient id="sunGoldB" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#92400e"/>
+                        <stop offset="50%" stop-color="#fef08a"/>
+                        <stop offset="100%" stop-color="#92400e"/>
+                    </linearGradient>
+                </defs>
+                <!-- โค้งกระจกสีด้านล่าง -->
+                <path d="M55,18 Q180,82 305,18 Z" fill="#ea580c" stroke="url(#sunGoldB)" stroke-width="3.5"/>
+                <path d="M85,18 Q180,66 275,18 Z" fill="#f59e0b" stroke="#fef08a" stroke-width="2"/>
+                <line x1="120" y1="18" x2="140" y2="55" stroke="#78350f" stroke-width="2"/>
+                <line x1="240" y1="18" x2="220" y2="55" stroke="#78350f" stroke-width="2"/>
+                <!-- ขอบทองคำรับตัวการ์ด + อัญมณีข้าง -->
+                <path d="M18,2 L18,14 Q18,20 26,20 L334,20 Q342,20 342,14 L342,2" fill="none" stroke="url(#sunGoldB)" stroke-width="4.5"/>
+                <polygon points="10,2 16,10 10,18 4,10" fill="#f97316" stroke="#fef08a" stroke-width="1.2"/>
+                <polygon points="350,2 356,10 350,18 344,10" fill="#f97316" stroke="#fef08a" stroke-width="1.2"/>
+                <!-- ตรา मุกคู่ซ้าย-ขวา และตราหลักตรงกลาง -->
+                <circle cx="112" cy="34" r="11" fill="#271206" stroke="#fef08a" stroke-width="2.5"/>
+                <circle cx="112" cy="34" r="4" fill="#ffffff"/>
+                <circle cx="248" cy="34" r="11" fill="#271206" stroke="#fef08a" stroke-width="2.5"/>
+                <circle cx="248" cy="34" r="4" fill="#ffffff"/>
+                <circle cx="180" cy="46" r="20" fill="#f59e0b" stroke="#fef08a" stroke-width="3.5"/>
+                <polygon points="180,29 185,41 197,46 185,51 180,63 175,51 163,46 175,41" fill="#ffffff" stroke="#b45309" stroke-width="1"/>
+            </svg>
+        `)
+    },
+    {
+        id: 'hellfire_skulls',
+        name: 'บัลลังก์กะโหลกเพลิงทมิฬ (Skull Inferno)',
+        price: 'LEGENDARY',
+        isNew: true,
+        // 💀 ด้านบน: เปลวเพลิงสีแดงอมชมพู + กะโหลก 7 หัวเรียงกัน ดวงตาเรืองแสง
+        topSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 105">
+                <defs>
+                    <linearGradient id="hellFlame" x1="0%" y1="100%" x2="0%" y2="0%">
+                        <stop offset="0%" stop-color="#be123c"/>
+                        <stop offset="60%" stop-color="#f43f5e"/>
+                        <stop offset="100%" stop-color="#fda4af"/>
+                    </linearGradient>
+                    <linearGradient id="skullBone" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#d1d5db"/>
+                        <stop offset="60%" stop-color="#6b7280"/>
+                        <stop offset="100%" stop-color="#1f2937"/>
+                    </linearGradient>
+                </defs>
+                <!-- เปลวเพลิงนรกด้านหลัง (กระพริบไหว) -->
+                <path d="M12,95 Q8,60 22,55 Q18,35 38,48 Q45,25 65,42 Q80,15 105,35 Q125,8 148,28 Q165,2 180,18 Q195,2 212,28 Q235,8 255,35 Q280,15 295,42 Q315,25 322,48 Q342,35 338,55 Q352,60 348,95 Q335,72 320,70 L40,70 Q25,72 12,95 Z" fill="url(#hellFlame)" opacity="0.9">
+                    <animate attributeName="opacity" values="0.95;0.75;0.95" dur="1.4s" repeatCount="indefinite"/>
+                </path>
+                <!-- คานกระดูกหินทมิฬเกาะขอบการ์ด -->
+                <path d="M16,92 L20,66 L340,66 L344,92 L334,72 L26,72 Z" fill="#4b5563" stroke="#111827" stroke-width="2"/>
+                <!-- กะโหลกซ้ายสุด & ขวาสุด (คู่ที่ 3) -->
+                <g fill="url(#skullBone)" stroke="#111827" stroke-width="1.8">
+                    <ellipse cx="95" cy="54" rx="13" ry="14"/><rect x="89" y="62" width="12" height="6" rx="2"/>
+                    <ellipse cx="265" cy="54" rx="13" ry="14"/><rect x="259" y="62" width="12" height="6" rx="2"/>
+                    <!-- กะโหลกคู่ที่ 2 -->
+                    <ellipse cx="120" cy="50" rx="15" ry="16"/><rect x="113" y="60" width="14" height="7" rx="2"/>
+                    <ellipse cx="240" cy="50" rx="15" ry="16"/><rect x="233" y="60" width="14" height="7" rx="2"/>
+                    <!-- กะโหลกคู่ใน (คู่ที่ 1) -->
+                    <ellipse cx="148" cy="46" rx="17" ry="19"/><rect x="139" y="58" width="18" height="9" rx="2"/>
+                    <ellipse cx="212" cy="46" rx="17" ry="19"/><rect x="203" y="58" width="18" height="9" rx="2"/>
+                </g>
+                <!-- กะโหลกจอมมารตรงกลาง (มีรอยบากเขาแตก) -->
+                <path d="M160,48 C156,28 164,16 172,18 L176,28 L184,16 C194,16 204,28 200,48 L194,68 L166,68 Z" fill="url(#skullBone)" stroke="#09090b" stroke-width="2.2"/>
+                <path d="M172,62 L172,68 M180,62 L180,69 M188,62 L188,68" stroke="#09090b" stroke-width="2"/>
+                <!-- ดวงตาเรืองแสงสีแดงของกะโหลกทั้ง 7 -->
+                <g fill="#f43f5e">
+                    <circle cx="91" cy="54" r="2.5"/><circle cx="99" cy="54" r="2.5"/>
+                    <circle cx="115" cy="50" r="3"/><circle cx="125" cy="50" r="3"/>
+                    <circle cx="142" cy="47" r="3.5"/><circle cx="153" cy="47" r="3.5"/>
+                    <circle cx="207" cy="47" r="3.5"/><circle cx="218" cy="47" r="3.5"/>
+                    <circle cx="235" cy="50" r="3"/><circle cx="245" cy="50" r="3"/>
+                    <circle cx="261" cy="54" r="2.5"/><circle cx="269" cy="54" r="2.5"/>
+                    <!-- ตากะโหลกกลางพร้อมไฟลุก -->
+                    <circle cx="171" cy="46" r="4.5"/><circle cx="189" cy="46" r="4.5"/>
+                    <animate attributeName="opacity" values="1;0.4;1" dur="1.1s" repeatCount="indefinite"/>
+                </g>
+                <polygon points="178,52 182,52 180,58" fill="#09090b"/>
+            </svg>
+        `),
+        // 💀 ด้านล่าง: เปลวไฟนรกสีแดงอมชมพูเกาะรอบขอบล่างการ์ด
+        bottomSvg: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 75">
+                <defs>
+                    <linearGradient id="hellFlameB" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#be123c"/>
+                        <stop offset="55%" stop-color="#f43f5e"/>
+                        <stop offset="100%" stop-color="#fda4af"/>
+                    </linearGradient>
+                </defs>
+                <path d="M12,5 Q5,32 22,28 Q25,52 42,34 Q55,58 72,36 Q90,62 110,36 Q130,58 150,35 Q172,64 185,36 Q205,58 225,35 Q248,66 262,36 Q285,58 302,34 Q322,55 335,28 Q352,32 348,5 Q335,24 315,22 L45,22 Q25,24 12,5 Z" fill="url(#hellFlameB)">
+                    <animate attributeName="opacity" values="0.95;0.7;0.95" dur="1.2s" repeatCount="indefinite"/>
+                </path>
+            </svg>
+        `)
     }
 ];
 
@@ -2187,6 +2406,7 @@ const shopThemes = [
         name: 'Checkerboard Dark (ลายหมากรุกโมเดิร์น)', 
         bg: 'repeating-conic-gradient(rgba(255, 255, 255, 0.03) 0% 25%, transparent 0% 50%) 0 0 / 24px 24px, linear-gradient(145deg, #1e1b4b 0%, #0f172a 100%)' 
     }
+    
 ];
 
 window.equipShopItem = async (type, value, itemName) => {
