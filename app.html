@@ -8,7 +8,9 @@
     <link rel="manifest" href="manifest.json?v=31stable">
     <meta name="theme-color" content="#1e1f22">
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=H&background=5865F2&color=fff&size=192">
-
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -834,6 +836,9 @@
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/agora-extension-ai-denoiser@1.1.0/index.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script type="module" src="main.js"></script>
+<!-- 🌟 บังคับโหลดไฟล์ main.js เวอร์ชันใหม่ล่าสุดทุกครั้งอัตโนมัติ (Cache Busting) -->
+    <script type="module">
+        import(`./main.js?v=${Date.now()}`);
+    </script>
 </body>
 </html>

@@ -1,4 +1,5 @@
-const CACHE_NAME = 'hive-pwa-cache-v31-stable';
+// เปลี่ยนชื่อ Cache ใหม่เพื่อล้างไฟล์เก่า (v31) ออกจากเครื่องผู้ใช้ทุกคนอัตโนมัติ
+const CACHE_NAME = 'hive-pwa-network-first-v32';
 
 const urlsToCache = [
   './',
@@ -9,33 +10,54 @@ const urlsToCache = [
   './manifest.json'
 ];
 
+// 1. ติดตั้ง Service Worker และบังคับให้เริ่มทำงานทันทีไม่ต้องรอปิดแท็บ
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-        console.log('✅ เปิดใช้งาน Cache HIVE V31 (Stable) สำเร็จ');
-        return cache.addAll(urlsToCache);
+      console.log('✅ อัปเดตระบบ Cache HIVE เวอร์ชันล่าสุดสำเร็จ');
+      return cache.addAll(urlsToCache).catch(() => {});
     })
   );
 });
 
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request).then(response => response || fetch(event.request))
-  );
-});
-
+// 2. ลบ Cache เวอร์ชันเก่า (เช่น hive-pwa-cache-v31-stable) ทิ้งทั้งหมดอัตโนมัติ
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
+// 3. ดึงไฟล์เวอร์ชันใหม่ล่าสุดจากเซิร์ฟเวอร์ก่อนเสมอ (Network-First)
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+
+  event.respondWith(
+    fetch(event.request, { cache: 'no-store' })
+      .then(networkResponse => {
+        // อัปเดตไฟล์ใหม่ล่าสุดเก็บสำรองไว้ใน Cache เผื่อตอนเน็ตหลุด
+        if (networkResponse && networkResponse.status === 200 && event.request.url.startsWith(self.location.origin)) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // ถ้าไม่มีอินเทอร์เน็ต ค่อยดึงจาก Cache มาแสดง
+        return caches.match(event.request);
+      })
+  );
+});
+
+// 4. ระบบจัดการคลิกแจ้งเตือนและปุ่มวางสายห้องเสียง (จากโค้ดเดิมของคุณ)
 self.addEventListener('notificationclick', event => {
   if (event.action === 'leave_call') {
     event.notification.close(); 
