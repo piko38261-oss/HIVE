@@ -2398,8 +2398,156 @@ const shopVoiceBanners = [
                 </g>
             </svg>
         `) 
+        },
+        { 
+        name: '🌟 Solar Dragon Emperor (มังกรสุริยันทองคำอลังการ)', 
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 375">
+                <defs>
+                    <linearGradient id="bgSolar" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#78350f"/><stop offset="50%" stop-color="#451a03"/><stop offset="100%" stop-color="#09090b"/>
+                    </linearGradient>
+                    <linearGradient id="goldBeam" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#fef08a" stop-opacity="0.9"/><stop offset="50%" stop-color="#eab308" stop-opacity="0.6"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <rect width="1200" height="375" fill="url(#bgSolar)"/>
+                <!-- วงแหวนพลังงานแสงอาทิตย์หมุนวน -->
+                <g transform="translate(1100, 187)">
+                    <circle cx="0" cy="0" r="140" fill="none" stroke="#fde047" stroke-width="3" stroke-dasharray="20 15">
+                        <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="10s" repeatCount="indefinite"/>
+                    </circle>
+                    <circle cx="0" cy="0" r="100" fill="none" stroke="#f59e0b" stroke-width="5" stroke-dasharray="10 8">
+                        <animateTransform attributeName="transform" type="rotate" from="360 0 0" to="0 0 0" dur="6s" repeatCount="indefinite"/>
+                    </circle>
+                    <circle cx="0" cy="0" r="50" fill="#fef08a" opacity="0.8">
+                        <animate attributeName="r" values="45;55;45" dur="2s" repeatCount="indefinite"/>
+                    </circle>
+                </g>
+                <!-- คลื่นแสงทองคำพุ่งพริ้ว -->
+                <path d="M600,375 Q750,150 950,220 Q1100,280 1200,100 L1200,375 Z" fill="url(#goldBeam)" opacity="0.7">
+                    <animate attributeName="d" values="M600,375 Q750,150 950,220 Q1100,280 1200,100 L1200,375 Z;M600,375 Q800,250 1000,180 Q1120,120 1200,200 L1200,375 Z;M600,375 Q750,150 950,220 Q1100,280 1200,100 L1200,375 Z" dur="4s" repeatCount="indefinite"/>
+                </path>
+            </svg>
+        `) 
     },
-    { name: 'Cyberpunk City (GIF)', url: 'https://media.giphy.com/media/l0HlHFRbmaZtBRhXG/giphy.gif' },
+    { 
+        name: '👁️ Blood Moon Demon Realm (เนตรอสูรโลหิตทะลุมิติ)', 
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 375">
+                <defs>
+                    <radialGradient id="bgBlood" cx="85%" cy="50%" r="65%">
+                        <stop offset="0%" stop-color="#7f1d1d"/><stop offset="50%" stop-color="#270606"/><stop offset="100%" stop-color="#050101"/>
+                    </radialGradient>
+                    <radialGradient id="eyeGlow" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#ef4444"/><stop offset="60%" stop-color="#991b1b"/><stop offset="100%" stop-color="transparent"/>
+                    </radialGradient>
+                </defs>
+                <rect width="1200" height="375" fill="url(#bgBlood)"/>
+                <!-- วงแหวนคำสาปหมุนรอบดวงตา -->
+                <g transform="translate(1080, 187)">
+                    <ellipse cx="0" cy="0" rx="110" ry="60" fill="none" stroke="#f87171" stroke-width="3" stroke-dasharray="15 8" transform="rotate(-15)">
+                        <animateTransform attributeName="transform" type="rotate" from="-15 0 0" to="345 0 0" dur="7s" repeatCount="indefinite"/>
+                    </ellipse>
+                    <!-- ลูกตาสีเลือดขยับมอง -->
+                    <ellipse cx="0" cy="0" rx="50" ry="30" fill="#fef2f2" stroke="#dc2626" stroke-width="4">
+                        <animate attributeName="rx" values="48;52;48" dur="3s" repeatCount="indefinite"/>
+                    </ellipse>
+                    <ellipse cx="0" cy="0" rx="18" ry="26" fill="#000000">
+                        <animate attributeName="cx" values="-10;10;-10" dur="3s" repeatCount="indefinite"/>
+                    </ellipse>
+                    <circle cx="-3" cy="-3" r="5" fill="#ffffff" opacity="0.8"/>
+                </g>
+                <!-- ออร่าหมอกเลือดพุ่งขึ้นด้านล่าง -->
+                <path d="M700,375 Q850,280 1000,320 Q1120,350 1200,280 L1200,375 Z" fill="#b91c1c" opacity="0.5">
+                    <animate attributeName="d" values="M700,375 Q850,280 1000,320 Q1120,350 1200,280 L1200,375 Z;M700,375 Q880,220 1020,300 Q1150,330 1200,250 L1200,375 Z;M700,375 Q850,280 1000,320 Q1120,350 1200,280 L1200,375 Z" dur="3.5s" repeatCount="indefinite"/>
+                </path>
+            </svg>
+        `) 
+        },
+        { 
+        name: 'Aquarius Mystic Mist (หมอกเวทมนตร์ราศีกุมภ์)', 
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 375">
+                <defs>
+                    <linearGradient id="bgAqua" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#2e1065"/><stop offset="50%" stop-color="#4c1d95"/><stop offset="100%" stop-color="#0f172a"/>
+                    </linearGradient>
+                    <linearGradient id="mistGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                        <stop offset="0%" stop-color="#c084fc" stop-opacity="0.8"/><stop offset="100%" stop-color="#f472b6" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <rect width="1200" height="375" fill="url(#bgAqua)"/>
+                <!-- กลุ่มควันหมอกเวทมนตร์พริ้วไหว -->
+                <g fill="url(#mistGrad)">
+                    <path d="M800,375 Q850,250 950,220 Q1050,190 1200,280 L1200,375 Z">
+                        <animate attributeName="d" values="M800,375 Q850,250 950,220 Q1050,190 1200,280 L1200,375 Z;M800,375 Q880,200 980,260 Q1080,310 1200,220 L1200,375 Z;M800,375 Q850,250 950,220 Q1050,190 1200,280 L1200,375 Z" dur="5s" repeatCount="indefinite"/>
+                    </path>
+                </g>
+                <!-- ละอองดาวเวทมนตร์ระยิบระยับ -->
+                <g fill="#e9d5ff">
+                    <circle cx="1000" cy="120" r="3"><animate attributeName="opacity" values="0.2;1;0.2" dur="1.5s" repeatCount="indefinite"/></circle>
+                    <circle cx="1100" cy="180" r="2" fill="#fbcfe8"><animate attributeName="opacity" values="1;0.2;1" dur="2s" repeatCount="indefinite"/></circle>
+                    <circle cx="920" cy="160" r="2.5"><animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" repeatCount="indefinite"/></circle>
+                </g>
+            </svg>
+        `) 
+    },
+    { 
+        name: 'Pisces Frost Azure (อาณาจักรน้ำแข็งราศีมีน)', 
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 375">
+                <defs>
+                    <linearGradient id="bgPisces" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#082f49"/><stop offset="50%" stop-color="#1e3a8a"/><stop offset="100%" stop-color="#020617"/>
+                    </linearGradient>
+                    <linearGradient id="frostGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.9"/><stop offset="100%" stop-color="#93c5fd" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <rect width="1200" height="375" fill="url(#bgPisces)"/>
+                <!-- คลื่นน้ำแข็ง / เกลียวออร่าพริ้วไหว -->
+                <g fill="url(#frostGrad)">
+                    <path d="M750,375 Q820,240 920,200 Q1040,150 1200,250 L1200,375 Z">
+                        <animate attributeName="d" values="M750,375 Q820,240 920,200 Q1040,150 1200,250 L1200,375 Z;M750,375 Q860,190 960,250 Q1060,300 1200,190 L1200,375 Z;M750,375 Q820,240 920,200 Q1040,150 1200,250 L1200,375 Z" dur="4s" repeatCount="indefinite"/>
+                    </path>
+                </g>
+                <!-- ประกายเกล็ดน้ำแข็งเรืองแสง -->
+                <g fill="#bae6fd">
+                    <circle cx="1050" cy="100" r="2.5"><animate attributeName="opacity" values="0.2;1;0.2" dur="1.2s" repeatCount="indefinite"/></circle>
+                    <circle cx="980" cy="150" r="3" fill="#ffffff"><animate attributeName="opacity" values="1;0.3;1" dur="1.8s" repeatCount="indefinite"/></circle>
+                    <circle cx="1130" cy="140" r="2"><animate attributeName="opacity" values="0.5;1;0.5" dur="1s" repeatCount="indefinite"/></circle>
+                </g>
+            </svg>
+        `) 
+    },
+    { 
+        name: 'Capricorn Dark Horn (รัตติกาลมังกรทมิฬ)', 
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 375">
+                <defs>
+                    <linearGradient id="bgCapri" x1="0%" y1="100%" x2="0%" y2="0%">
+                        <stop offset="0%" stop-color="#18181b"/><stop offset="50%" stop-color="#27272a"/><stop offset="100%" stop-color="#09090b"/>
+                    </linearGradient>
+                    <linearGradient id="silverGlow" x1="0%" y1="100%" x2="0%" y2="0%">
+                        <stop offset="0%" stop-color="#94a3b8" stop-opacity="0.8"/><stop offset="100%" stop-color="#e2e8f0" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <rect width="1200" height="375" fill="url(#bgCapri)"/>
+                <!-- ควันออร่าสีเงินลึกลับ -->
+                <g fill="url(#silverGlow)">
+                    <path d="M820,375 Q880,240 980,210 Q1080,180 1200,260 L1200,375 Z">
+                        <animate attributeName="d" values="M820,375 Q880,240 980,210 Q1080,180 1200,260 L1200,375 Z;M820,375 Q900,180 1000,240 Q1100,300 1200,200 L1200,375 Z;M820,375 Q880,240 980,210 Q1080,180 1200,260 L1200,375 Z" dur="4.5s" repeatCount="indefinite"/>
+                    </path>
+                </g>
+                <!-- ประกายเพชรสีเงิน -->
+                <g fill="#f8fafc">
+                    <circle cx="1020" cy="110" r="2"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.3s" repeatCount="indefinite"/></circle>
+                    <circle cx="1110" cy="160" r="2.5"><animate attributeName="opacity" values="1;0.2;1" dur="1.6s" repeatCount="indefinite"/></circle>
+                </g>
+            </svg>
+        `)
+    },
     { name: 'Galaxy Nebula (GIF)', url: 'https://media.giphy.com/media/3o7buijTqhjxjbEqjK/giphy.gif' }
 ];
 
