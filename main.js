@@ -270,10 +270,24 @@ function startDatabaseListeners() {
             }
 
             if(membersList) {
+                // 🌟 ดึง voiceBannerURL มาใช้เป็นพื้นหลังยาวในรายชื่อด้านขวาด้วย
+                const memberBannerStyle = u.voiceBannerURL ? `background-image: url('${u.voiceBannerURL}'); background-size: cover; background-position: center;` : '';
+                const memberBannerOverlay = u.voiceBannerURL ? `bg-black/60 backdrop-blur-[2px]` : `hover:bg-[#2b2d31]`;
+
                 membersList.insertAdjacentHTML('beforeend', `
-                    <div onclick="showUserProfile('${userName}')" class="flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[#2b2d31] transition group ${!isOnline ? 'opacity-50' : ''}">
-                        <div class="relative flex-shrink-0 flex items-center justify-center w-8 h-8"><img src="${userAvatar}" class="w-8 h-8 rounded-full object-cover opacity-90 absolute z-0">${renderFrameHtml}<div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619] z-20"></div></div>
-                        <div class="overflow-hidden flex-1"><div class="flex items-center"><p class="text-[14px] font-medium truncate ${nameStyle}">${userName} ${roleDisplay}</p></div>${customStatusText}</div>
+                    <div onclick="showUserProfile('${userName}')" class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg transition group relative overflow-hidden shadow-sm border border-white/5 mb-1 ${!isOnline ? 'opacity-50' : ''}" style="${memberBannerStyle}">
+                        <div class="absolute inset-0 ${memberBannerOverlay} z-0"></div>
+                        <div class="relative flex-shrink-0 flex items-center justify-center w-8 h-8 z-10">
+                            <img src="${userAvatar}" class="w-8 h-8 rounded-full object-cover opacity-95 absolute z-0">
+                            ${renderFrameHtml}
+                            <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619] z-20"></div>
+                        </div>
+                        <div class="overflow-hidden flex-1 z-10 drop-shadow">
+                            <div class="flex items-center">
+                                <p class="text-[14px] font-bold truncate ${nameStyle}">${userName} ${roleDisplay}</p>
+                            </div>
+                            ${customStatusText}
+                        </div>
                     </div>`);
             }
                 
