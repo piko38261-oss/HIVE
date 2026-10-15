@@ -224,14 +224,16 @@
             try {
                 const userCred = await createUserWithEmailAndPassword(auth, email, pass);
                 await updateProfile(userCred.user, { displayName: user });
-                await setDoc(doc(db, "users", userCred.user.uid), {
-                    username: user,
-                    email: email,
-                    role: "Member",
-                    status: "online",
-                    photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user)}&background=5865F2&color=fff&rounded=true&bold=true`,
-                    createdAt: serverTimestamp()
-                });
+            await setDoc(doc(db, "users", userCred.user.uid), {
+                 username: user,
+                  email: email,
+                 role: "Member",
+                 status: "online",
+                 photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user)}&background=5865F2&color=fff&rounded=true&bold=true`,
+                 bannerURL: "", // 🌟 เพิ่มบรรทัดนี้เพื่อรองรับระบบแบนเนอร์โปรไฟล์
+                 voiceBannerURL: "", // 🌟 แบนเนอร์ยาวสำหรับแสดงในห้องเสียงโดยเฉพาะ
+                 createdAt: serverTimestamp()
+            });
                 showToast("สมัครสมาชิกสำเร็จ! ยินดีต้อนรับสู่ HIVE", "success");
                 setTimeout(() => { window.location.href = "app.html"; }, 1000);
             } catch (error) {

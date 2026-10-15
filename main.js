@@ -237,6 +237,7 @@ function startDatabaseListeners() {
             usersData[userName] = { 
                 avatar: userAvatar, 
                 banner: u.bannerURL || '', 
+                voiceBannerURL: u.voiceBannerURL || '', 
                 id: id, 
                 agoraUid: u.agoraUid, 
                 customStatus: u.customStatus || '', 
@@ -277,11 +278,19 @@ function startDatabaseListeners() {
             }
                 
             if (u.inVoice && voiceActiveList) {
-                voiceActiveList.insertAdjacentHTML('beforeend', `
-                <div class="flex items-center space-x-2.5 text-[13px] text-[#80848e] py-1 px-2 hover:bg-[#2b2d31] hover:text-[#dbdee1] rounded-md transition cursor-pointer ml-2">
-                    <div class="relative flex-shrink-0 flex items-center justify-center w-6 h-6"><img src="${userAvatar}" class="w-6 h-6 rounded-full object-cover opacity-90 absolute z-0">${frameUrl ? `<img src="${frameUrl}" class="absolute w-[140%] h-[140%] max-w-none pointer-events-none z-10 drop-shadow-md">` : ''}</div>
-                    <span class="truncate font-medium flex-1 flex items-center">${userName} ${screenBadgeSmall}</span>${muteIconSmall}
-                </div>`);
+             const bannerStyle = u.voiceBannerURL ? `background-image: url('${u.voiceBannerURL}'); background-size: cover; background-position: center;` : '';
+             const bannerOverlay = u.voiceBannerURL ? `bg-black/50 backdrop-blur-[2px]` : `hover:bg-[#2b2d31]`;
+
+                 voiceActiveList.insertAdjacentHTML('beforeend', `
+                    <div class="flex items-center space-x-2.5 text-[13px] text-[#dbdee1] py-1.5 px-2.5 rounded-lg transition cursor-pointer ml-2 relative overflow-hidden shadow-sm border border-white/5 mb-1" style="${bannerStyle}">
+                      <div class="absolute inset-0 ${bannerOverlay} z-0"></div>
+                         <div class="relative flex-shrink-0 flex items-center justify-center w-7 h-7 z-10">
+                           <img src="${userAvatar}" class="w-7 h-7 rounded-full object-cover opacity-95 absolute z-0">
+                              ${frameUrl ? `<img src="${frameUrl}" class="absolute w-[140%] h-[140%] max-w-none pointer-events-none z-10 drop-shadow-md">` : ''}
+                         </div>
+                     <span class="truncate font-bold flex-1 flex items-center z-10 drop-shadow">${userName} ${screenBadgeSmall}</span>
+                 <span class="z-10">${muteIconSmall}</span>
+             </div>`);
             }
             
             if (u.inVoice && voiceGrid) { 
@@ -2216,6 +2225,7 @@ const shopDecos = [
             </svg>
         `)
     }
+    
 ];
 
 const shopThemes = [
@@ -2248,6 +2258,137 @@ window.equipShopItem = async (type, value, itemName) => {
     }
 };
 
+// 🌟 แยกฟังก์ชัน equipVoiceBanner ให้อยู่นอกสุดอย่างถูกต้อง
+window.equipVoiceBanner = async (bannerUrlValue, bannerName) => {
+    if (!currentUserId) return;
+    try {
+        await updateDoc(doc(db, "users", currentUserId), {
+            voiceBannerURL: bannerUrlValue
+        });
+        showToast(`ตั้งค่าแบนเนอร์ห้องเสียง "${bannerName}" เรียบร้อย! ✨`, "success");
+    } catch (e) {
+        showToast("เกิดข้อผิดพลาดในการตั้งค่าแบนเนอร์ห้องเสียง", "error");
+    }
+};
+
+// 🌟 ประกาศตัวแปร shopVoiceBanners ไว้ข้างนอกฟังก์ชัน renderHiveShop
+const shopVoiceBanners = [
+    { name: 'ถอดแบนเนอร์ห้องเสียง', url: '' },
+    { 
+        name: 'Inferno Fire Banner (ไฟโลกันตร์)', 
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 375">
+                <defs>
+                    <linearGradient id="bgFire" x1="0%" y1="100%" x2="0%" y2="0%">
+                        <stop offset="0%" stop-color="#450a0a"/><stop offset="50%" stop-color="#7f1d1d"/><stop offset="100%" stop-color="#18181b"/>
+                    </linearGradient>
+                    <linearGradient id="flameGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                        <stop offset="0%" stop-color="#ea580c"/><stop offset="50%" stop-color="#f97316"/><stop offset="100%" stop-color="#fde047"/>
+                    </linearGradient>
+                </defs>
+                <rect width="1200" height="375" fill="url(#bgFire)"/>
+                <g fill="url(#flameGrad)">
+                    <path d="M1200,375 Q1150,250 1180,180 Q1120,220 1100,120 Q1060,200 1020,150 Q980,280 1050,375 Z" opacity="0.9">
+                        <animate attributeName="d" values="M1200,375 Q1150,250 1180,180 Q1120,220 1100,120 Q1060,200 1020,150 Q980,280 1050,375 Z;M1200,375 Q1160,230 1170,160 Q1130,200 1090,100 Q1050,180 1010,130 Q970,260 1050,375 Z;M1200,375 Q1150,250 1180,180 Q1120,220 1100,120 Q1060,200 1020,150 Q980,280 1050,375 Z" dur="1.8s" repeatCount="indefinite"/>
+                    </path>
+                </g>
+                <g fill="#fef08a">
+                    <circle cx="1050" cy="200" r="4"><animate attributeName="cy" values="200;80;20" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0;1" dur="1.5s" repeatCount="indefinite"/></circle>
+                    <circle cx="1120" cy="160" r="3" fill="#ea580c"><animate attributeName="cy" values="160;60;10" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0;1" dur="1.2s" repeatCount="indefinite"/></circle>
+                </g>
+            </svg>
+        `) 
+    },
+    { 
+        name: 'Thunder Raijin (อสนีบาตฟาดสายฟ้า)', 
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 375">
+                <defs>
+                    <linearGradient id="bgThunder" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#0f172a"/><stop offset="50%" stop-color="#1e1b4b"/><stop offset="100%" stop-color="#020617"/>
+                    </linearGradient>
+                    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#38bdf8"/><stop offset="100%" stop-color="#facc15"/>
+                    </linearGradient>
+                </defs>
+                <rect width="1200" height="375" fill="url(#bgThunder)"/>
+                <!-- เส้นสายฟ้าวิ่งบริเวณมุมขวา -->
+                <g stroke="url(#boltGrad)" stroke-width="4" fill="none" stroke-linejoin="round">
+                    <polyline points="1050,0 1010,140 1060,150 1000,375">
+                        <animate attributeName="opacity" values="1;0.1;1;0.8;0;1" dur="0.8s" repeatCount="indefinite"/>
+                    </polyline>
+                    <polyline points="1150,20 1100,180 1140,190 1080,350" stroke="#38bdf8" stroke-width="2">
+                        <animate attributeName="opacity" values="0.2;1;0;0.9;0.3" dur="1.1s" repeatCount="indefinite"/>
+                    </polyline>
+                </g>
+                <!-- ประกายออร่าไฟฟ้าช็อต -->
+                <circle cx="1030" cy="140" r="25" fill="#38bdf8" opacity="0.2">
+                    <animate attributeName="r" values="15;35;15" dur="0.8s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.4;0;0.4" dur="0.8s" repeatCount="indefinite"/>
+                </circle>
+            </svg>
+        `) 
+    },
+    { 
+        name: 'Cyberpunk Neon Wave (นีออนไซเบอร์)', 
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 375">
+                <defs>
+                    <linearGradient id="bgCyber" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#2e1065"/><stop offset="50%" stop-color="#831843"/><stop offset="100%" stop-color="#090d16"/>
+                    </linearGradient>
+                    <linearGradient id="neonGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#ec4899"/><stop offset="50%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#a855f7"/>
+                    </linearGradient>
+                </defs>
+                <rect width="1200" height="375" fill="url(#bgCyber)"/>
+                <!-- คลื่นนีออนพริ้วไหว -->
+                <path d="M0,250 Q300,320 600,220 T1200,200 L1200,375 L0,375 Z" fill="#06b6d4" opacity="0.25">
+                    <animate attributeName="d" values="M0,250 Q300,320 600,220 T1200,200 L1200,375 L0,375 Z;M0,220 Q300,180 600,280 T1200,240 L1200,375 L0,375 Z;M0,250 Q300,320 600,220 T1200,200 L1200,375 L0,375 Z" dur="4s" repeatCount="indefinite"/>
+                </path>
+                <path d="M0,280 Q400,180 800,280 T1200,250 L1200,375 L0,375 Z" fill="url(#neonGrad)" opacity="0.35">
+                    <animate attributeName="d" values="M0,280 Q400,180 800,280 T1200,250 L1200,375 L0,375 Z;M0,240 Q400,320 800,200 T1200,270 L1200,375 L0,375 Z;M0,280 Q400,180 800,280 T1200,250 L1200,375 L0,375 Z" dur="3s" repeatCount="indefinite"/>
+                </path>
+            </svg>
+        `) 
+    },
+    { 
+        name: 'Cosmic Void (ห้วงอวกาศหลุมดำ)', 
+        url: svgToUrl(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 375">
+                <defs>
+                    <radialGradient id="spaceBg" cx="80%" cy="50%" r="60%">
+                        <stop offset="0%" stop-color="#3b0764"/><stop offset="50%" stop-color="#1e1b4b"/><stop offset="100%" stop-color="#050505"/>
+                    </radialGradient>
+                    <radialGradient id="blackHole" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#000000"/><stop offset="70%" stop-color="#a855f7"/><stop offset="100%" stop-color="transparent"/>
+                    </radialGradient>
+                </defs>
+                <rect width="1200" height="375" fill="url(#spaceBg)"/>
+                <!-- วงแหวนกาแล็กซีหมุนรอบหลุมดำ -->
+                <g transform="translate(1050, 187)">
+                    <ellipse cx="0" cy="0" rx="120" ry="35" fill="none" stroke="#f472b6" stroke-width="4" stroke-dasharray="25 10" transform="rotate(-25)">
+                        <animateTransform attributeName="transform" type="rotate" from="-25 0 0" to="335 0 0" dur="8s" repeatCount="indefinite"/>
+                    </ellipse>
+                    <ellipse cx="0" cy="0" rx="90" ry="25" fill="none" stroke="#38bdf8" stroke-width="3" transform="rotate(15)">
+                        <animateTransform attributeName="transform" type="rotate" from="15 0 0" to="-345 0 0" dur="5s" repeatCount="indefinite"/>
+                    </ellipse>
+                    <circle cx="0" cy="0" r="35" fill="url(#blackHole)" stroke="#ffffff" stroke-width="1.5"/>
+                </g>
+                <!-- ดวงดาวระยิบระยับ -->
+                <g fill="#ffffff">
+                    <circle cx="200" cy="80" r="2"><animate attributeName="opacity" values="0.2;1;0.2" dur="1.5s" repeatCount="indefinite"/></circle>
+                    <circle cx="500" cy="120" r="1.5"><animate attributeName="opacity" values="1;0.2;1" dur="2s" repeatCount="indefinite"/></circle>
+                    <circle cx="800" cy="60" r="2.5"><animate attributeName="opacity" values="0.3;1;0.3" dur="1.2s" repeatCount="indefinite"/></circle>
+                    <circle cx="350" cy="280" r="2"><animate attributeName="opacity" values="0.8;0.1;0.8" dur="1.8s" repeatCount="indefinite"/></circle>
+                </g>
+            </svg>
+        `) 
+    },
+    { name: 'Cyberpunk City (GIF)', url: 'https://media.giphy.com/media/l0HlHFRbmaZtBRhXG/giphy.gif' },
+    { name: 'Galaxy Nebula (GIF)', url: 'https://media.giphy.com/media/3o7buijTqhjxjbEqjK/giphy.gif' }
+];
+
 function renderHiveShop() {
     const framesGrid = document.getElementById('shop-frames-grid');
     const bannersGrid = document.getElementById('shop-banners-grid');
@@ -2271,7 +2412,7 @@ function renderHiveShop() {
     }
 
     if (bannersGrid) {
-        bannersGrid.innerHTML = shopBanners.map(b => `
+        const mainBannersHTML = shopBanners.map(b => `
             <div class="bg-[#2b2d31] border border-white/5 hover:border-purple-500 rounded-2xl overflow-hidden flex flex-col transition shadow-md">
                 <div class="h-24 bg-black relative">
                     <img src="${b.url}" class="w-full h-full object-cover">
@@ -2285,6 +2426,23 @@ function renderHiveShop() {
                 </div>
             </div>
         `).join('');
+
+        const voiceBannersHTML = shopVoiceBanners.map(b => `
+            <div class="bg-[#2b2d31] border border-white/5 hover:border-[#23a559] rounded-2xl overflow-hidden flex flex-col transition shadow-md">
+                <div class="h-24 bg-black relative flex items-center justify-center">
+                    ${b.url ? `<img src="${b.url}" class="w-full h-full object-cover">` : `<span class="text-xs text-gray-400">ไม่มีแบนเนอร์</span>`}
+                    <span class="absolute top-2 right-2 bg-[#23a559]/80 text-white text-[10px] font-bold px-2 py-0.5 rounded backdrop-blur-sm">VOICE BANNER</span>
+                </div>
+                <div class="p-3.5 flex items-center justify-between">
+                    <span class="font-bold text-white text-[13px] truncate mr-2">${b.name}</span>
+                    <button onclick="equipVoiceBanner('${b.url}', '${b.name}')" class="bg-[#23a559] hover:bg-[#1e8e4c] text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition flex-shrink-0">
+                        ตั้งเป็นแบนเนอร์ห้องเสียง
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        bannersGrid.innerHTML = voiceBannersHTML + mainBannersHTML;
     }
 
     if (themesGrid) {
