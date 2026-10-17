@@ -2712,7 +2712,7 @@ function renderHiveShop() {
 // ==========================================
 // 🎵 15. ระบบห้องฟังเพลง & แชทบอท (Music Room - Persistent Sync)
 // ==========================================
-import { getDatabase, ref, set, onValue, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+import { getDatabase, ref, set, onValue, remove, onDisconnect, push } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
 const musicDb = getDatabase(app, "https://hive-workspace-f373c-default-rtdb.asia-southeast1.firebasedatabase.app");
 
@@ -2938,6 +2938,8 @@ function updateMusicQueueUI(queue) {
     });
 }
 
+let musicPlayerObj = null;
+
 function updateMusicPlayerUI(currentPlaying) {
     const placeholder = document.getElementById('music-player-placeholder');
     const iframeWrapper = document.getElementById('music-player-iframe-wrapper');
@@ -2952,6 +2954,7 @@ function updateMusicPlayerUI(currentPlaying) {
         }
         if(titleEl) titleEl.innerText = 'ไม่มีเพลงกำลังเล่น';
         if(requesterEl) requesterEl.innerText = 'เพิ่มเพลงเพื่อเริ่มความสนุกกันเลย!';
+        musicPlayerObj = null;
         return;
     }
 
@@ -2959,6 +2962,8 @@ function updateMusicPlayerUI(currentPlaying) {
     if(iframeWrapper) {
         iframeWrapper.classList.remove('hidden');
         const thumbnailUrl = `https://img.youtube.com/vi/${currentPlaying.videoId}/maxresdefault.jpg`;
+        
+        // ใส่ ID ให้ iframe เพื่อให้ YouTube API ควบคุมและดักจับตอนเพลงจบได้
         iframeWrapper.innerHTML = `
             <div class="relative w-full h-full group">
                 <img src="${thumbnailUrl}" class="w-full h-full object-cover" onerror="this.src='https://img.youtube.com/vi/${currentPlaying.videoId}/hqdefault.jpg'">
@@ -2967,9 +2972,30 @@ function updateMusicPlayerUI(currentPlaying) {
                         <i class="ph-fill ph-music-notes"></i> กำลังเล่นเพลงนี้อยู่
                     </span>
                 </div>
-                <iframe src="https://www.youtube.com/embed/${currentPlaying.videoId}?autoplay=1&enablejsapi=1" class="hidden" allow="autoplay"></iframe>
+                <iframe id="hive-yt-audio-player" src="https://www.youtube.com/embed/${currentPlaying.videoId}?autoplay=1&enablejsapi=1" class="hidden" allow="autoplay"></iframe>
             </div>
         `;
+
+        // สร้าง YouTube Player API เพื่อดักจับเหตุการณ์เมื่อเพลงเล่นจบ (Ended)
+        setTimeout(() => {
+            if (window.YT && window.YT.Player) {
+                try {
+                    musicPlayerObj = new YT.Player('hive-yt-audio-player', {
+                        events: {
+                            'onStateChange': (event) => {
+                                // 0 หมายถึงเพลงเล่นจบแล้ว (Ended)
+                                if (event.data === YT.PlayerState.ENDED) {
+                                    // เรียกใช้ฟังก์ชันข้ามเพลงอัตโนมัติเพื่อให้เล่นเพลงถัดไปในคิว
+                                    if (typeof window.skipMusicSong === 'function') {
+                                        window.skipMusicSong();
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } catch(e) {}
+            }
+        }, 500);
     }
 
     if(titleEl) titleEl.innerText = currentPlaying.title;
