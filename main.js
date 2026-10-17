@@ -223,7 +223,9 @@ function startDatabaseListeners() {
         if(membersList) membersList.innerHTML = ''; if (voiceActiveList) voiceActiveList.innerHTML = ''; 
         let usersInVoiceCount = 0, peopleTyping = []; 
         const countEl = document.getElementById('member-count');
-        if(countEl) countEl.textContent = snapshot.size; 
+        let onlineCount = 0;
+        snapshot.forEach(docSnap => { if (docSnap.data().status === 'online') onlineCount++; });
+        if(countEl) countEl.textContent = onlineCount;
         usersData = {}; const currentVoiceCardIds = [];
 
         snapshot.forEach((docSnap) => {
@@ -270,15 +272,14 @@ function startDatabaseListeners() {
             }
 
             if(membersList) {
-                // 🌟 ดึง voiceBannerURL มาใช้เป็นพื้นหลังยาวในรายชื่อด้านขวาด้วย
-                const memberBannerStyle = u.voiceBannerURL ? `background-image: url('${u.voiceBannerURL}'); background-size: cover; background-position: center;` : '';
-                const memberBannerOverlay = u.voiceBannerURL ? `bg-black/60 backdrop-blur-[2px]` : `hover:bg-[#2b2d31]`;
+                const memberBannerStyle = u.voiceBannerURL ? `background-image: url('${u.voiceBannerURL}'); background-size: cover; background-position: center; background-repeat: no-repeat;` : '';
+                const memberBannerOverlay = u.voiceBannerURL ? `bg-black/50 backdrop-blur-[1px]` : `hover:bg-[#2b2d31]`;
 
                 membersList.insertAdjacentHTML('beforeend', `
-                    <div onclick="showUserProfile('${userName}')" class="flex items-center space-x-3 cursor-pointer p-2 rounded-lg transition group relative overflow-hidden shadow-sm border border-white/5 mb-1 ${!isOnline ? 'opacity-50' : ''}" style="${memberBannerStyle}">
+                    <div onclick="showUserProfile('${userName}')" class="flex items-center space-x-3 cursor-pointer px-3 py-2.5 rounded-xl transition group relative overflow-hidden shadow-sm border border-white/5 mb-2 min-h-[56px] ${!isOnline ? 'opacity-60' : ''}" style="${memberBannerStyle}">
                         <div class="absolute inset-0 ${memberBannerOverlay} z-0"></div>
-                        <div class="relative flex-shrink-0 flex items-center justify-center w-8 h-8 z-10">
-                            <img src="${userAvatar}" class="w-8 h-8 rounded-full object-cover opacity-95 absolute z-0">
+                        <div class="relative flex-shrink-0 flex items-center justify-center w-9 h-9 z-10">
+                            <img src="${userAvatar}" class="w-9 h-9 rounded-full object-cover opacity-95 absolute z-0">
                             ${renderFrameHtml}
                             <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619] z-20"></div>
                         </div>
@@ -771,31 +772,69 @@ if(btnSaveSettings) {
 // ==========================================
 // 💬 8. ระบบ Chat & Mentions
 // ==========================================
+function getOrCreateMentionPopup() {
+    let mentionPopup = document.getElementById('mention-popup');
+    if (!mentionPopup) {
+        mentionPopup = document.createElement('div');
+        mentionPopup.id = 'mention-popup';
+        mentionPopup.className = 'fixed z-[999] bg-[#2b2d31] border border-[#1e1f22] rounded-xl shadow-2xl py-1.5 w-64 max-h-48 overflow-y-auto custom-scrollbar hidden -translate-y-full';
+        document.body.appendChild(mentionPopup);
+    }
+    return mentionPopup;
+}
+
 function handleMentionInput(e) {
     const input = e.target;
-    const val = input.value; const cursorPos = input.selectionStart;
+    const val = input.value;
+    const cursorPos = input.selectionStart;
     const textBeforeCursor = val.substring(0, cursorPos);
-    const match = textBeforeCursor.match(/@([a-zA-Z0-9_ก-๙]*)$/);
-    const mentionPopup = document.getElementById('mention-popup');
-    if(!mentionPopup) return;
-    if (match) { mentionQuery = match[1].toLowerCase(); showMentionPopup(input, match[0]); } else { mentionPopup.classList.add('hidden'); }
+    // รองรับการพิมพ์ค้นหาชื่อที่มีจุด ขีด หรือตัวอักษรทั่วไปหลังเครื่องหมาย @
+    const match = textBeforeCursor.match(/(?:^|\s)@([^\s@]*)$/);
+    const mentionPopup = getOrCreateMentionPopup();
+
+    if (match) {
+        mentionQuery = match[1].toLowerCase();
+        showMentionPopup(input, match[0]);
+    } else {
+        mentionPopup.classList.add('hidden');
+    }
 }
 
 function showMentionPopup(inputEl, fullMatch) {
-    const mentionPopup = document.getElementById('mention-popup');
-    if(!mentionPopup) return;
-    mentionPopup.innerHTML = ''; const rect = inputEl.getBoundingClientRect();
-    mentionPopup.style.left = `${rect.left}px`; mentionPopup.style.top = `${rect.top - 160}px`; 
-    const matchedUsers = Object.keys(usersData).filter(name => name.toLowerCase().includes(mentionQuery));
-    if (matchedUsers.length === 0) { mentionPopup.classList.add('hidden'); return; }
+    const mentionPopup = getOrCreateMentionPopup();
+    mentionPopup.innerHTML = '';
+    const rect = inputEl.getBoundingClientRect();
+    
+    // จัดตำแหน่งให้ลอยอยู่เหนือช่องพิมพ์ข้อความพอดี
+    mentionPopup.style.left = `${rect.left}px`;
+    mentionPopup.style.top = `${rect.top - 8}px`;
+
+    const matchedUsers = Object.keys(usersData).filter(name => 
+        name.toLowerCase().includes(mentionQuery)
+    );
+
+    if (matchedUsers.length === 0) {
+        mentionPopup.classList.add('hidden');
+        return;
+    }
+
     mentionPopup.classList.remove('hidden');
     matchedUsers.forEach(name => {
-        const u = usersData[name]; const item = document.createElement('div'); item.className = 'flex items-center px-3 py-2 hover:bg-[#35373c] cursor-pointer transition'; item.innerHTML = `<img src="${u.avatar}" class="w-6 h-6 rounded-full mr-2 object-cover opacity-90"><span class="text-[13px] font-bold text-[#dbdee1]">${name}</span>`;
+        const u = usersData[name];
+        const item = document.createElement('div');
+        item.className = 'flex items-center px-3 py-2 hover:bg-[#404249] cursor-pointer transition mx-1 rounded-lg';
+        item.innerHTML = `
+            <img src="${u.avatar}" class="w-6 h-6 rounded-full mr-2.5 object-cover opacity-95">
+            <span class="text-[13px] font-bold text-[#dbdee1] truncate">${name}</span>
+        `;
         item.onclick = () => {
-            const val = inputEl.value; const cursorPos = inputEl.selectionStart;
-            const textBeforeCursor = val.substring(0, cursorPos); const textAfterCursor = val.substring(cursorPos);
-            const newTextBefore = textBeforeCursor.replace(/@([a-zA-Z0-9_ก-๙]*)$/, `@${name} `);
-            inputEl.value = newTextBefore + textAfterCursor; inputEl.focus();
+            const val = inputEl.value;
+            const cursorPos = inputEl.selectionStart;
+            const textBeforeCursor = val.substring(0, cursorPos);
+            const textAfterCursor = val.substring(cursorPos);
+            const newTextBefore = textBeforeCursor.replace(/@([^\s@]*)$/, `@${name} `);
+            inputEl.value = newTextBefore + textAfterCursor;
+            inputEl.focus();
             inputEl.selectionStart = inputEl.selectionEnd = newTextBefore.length;
             mentionPopup.classList.add('hidden');
         };
@@ -863,11 +902,22 @@ function renderMessages() {
         let timeString = m.timestamp ? m.timestamp.toDate().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : "...";
         let formattedText = m.text ? m.text.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-[#e4e5e7]">$1</span>') : '';
 
-        let isMentioned = false;
-        formattedText = formattedText.replace(/@([a-zA-Z0-9_ก-๙]+)/g, (match, username) => {
-            if (username === currentUsername) { isMentioned = true; return `<span class="bg-[#5865F2]/40 text-[#dbdee1] font-bold px-1.5 py-0.5 rounded-md border border-[#5865F2]/50">@${username}</span>`; } else if (usersData[username]) { return `<span class="text-[#5865F2] font-bold hover:underline cursor-pointer" onclick="showUserProfile('${username}')">@${username}</span>`; } return match;
+let isMentioned = false;
+        const sortedUsernames = Object.keys(usersData).sort((a, b) => b.length - a.length);
+        
+        sortedUsernames.forEach((username) => {
+            const escapedName = username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const mentionRegex = new RegExp(`@${escapedName}(?![a-zA-Z0-9_ก-๙])`, 'g');
+            
+            if (mentionRegex.test(formattedText)) {
+                if (username === currentUsername) {
+                    isMentioned = true;
+                    formattedText = formattedText.replace(mentionRegex, `<span class="bg-[#5865F2]/40 text-[#dbdee1] font-bold px-1.5 py-0.5 rounded-md border border-[#5865F2]/50">@${username}</span>`);
+                } else {
+                    formattedText = formattedText.replace(mentionRegex, `<span class="text-[#5865F2] font-bold hover:underline cursor-pointer" onclick="showUserProfile('${username}')">@${username}</span>`);
+                }
+            }
         });
-
         const rowHighlight = isMentioned ? "bg-[#5865F2]/10 border-l-[3px] border-[#5865F2] hover:bg-[#5865F2]/20" : "hover:bg-[#2b2d31]/50 border-l-[3px] border-transparent";
 
         if (m.senderName === "🤖 System Bot") {
@@ -2548,6 +2598,7 @@ const shopVoiceBanners = [
             </svg>
         `)
     },
+    
     { name: 'Galaxy Nebula (GIF)', url: 'https://media.giphy.com/media/3o7buijTqhjxjbEqjK/giphy.gif' }
 ];
 
