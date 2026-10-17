@@ -2804,16 +2804,13 @@ onValue(ref(musicDb, 'music_room/state'), (snapshot) => {
     let queue = data.queue || [];
     let currentPlaying = data.currentPlaying;
 
-    // ถ้ามีเพลงในคิว แต่ช่อง currentPlaying เป็น null (เพลงหมดหรือยังไม่เริ่มเล่น) 
-    // และเราอยู่ในหน้าห้องเพลง ให้ดึงเพลงแรกจากคิวมาเล่นให้อัตโนมัติทันที
     const musicRoomView = document.getElementById('view-music-room');
     const isInMusicRoom = musicRoomView && !musicRoomView.classList.contains('hidden');
 
     if (!currentPlaying && queue.length > 0 && isInMusicRoom) {
         currentPlaying = queue.shift();
-        // อัปเดตกลับไปที่ Firebase ทันที เพื่อให้ทุกคนเห็นเพลงนี้พร้อมกัน
         set(ref(musicDb, 'music_room/state'), { queue, currentPlaying });
-        return;
+        // ❌ เอาคำว่า return ออกตรงนี้ เพื่อให้โค้ดวิ่งลงมาอัปเดตหน้าจอ UI ด้านล่างต่อทันที
     }
 
     updateMusicQueueUI(queue);
