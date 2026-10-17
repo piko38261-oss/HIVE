@@ -3049,6 +3049,57 @@ window.toggleMusicMute = () => {
         changeMusicVolume(slider.value);
     }
 };
+// ==========================================
+// 💬 ระบบแชทห้องเพลง (Realtime Sync)
+// ==========================================
+
+onValue(ref(musicDb, 'music_room/chat_messages'), (snapshot) => {
+    const messages = snapshot.val();
+    const chatBox = document.getElementById('music-room-chat');
+    if (!chatBox) return;
+    chatBox.innerHTML = '';
+
+    if (!messages) return;
+
+    Object.values(messages).forEach(m => {
+        const time = new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        let avatarHTML = `<div class="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center font-bold text-white text-xs shrink-0">${m.sender ? m.sender.charAt(0).toUpperCase() : 'U'}</div>`;
+        if (m.avatar) {
+            avatarHTML = `<div class="w-7 h-7 rounded-full overflow-hidden flex-shrink-0"><img src="${m.avatar}" class="w-full h-full object-cover"></div>`;
+        }
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'flex items-start space-x-2.5';
+        msgDiv.innerHTML = `${avatarHTML}<div><div class="flex items-center space-x-1.5"><span class="font-bold text-white text-xs">${m.sender}</span><span class="text-[9px] text-gray-400">${time}</span></div><p class="text-gray-300 mt-0.5 break-all">${m.text}</p></div>`;
+        chatBox.appendChild(msgDiv);
+    });
+    chatBox.scrollTop = chatBox.scrollHeight;
+});
+
+window.sendMusicChatMessage = async () => {
+    const input = document.getElementById('music-chat-input');
+    const val = input ? input.value.trim() : '';
+    if (!val) return;
+
+    const userAvatar = usersData[currentUsername] ? usersData[currentUsername].avatar : '';
+
+    const newMsgRef = ref(musicDb, 'music_room/chat_messages');
+    const newMessageRef = push(newMsgRef);
+    await set(newMessageRef, {
+        sender: currentUsername,
+        avatar: userAvatar,
+        text: val,
+        timestamp: Date.now()
+    });
+
+    if (input) input.value = '';
+};
+
+window.handleMusicChatKey = (e) => {
+    if (e.key === 'Enter') sendMusicChatMessage();
+};
+
+
 
 window.leaveMusicRoom = () => {
     // ลบสถานะออกจาก Realtime Database ของห้องเพลงทันที
