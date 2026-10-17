@@ -65,9 +65,8 @@
     </div>
 
     <script>
-        const YOUTUBE_API_KEY = "AIzaSyCkE0LxJDJSfaIHe8_hMGuMAbAIDbBDkGM";
+        const YOUTUBE_API_KEY = "AIzaSyBMTXJiWCh2dL7YGqf3R3Ygc78pmUA3nYw";
 
-        // 🌟 เพิ่มรายการคลิปสำรอง (Fallback) ให้มีจำนวนมากขึ้น เพื่อไม่ให้วิดีโอวนซ้ำแค่ 3 คลิป
         const fallbackShorts = [
             { videoId: "9bZkp7q19f0", title: "✨ บรรยากาศการทำงานใน HIVE Workspace", channelTitle: "HIVE_Creator" },
             { videoId: "3JZ_D3ELwOQ", title: "🚀 พัฒนาระบบเว็บแอปพลิเคชันด้วย AI", channelTitle: "Dev_Master" },
@@ -79,14 +78,18 @@
         ];
 
         async function fetchYouTubeShorts() {
-            const queries = ['coding shorts', 'programming shorts', 'gaming shorts', 'tech shorts', 'lofi coding'];
-            const randomQuery = queries[Math.floor(Math.random() * queries.length)];
-            
-            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=15&q=${randomQuery}&type=video&videoDuration=short&key=${YOUTUBE_API_KEY}`;
+            // ปรับ URL คำขอให้เรียบง่ายและแม่นยำเพื่อป้องกัน Error 400
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&q=shorts&type=video&key=${YOUTUBE_API_KEY}`;
 
             try {
                 const res = await fetch(url);
                 const data = await res.json();
+                
+                if (data.error) {
+                    console.error("YouTube API Error:", data.error.message);
+                    throw new Error(data.error.message);
+                }
+
                 if (data.items && data.items.length > 0) {
                     return data.items.map(item => ({
                         videoId: item.id.videoId,
@@ -98,7 +101,7 @@
                 console.error("Error fetching YouTube API:", err);
             }
 
-            // ถ้าระบบ API ขัดข้องหรือดึงไม่สำเร็จ จะสุ่มดึงจากรายการสำรองที่เตรียมไว้
+            // Fallback สุ่มดึงจากรายการสำรองกรณี API ขัดข้อง
             return fallbackShorts.sort(() => Math.random() - 0.5);
         }
 
@@ -141,7 +144,6 @@
                     </iframe>
                 </div>
 
-                <!-- Sidebar Action Buttons (ด้านขวา) -->
                 <div class="absolute right-4 bottom-20 flex flex-col items-center space-y-6 z-30 pointer-events-auto">
                     <button onclick="toggleLike(this)" class="w-12 h-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:scale-110 transition shadow-lg">
                         <i class="ph-fill ph-heart text-[26px]"></i>
@@ -154,7 +156,6 @@
                     <span class="text-xs font-bold drop-shadow">แชร์</span>
                 </div>
 
-                <!-- Bottom Details (ชื่อช่องและคำบรรยาย) -->
                 <div class="absolute left-4 bottom-8 right-20 z-30 pointer-events-auto drop-shadow-md">
                     <div class="flex items-center space-x-3 mb-2">
                         <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white border border-white/20">${short.channelTitle.charAt(0)}</div>
@@ -194,7 +195,6 @@
             setTimeout(renderShortsFeed, 500);
         });
 
-        // ตรวจจับการเลื่อนฟีดเพื่อโหลดคลิปเพิ่มอัตโนมัติเมื่อเลื่อนถึงคลิปเกือบสุดท้าย
         const feedContainer = document.getElementById('shorts-feed');
         feedContainer.addEventListener('scroll', () => {
             const threshold = feedContainer.scrollHeight - feedContainer.clientHeight - 150;
