@@ -2707,4 +2707,344 @@ function renderHiveShop() {
         themesGrid.innerHTML = decoCardsHTML + themeCardsHTML;
     }
 }
+
+
+// ==========================================
+// 🎵 15. ระบบห้องฟังเพลง & แชทบอท (Music Room - Persistent Sync)
+// ==========================================
+import { getDatabase, ref, set, onValue, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+const musicDb = getDatabase(app, "https://hive-workspace-f373c-default-rtdb.asia-southeast1.firebasedatabase.app");
+
+let musicRoomActiveRef = null;
+
+// ลงทะเบียน View 'music-room' ใน Object views
+views['music-room'] = document.getElementById('view-music-room');
+
+// ตรวจสอบเมื่อกดสลับหน้าจอ (Navigation)
+document.querySelectorAll('.nav-btn').forEach(btn => {
+    const originalOnClick = btn.onclick;
+    btn.onclick = (e) => {
+        if(originalOnClick) originalOnClick(e);
+        const view = btn.getAttribute('data-view');
+        if (view === 'music-room') {
+            initMusicRoomRealtime();
+        } else {
+            if (musicRoomActiveRef) {
+                remove(musicRoomActiveRef);
+                musicRoomActiveRef = null;
+            }
+            // 🛑 ตัดเสียงเพลงทันทีเมื่อกดเปลี่ยนไปหน้าอื่น เพื่อไม่ให้เสียงเล็ดลอดออกไป
+            const iframeWrapper = document.getElementById('music-player-iframe-wrapper');
+            if (iframeWrapper) {
+                iframeWrapper.innerHTML = '';
+                iframeWrapper.classList.add('hidden');
+            }
+            const placeholder = document.getElementById('music-player-placeholder');
+            if (placeholder) placeholder.classList.remove('hidden');
+        }
+    };
+});
+
+function initMusicRoomRealtime() {
+    if (!currentUserId) return;
+    const userAvatar = usersData[currentUsername] ? usersData[currentUsername].avatar : '';
+    const userFrame = usersData[currentUsername] ? usersData[currentUsername].profileFrame : '';
+
+    musicRoomActiveRef = ref(musicDb, 'music_room/active_users/' + currentUserId);
+    set(musicRoomActiveRef, {
+        name: currentUsername,
+        avatar: userAvatar,
+        frame: userFrame,
+        status: "กำลังฟังเพลงอยู่"
+    });
+    onDisconnect(musicRoomActiveRef).remove();
+
+    // ฟังสถานะสมาชิกในห้องเพื่อจัดการเพลงอัตโนมัติ
+    onValue(ref(musicDb, 'music_room/active_users'), (snapshot) => {
+        const users = snapshot.val();
+        const listContainer = document.getElementById('music-room-members-list');
+        const countSpan = document.getElementById('music-member-count');
+        if (!listContainer) return;
+        listContainer.innerHTML = '';
+
+        if (!users) {
+            if(countSpan) countSpan.innerText = '0';
+            listContainer.innerHTML = `<div class="text-center py-2 text-gray-500 text-xs italic">ไม่มีคนในห้อง</div>`;
+            // ถ้าไม่มีคนเหลืออยู่ในห้องเลย ให้ล้างเพลงและหยุดเล่นทันที
+            set(ref(musicDb, 'music_room/state'), { queue: [], currentPlaying: null });
+            return;
+        }
+
+        const userKeys = Object.keys(users);
+        if(countSpan) countSpan.innerText = userKeys.length;
+
+        userKeys.forEach(key => {
+            const u = users[key];
+            const div = document.createElement('div');
+            div.className = 'flex items-center space-x-2.5 p-1.5 rounded-lg hover:bg-[#35373c] transition';
+            
+            let avatarHTML = '';
+            if (u.avatar) {
+                let frameHTML = u.frame ? `<img src="${u.frame}" class="absolute w-[135%] h-[135%] max-w-none pointer-events-none z-10 -top-[18%] -left-[18%]">` : '';
+                avatarHTML = `<div class="relative flex-shrink-0 flex items-center justify-center w-8 h-8"><img src="${u.avatar}" class="w-8 h-8 rounded-full object-cover bg-gray-700 absolute">${frameHTML}<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#2b2d31] rounded-full z-20"></span></div>`;
+            } else {
+                avatarHTML = `<div class="relative flex-shrink-0 flex items-center justify-center w-8 h-8"><div class="w-8 h-8 rounded-full bg-amber-600 flex items-center justify-center font-bold text-white text-xs absolute">${u.name ? u.name.charAt(0).toUpperCase() : 'A'}</div><span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#2b2d31] rounded-full z-20"></span></div>`;
+            }
+
+            div.innerHTML = `${avatarHTML}<div class="overflow-hidden ml-1"><span class="text-xs font-semibold text-white block truncate">${u.name}</span><span class="text-[10px] text-gray-400 block truncate">ออนไลน์</span></div>`;
+            listContainer.appendChild(div);
+        });
+    });
+}
+
+// ซิงค์สถานะเพลงและคิวผ่าน Firebase Realtime Database
+onValue(ref(musicDb, 'music_room/state'), (snapshot) => {
+    const data = snapshot.val() || { queue: [], currentPlaying: null };
+    updateMusicQueueUI(data.queue || []);
+    // เช็คว่าตอนนี้ผู้ใช้อยู่ในหน้าห้องเพลงหรือไม่ ถ้าไม่อยู่ให้ระงับการเล่นเสียงเพลง
+    const musicRoomView = document.getElementById('view-music-room');
+    const isInMusicRoom = musicRoomView && !musicRoomView.classList.contains('hidden');
+    updateMusicPlayerUI(isInMusicRoom ? data.currentPlaying : null);
+});
+
+function extractMusicYouTubeId(urlOrQuery) {
+    if (urlOrQuery.length === 11 && !urlOrQuery.includes(' ')) return urlOrQuery;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = urlOrQuery.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+}
+
+window.addMusicSongToQueue = async () => {
+    const input = document.getElementById('music-song-input');
+    const val = input ? input.value.trim() : '';
+    if (!val) return;
+
+    const videoId = extractMusicYouTubeId(val);
+    const title = videoId ? `YouTube Video (${videoId})` : val;
+
+    const songItem = {
+        id: Math.random().toString(36).substr(2, 9),
+        videoId: videoId || '9bZkp7q19f0',
+        title: title,
+        requester: currentUsername
+    };
+
+    const snapshot = await new Promise(resolve => onValue(ref(musicDb, 'music_room/state'), resolve, { onlyOnce: true }));
+    const currentState = snapshot.val() || { queue: [], currentPlaying: null };
+    let queue = currentState.queue || [];
+    let currentPlaying = currentState.currentPlaying;
+
+    queue.push(songItem);
+    if(input) input.value = '';
+
+    if (!currentPlaying) {
+        currentPlaying = queue.shift();
+        appendMusicBotChat(`🎶 กำลังเล่นเพลง: <span class="text-emerald-400 font-bold">${currentPlaying.title}</span>`);
+    } else {
+        appendMusicBotChat(`🤖 เพิ่มเพลง <span class="text-indigo-300 font-semibold">"${songItem.title}"</span> เข้าสู่คิวลำดับที่ ${queue.length} แล้วครับ!`);
+    }
+
+    await set(ref(musicDb, 'music_room/state'), { queue, currentPlaying });
+};
+
+window.skipMusicSong = async () => {
+    const snapshot = await new Promise(resolve => onValue(ref(musicDb, 'music_room/state'), resolve, { onlyOnce: true }));
+    const currentState = snapshot.val() || { queue: [], currentPlaying: null };
+    let queue = currentState.queue || [];
+    let currentPlaying = currentState.currentPlaying;
+
+    if (currentPlaying) {
+        appendMusicBotChat(`⏭️ ข้ามเพลง <span class="text-gray-300">"${currentPlaying.title}"</span>`);
+    }
+
+    if (queue.length > 0) {
+        currentPlaying = queue.shift();
+        appendMusicBotChat(`🎶 กำลังเล่นเพลง: <span class="text-emerald-400 font-bold">${currentPlaying.title}</span>`);
+    } else {
+        currentPlaying = null;
+        appendMusicBotChat(`🤖 คิวเพลงหมดแล้วครับ!`);
+    }
+
+    await set(ref(musicDb, 'music_room/state'), { queue, currentPlaying });
+};
+
+// ปุ่มออกจากห้องเพลง
+window.leaveMusicRoom = () => {
+    if (musicRoomActiveRef) {
+        remove(musicRoomActiveRef);
+        musicRoomActiveRef = null;
+    }
+    
+    // ทำลาย Iframe และหยุดเสียงทันที
+    const iframeWrapper = document.getElementById('music-player-iframe-wrapper');
+    if (iframeWrapper) {
+        iframeWrapper.innerHTML = '';
+        iframeWrapper.classList.add('hidden');
+    }
+    const placeholder = document.getElementById('music-player-placeholder');
+    if (placeholder) placeholder.classList.remove('hidden');
+
+    showToast("ออกจากห้องฟังเพลงแล้ว", "info");
+    
+    const defaultChatBtn = document.querySelector('.nav-btn[data-view="chat"]');
+    if (defaultChatBtn) {
+        defaultChatBtn.click();
+    } else {
+        if(views['music-room']) views['music-room'].classList.add('hidden');
+        if(views['chat']) views['chat'].classList.remove('hidden');
+    }
+};
+
+function updateMusicQueueUI(queue) {
+    const queueList = document.getElementById('music-queue-list');
+    const queueCount = document.getElementById('music-queue-count');
+    if(!queueList || !queueCount) return;
+    queueCount.innerText = `${queue.length} เพลงในคิว`;
+
+    if (queue.length === 0) {
+        queueList.innerHTML = `<div class="text-center py-8 text-gray-500 text-xs italic">คิวเพลงว่างเปล่า ส่งลิงก์เพลงแรกเข้ามาได้เลยครับ!</div>`;
+        return;
+    }
+
+    queueList.innerHTML = '';
+    queue.forEach((song, index) => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center justify-between bg-[#1e1f22] p-2.5 rounded-lg border border-[#2b2d31] text-xs';
+        div.innerHTML = `<div class="flex items-center space-x-3 overflow-hidden"><span class="w-5 h-5 rounded bg-[#35373c] text-gray-300 font-bold flex items-center justify-center shrink-0">${index + 1}</span><span class="text-white truncate font-medium">${song.title}</span></div><span class="text-gray-400 text-[10px] shrink-0 ml-2">ผู้ขอ: ${song.requester}</span>`;
+        queueList.appendChild(div);
+    });
+}
+
+function updateMusicPlayerUI(currentPlaying) {
+    const placeholder = document.getElementById('music-player-placeholder');
+    const iframeWrapper = document.getElementById('music-player-iframe-wrapper');
+    const titleEl = document.getElementById('music-current-title');
+    const requesterEl = document.getElementById('music-current-requester');
+
+    if (!currentPlaying) {
+        if(placeholder) placeholder.classList.remove('hidden');
+        if(iframeWrapper) {
+            iframeWrapper.classList.add('hidden');
+            iframeWrapper.innerHTML = '';
+        }
+        if(titleEl) titleEl.innerText = 'ไม่มีเพลงกำลังเล่น';
+        if(requesterEl) requesterEl.innerText = 'เพิ่มเพลงเพื่อเริ่มความสนุกกันเลย!';
+        return;
+    }
+
+    if(placeholder) placeholder.classList.add('hidden');
+    if(iframeWrapper) {
+        iframeWrapper.classList.remove('hidden');
+        const thumbnailUrl = `https://img.youtube.com/vi/${currentPlaying.videoId}/maxresdefault.jpg`;
+        iframeWrapper.innerHTML = `
+            <div class="relative w-full h-full group">
+                <img src="${thumbnailUrl}" class="w-full h-full object-cover" onerror="this.src='https://img.youtube.com/vi/${currentPlaying.videoId}/hqdefault.jpg'">
+                <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="bg-black/70 text-white text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1">
+                        <i class="ph-fill ph-music-notes"></i> กำลังเล่นเพลงนี้อยู่
+                    </span>
+                </div>
+                <iframe src="https://www.youtube.com/embed/${currentPlaying.videoId}?autoplay=1&enablejsapi=1" class="hidden" allow="autoplay"></iframe>
+            </div>
+        `;
+    }
+
+    if(titleEl) titleEl.innerText = currentPlaying.title;
+    if(requesterEl) requesterEl.innerText = `ขอโดย: ${currentPlaying.requester}`;
+}
+
+function appendMusicBotChat(htmlText) {
+    const chatBox = document.getElementById('music-room-chat');
+    if(!chatBox) return;
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'flex items-start space-x-2.5';
+    msgDiv.innerHTML = `<div class="w-7 h-7 rounded-full bg-[#5865F2] flex items-center justify-center font-bold text-white text-xs shrink-0">🤖</div><div><div class="flex items-center space-x-1.5"><span class="font-bold text-white text-xs">HIVE Music Bot</span><span class="bg-[#5865F2] text-[9px] text-white px-1 rounded font-semibold">BOT</span><span class="text-[9px] text-gray-400">${time}</span></div><p class="text-gray-300 mt-0.5">${htmlText}</p></div>`;
+    chatBox.appendChild(msgDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+window.sendMusicChatMessage = () => {
+    const input = document.getElementById('music-chat-input');
+    const val = input ? input.value.trim() : '';
+    if (!val) return;
+
+    const chatBox = document.getElementById('music-room-chat');
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const userAvatar = usersData[currentUsername] ? usersData[currentUsername].avatar : '';
+
+    let avatarHTML = `<div class="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center font-bold text-white text-xs shrink-0">${currentUsername.charAt(0).toUpperCase()}</div>`;
+    if (userAvatar) avatarHTML = `<div class="w-7 h-7 rounded-full overflow-hidden flex-shrink-0"><img src="${userAvatar}" class="w-full h-full object-cover"></div>`;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'flex items-start space-x-2.5';
+    msgDiv.innerHTML = `${avatarHTML}<div><div class="flex items-center space-x-1.5"><span class="font-bold text-white text-xs">${currentUsername}</span><span class="text-[9px] text-gray-400">${time}</span></div><p class="text-gray-300 mt-0.5">${val}</p></div>`;
+    chatBox.appendChild(msgDiv);
+    if(input) input.value = '';
+    chatBox.scrollTop = chatBox.scrollHeight;
+};
+
+window.handleMusicChatKey = (e) => {
+    if (e.key === 'Enter') sendMusicChatMessage();
+};
+// ฟังก์ชันปรับระดับเสียงเพลง (0 - 100%)
+window.changeMusicVolume = (val) => {
+    const vol = parseInt(val);
+    const volText = document.getElementById('music-volume-text');
+    if (volText) volText.innerText = vol + '%';
+
+    const volumeIcon = document.getElementById('music-volume-icon');
+    if (volumeIcon) {
+        if (vol === 0) volumeIcon.className = "ph-fill ph-speaker-slash text-base text-red-400";
+        else if (vol < 50) volumeIcon.className = "ph-fill ph-speaker-low text-base text-gray-300";
+        else volumeIcon.className = "ph-fill ph-speaker-high text-base text-gray-300";
+    }
+
+    // ควบคุมผ่าน Iframe YouTube Player API (ถ้าเชื่อมต่อ API หรือปรับผ่าน element iframe)
+    const iframe = document.querySelector('#music-player-iframe-wrapper iframe');
+    if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage(JSON.stringify({
+            event: 'command',
+            func: 'setVolume',
+            args: [vol]
+        }), '*');
+    }
+};
+
+// ฟังก์ชันกดปิด/เปิดเสียงด่วน (Mute / Unmute)
+let previousMusicVol = 80;
+window.toggleMusicMute = () => {
+    const slider = document.getElementById('music-volume-slider');
+    if (!slider) return;
+
+    if (parseInt(slider.value) > 0) {
+        previousMusicVol = slider.value;
+        slider.value = 0;
+        changeMusicVolume(0);
+    } else {
+        slider.value = previousMusicVol || 80;
+        changeMusicVolume(slider.value);
+    }
+};
+
+window.leaveMusicRoom = () => {
+    // ลบสถานะออกจาก Realtime Database ของห้องเพลงทันที
+    if (musicRoomActiveRef) {
+        remove(musicRoomActiveRef);
+        musicRoomActiveRef = null;
+    }
+    showToast("ออกจากห้องฟังเพลงแล้ว", "info");
+    
+    // สลับหน้ากลับไปที่ห้องแชทหลัก (General)
+    const defaultChatBtn = document.querySelector('.nav-btn[data-view="chat"]');
+    if (defaultChatBtn) {
+        defaultChatBtn.click();
+    } else {
+        // กรณีหาปุ่มไม่เจอ ให้ซ่อนวิวห้องเพลงแล้วแสดงวิวแชทตรงๆ
+        if(views['music-room']) views['music-room'].classList.add('hidden');
+        if(views['chat']) views['chat'].classList.remove('hidden');
+    }
+};
+
 // === END OF FILE ===

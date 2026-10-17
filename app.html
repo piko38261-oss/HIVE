@@ -225,7 +225,13 @@
                         <span class="font-bold text-[15px] truncate">ร้านค้าของตกแต่ง</span>
                         <span class="ml-auto bg-gradient-to-r from-pink-500 to-purple-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase">NEW</span>
                     </a>
-                   
+                    
+                   <a href="#" class="nav-btn channel-inactive group flex items-center px-2 py-1.5 rounded-md text-indigo-400 hover:bg-[#35373c] hover:text-indigo-300 transition mt-1" data-view="music-room">
+                        <i class="ph-fill ph-music-notes text-[18px] mr-1.5"></i>
+                        <span class="font-bold text-[15px] truncate">ห้องฟังเพลง & แชทบอท</span>
+                        <span class="ml-auto bg-indigo-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase">LIVE</span>
+                    </a>
+
                 </div>
             </div>
             
@@ -437,6 +443,102 @@
                     </div>
                 </div>
             </div>
+            <!-- 🎵 VIEW: MUSIC & VOICE ROOM -->
+<div id="view-music-room" class="absolute inset-0 hidden flex flex-col md:flex-row bg-[#313338] overflow-hidden">
+    <!-- ฝั่งซ้าย: เครื่องเล่นเพลงและคิว (สัดส่วนกว้างกว่า) -->
+    <div class="flex-1 flex flex-col bg-[#313338] p-4 md:p-6 overflow-y-auto custom-scrollbar">
+        <!-- การ์ด Now Playing -->
+        <div class="bg-[#2b2d31] rounded-xl p-5 border border-[#1f2023] shadow-lg mb-6 flex-shrink-0">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                    <i class="ph-fill ph-broadcast text-sm animate-pulse"></i> กำลังเล่นตอนนี้ (Now Playing)
+                </span>
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs bg-[#1e1f22] px-2.5 py-1 rounded text-gray-400">HIVE Bot กำลังทำงาน</span>
+                    <button onclick="leaveMusicRoom()" class="bg-[#da373c]/20 hover:bg-[#da373c] text-[#da373c] hover:text-white px-3 py-1 rounded text-xs font-bold transition flex items-center gap-1 border border-[#da373c]/30">
+                        <i class="ph ph-sign-out text-sm"></i> ออกจากห้อง
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex flex-col md:flex-row items-center gap-5">
+                <div class="w-full md:w-64 aspect-video bg-black rounded-lg overflow-hidden relative shadow-md flex items-center justify-center shrink-0">
+                    <div id="music-player-placeholder" class="text-center p-4">
+                        <i class="ph ph-music-notes text-4xl text-gray-600 mb-2 animate-bounce"></i>
+                        <p class="text-xs text-gray-400">ยังไม่มีเพลงในคิว กรุณาเพิ่มเพลงด้านล่าง</p>
+                    </div>
+                    <div id="music-player-iframe-wrapper" class="absolute inset-0 w-full h-full hidden"></div>
+                </div>
+                
+                <div class="flex-1 w-full text-center md:text-left">
+                    <h2 id="music-current-title" class="text-lg font-bold text-white mb-1">ไม่มีเพลงกำลังเล่น</h2>
+                    <p id="music-current-requester" class="text-sm text-gray-400 mb-4">เพิ่มเพลงเพื่อเริ่มความสนุกกันเลย!</p>
+                    
+                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                        <button onclick="skipMusicSong()" class="bg-[#5865F2] hover:bg-[#4752c4] text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow">
+                            <i class="ph ph-skip-forward text-sm"></i> ข้ามเพลง (Skip)
+                        </button>
+                        
+                        <div class="flex items-center space-x-2 bg-[#1e1f22] px-3 py-1.5 rounded-lg border border-[#35373c]">
+                            <button onclick="toggleMusicMute()" id="music-mute-btn" class="text-gray-400 hover:text-white transition" title="ปิด/เปิดเสียง">
+                                <i id="music-volume-icon" class="ph-fill ph-speaker-high text-base"></i>
+                            </button>
+                            <input type="range" id="music-volume-slider" min="0" max="100" value="80" oninput="changeMusicVolume(this.value)" class="w-20 md:w-28 h-1 bg-[#35373c] rounded-lg appearance-none cursor-pointer accent-[#5865F2]">
+                            <span id="music-volume-text" class="text-[10px] text-gray-400 font-bold w-7 text-right">80%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ฟอร์มเพิ่มเพลง -->
+        <div class="bg-[#2b2d31] rounded-xl p-4 border border-[#1f2023] mb-6 flex-shrink-0">
+            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                <i class="ph-fill ph-plus-circle text-emerald-400"></i> สั่งบอทเพิ่มเพลงเข้าคิว (Add to Queue)
+            </h3>
+            <div class="flex gap-2">
+                <input type="text" id="music-song-input" placeholder="วางลิงก์ YouTube หรือชื่อเพลง..." class="flex-1 bg-[#1e1f22] border border-[#383a40] rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#5865F2]">
+                <button onclick="addMusicSongToQueue()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition shadow shrink-0">เพิ่มเข้าคิว</button>
+            </div>
+        </div>
+
+        <!-- คิวเพลง -->
+        <div class="bg-[#2b2d31] rounded-xl p-4 border border-[#1f2023] flex-1 flex flex-col min-h-[200px]">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="ph-fill ph-list-numbers text-indigo-400"></i> คิวเพลงถัดไป (Queue List)
+                </h3>
+                <span id="music-queue-count" class="text-xs bg-[#1e1f22] px-2.5 py-1 rounded text-gray-400">0 เพลงในคิว</span>
+            </div>
+            <div id="music-queue-list" class="space-y-2 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+                <div class="text-center py-8 text-gray-500 text-xs italic">คิวเพลงว่างเปล่า ส่งลิงก์เพลงแรกเข้ามาได้เลยครับ!</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ฝั่งขวา: รายชื่อคนในห้องเพลง และแชทห้องเพลง -->
+    <div class="w-full md:w-80 bg-[#2b2d31] border-l border-[#1f2023] flex flex-col shrink-0 h-[40vh] md:h-full">
+        <div class="p-3 border-b border-[#1f2023] bg-[#2b2d31]">
+            <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                🟢 กำลังอยู่ในห้องเพลง — <span id="music-member-count">0</span> คน
+            </h4>
+            <div id="music-room-members-list" class="space-y-1.5 max-h-36 overflow-y-auto pr-1 custom-scrollbar"></div>
+        </div>
+        
+        <div class="h-11 border-b border-[#1f2023] px-4 flex items-center font-bold text-xs text-white bg-[#2b2d31]">
+            <i class="ph-fill ph-chat-circle-dots text-indigo-400 mr-2 text-base"></i> แชทห้องเพลง
+        </div>
+        
+        <div id="music-room-chat" class="flex-1 p-3 overflow-y-auto space-y-3 text-xs custom-scrollbar bg-[#2b2d31]"></div>
+        
+        <div class="p-3 border-t border-[#1f2023] bg-[#313338]">
+            <div class="flex items-center bg-[#383a40] rounded-lg px-3 py-2">
+                <input type="text" id="music-chat-input" placeholder="พิมพ์ข้อความในห้องเพลง..." onkeypress="handleMusicChatKey(event)" class="w-full bg-transparent text-xs text-white placeholder-gray-400 focus:outline-none">
+                <button onclick="sendMusicChatMessage()" class="text-indigo-400 hover:text-indigo-300 ml-2"><i class="ph-fill ph-paper-plane-right text-base"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
 
             <!-- 📋 VIEW: BOARD -->
             <div id="view-board" class="absolute inset-0 hidden overflow-hidden flex flex-col bg-[#313338]">
