@@ -2810,7 +2810,7 @@ onValue(ref(musicDb, 'music_room/state'), (snapshot) => {
     if (!currentPlaying && queue.length > 0 && isInMusicRoom) {
         currentPlaying = queue.shift();
         set(ref(musicDb, 'music_room/state'), { queue, currentPlaying });
-        // ❌ เอาคำว่า return ออกตรงนี้ เพื่อให้โค้ดวิ่งลงมาอัปเดตหน้าจอ UI ด้านล่างต่อทันที
+        
     }
 
     updateMusicQueueUI(queue);
@@ -2830,7 +2830,20 @@ window.addMusicSongToQueue = async () => {
     if (!val) return;
 
     const videoId = extractMusicYouTubeId(val);
-    const title = videoId ? `YouTube Video (${videoId})` : val;
+    let title = val;
+
+    if (videoId) {
+        // ดึงชื่อเพลง/ชื่อวิดีโอจริงจาก YouTube oEmbed API
+        try {
+            const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+            const data = await res.json();
+            if (data && data.title) {
+                title = data.title;
+            }
+        } catch (e) {
+            title = `YouTube Video (${videoId})`;
+        }
+    }
 
     const songItem = {
         id: Math.random().toString(36).substr(2, 9),
