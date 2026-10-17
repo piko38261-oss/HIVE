@@ -2801,11 +2801,23 @@ function initMusicRoomRealtime() {
 // ซิงค์สถานะเพลงและคิวผ่าน Firebase Realtime Database
 onValue(ref(musicDb, 'music_room/state'), (snapshot) => {
     const data = snapshot.val() || { queue: [], currentPlaying: null };
-    updateMusicQueueUI(data.queue || []);
-    // เช็คว่าตอนนี้ผู้ใช้อยู่ในหน้าห้องเพลงหรือไม่ ถ้าไม่อยู่ให้ระงับการเล่นเสียงเพลง
+    let queue = data.queue || [];
+    let currentPlaying = data.currentPlaying;
+
+    // ถ้ามีเพลงในคิว แต่ช่อง currentPlaying เป็น null (เพลงหมดหรือยังไม่เริ่มเล่น) 
+    // และเราอยู่ในหน้าห้องเพลง ให้ดึงเพลงแรกจากคิวมาเล่นให้อัตโนมัติทันที
     const musicRoomView = document.getElementById('view-music-room');
     const isInMusicRoom = musicRoomView && !musicRoomView.classList.contains('hidden');
-    updateMusicPlayerUI(isInMusicRoom ? data.currentPlaying : null);
+
+    if (!currentPlaying && queue.length > 0 && isInMusicRoom) {
+        currentPlaying = queue.shift();
+        // อัปเดตกลับไปที่ Firebase ทันที เพื่อให้ทุกคนเห็นเพลงนี้พร้อมกัน
+        set(ref(musicDb, 'music_room/state'), { queue, currentPlaying });
+        return;
+    }
+
+    updateMusicQueueUI(queue);
+    updateMusicPlayerUI(isInMusicRoom ? currentPlaying : null);
 });
 
 function extractMusicYouTubeId(urlOrQuery) {
