@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
 // ==========================================
 // 🚨 1. ตั้งค่า Firebase & API ต่างๆ
@@ -17,6 +18,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a";
 const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
 const GEMINI_API_KEY = "AIzaSyCifkioB2z1Ho9LAGSFBYWtV-kM4bgtzhw"; 
@@ -1286,24 +1288,72 @@ if(btnAttach) btnAttach.onclick = () => { if(fileInput) fileInput.click(); };
 if(fileInput) {
     fileInput.onchange = async (e) => { 
         const f = e.target.files[0]; if (!f) return; 
-        if(chatInput) { chatInput.placeholder = "กำลังอัปโหลดไฟล์..."; chatInput.disabled = true; }
+        
+        // เช็กขนาดไฟล์ (จำกัดไม่ให้เกิน 25MB เพื่อไม่ให้ Firebase โหลดหนักเกินไป)
+        if (f.size > 25 * 1024 * 1024) {
+            showToast("ขนาดไฟล์ใหญ่เกิน 25MB กรุณาย่อขนาดก่อนครับ", "error");
+            fileInput.value = "";
+            return;
+        }
+
+        if(chatInput) { 
+            chatInput.placeholder = `กำลังอัปโหลดไฟล์ ${f.name}... ⏳`; 
+            chatInput.disabled = true; 
+        }
+
         try { 
-            const fd = new FormData(); fd.append("image", f); 
-            const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); 
-            const r = await res.json(); 
-            if (r.success) { 
-                await addDoc(collection(db, "messages"), { text: "", imageUrl: r.data.url, senderName: currentUsername, channel: activeChannel, timestamp: serverTimestamp(), reactions: {}, replyTo: replyingTo }); 
-                replyingTo = null; 
-                const rBanner = document.getElementById('reply-banner');
-                if(rBanner) rBanner.classList.add('hidden'); 
-            } 
-        } catch (err) { showToast("อัปโหลดพลาด", "error"); } 
-        finally { 
-            if(chatInput) { chatInput.placeholder = "ส่งข้อความถึง #ห้องแชท"; chatInput.disabled = false; chatInput.value = ""; chatInput.focus(); }
+            // ตรวจสอบว่าเป็นรูปภาพหรือไม่ ถ้าใช่ใช้ ImgBB แบบเดิม (เร็วกว่า)
+            if (f.type.startsWith('image/')) {
+                const fd = new FormData(); fd.append("image", f); 
+                const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); 
+                const r = await res.json(); 
+                if (r.success) { 
+                    await addDoc(collection(db, "messages"), { 
+                        text: "", 
+                        imageUrl: r.data.url, 
+                        senderName: currentUsername, 
+                        channel: activeChannel, 
+                        timestamp: serverTimestamp(), 
+                        reactions: {}, 
+                        replyTo: replyingTo 
+                    }); 
+                }
+            } else {
+                // ถ้าเป็นไฟล์ประเภทอื่นๆ (PDF, Word, ZIP, ฯลฯ) อัปโหลดเข้า Firebase Storage
+                const fileRef = storageRef(storage, `chat_files/${Date.now()}_${f.name}`);
+                await uploadBytes(fileRef, f);
+                const downloadURL = await getDownloadURL(fileRef);
+
+                // ส่งข้อความเข้า Firestore พร้อมลิงก์ดาวน์โหลดและชื่อไฟล์
+                await addDoc(collection(db, "messages"), { 
+                    text: `📎 **แนบไฟล์เอกสาร:** [${f.name}](${downloadURL})`, 
+                    senderName: currentUsername, 
+                    channel: activeChannel, 
+                    timestamp: serverTimestamp(), 
+                    reactions: {}, 
+                    replyTo: replyingTo 
+                });
+            }
+
+            replyingTo = null; 
+            const rBanner = document.getElementById('reply-banner');
+            if(rBanner) rBanner.classList.add('hidden'); 
+            showToast("อัปโหลดไฟล์สำเร็จ!", "success");
+
+        } catch (err) { 
+            console.error(err);
+            showToast("อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", "error"); 
+        } finally { 
+            if(chatInput) { 
+                chatInput.placeholder = "ส่งข้อความ หรือพิมพ์ / เพื่อใช้คำสั่งบอท"; 
+                chatInput.disabled = false; 
+                chatInput.value = ""; 
+                chatInput.focus(); 
+            }
+            fileInput.value = ""; // รีเซ็ตค่าเพื่อให้เลือกไฟล์เดิมซ้ำได้
         } 
     };
 }
-
 // ==========================================
 // 🎨 9. ระบบวาดรูป และ เกมทายภาพ
 // ==========================================
