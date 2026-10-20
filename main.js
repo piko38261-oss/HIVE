@@ -146,6 +146,10 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUserId = user.uid; 
         currentUsername = user.displayName || user.email.split('@')[0];
+        // 🌟 นำมาวางไว้ตรงนี้ได้เลยครับ เพื่อขอสิทธิ์แจ้งเตือนตอนเข้าแอป
+        if ("Notification" in window && Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
         
         const myNameUI = document.getElementById('current-user-name');
         if(myNameUI) myNameUI.textContent = currentUsername;
@@ -1052,15 +1056,38 @@ window.toggleReaction = async (msgId, emoji) => { if (!currentUserId) return; co
 function renderMessages() {
     let chatContainer = (activeChannel === 'game_draw') ? document.getElementById('game-chat-container') : document.getElementById('chat-container');
     if (!chatContainer) return;
-    chatContainer.innerHTML = ''; const filteredMessages = allMessages.filter(msg => msg.channel === activeChannel); let lastSender = null; 
+    
+    // เก็บค่าระยะ Scroll ก่อนอัปเดต เพื่อดูว่าผู้ใช้อยู่ล่างสุดหรือไม่
+    const isAtBottom = chatContainer.scrollHeight - chatContainer.scrollTop <= chatContainer.clientHeight + 100;
+    
+    chatContainer.innerHTML = ''; 
+    const filteredMessages = allMessages.filter(msg => msg.channel === activeChannel); 
+    
+    let lastSender = null; 
+    let lastDate = null; // 🌟 เพิ่มตัวแปรเก็บวันที่
     
     filteredMessages.forEach((m) => {
-        let timeString = m.timestamp ? m.timestamp.toDate().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : "...";
-        let formattedText = m.text ? m.text.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-[#e4e5e7]">$1</span>') : '';
+        let msgDateObj = m.timestamp ? m.timestamp.toDate() : new Date();
+        let dateString = msgDateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+        let timeString = msgDateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
-let isMentioned = false;
-        const sortedUsernames = Object.keys(usersData).sort((a, b) => b.length - a.length);
+        // 🌟 1. ระบบตัวคั่นวันที่ (Date Divider) แบบ Discord แต่หรูหรากว่า
+        if (dateString !== lastDate) {
+            chatContainer.insertAdjacentHTML('beforeend', `
+                <div class="flex items-center my-6 relative group">
+                    <div class="flex-grow h-px bg-gradient-to-r from-transparent via-[#35373c] to-transparent group-hover:via-[#5865F2]/50 transition-colors"></div>
+                    <span class="px-4 text-[11px] font-bold text-[#949ba4] bg-[#313338] z-10 tracking-widest">${dateString}</span>
+                    <div class="flex-grow h-px bg-gradient-to-r from-transparent via-[#35373c] to-transparent group-hover:via-[#5865F2]/50 transition-colors"></div>
+                </div>
+            `);
+            lastDate = dateString;
+            lastSender = null; // รีเซ็ตผู้ส่งเพื่อให้โชว์รูปโปรไฟล์ใหม่เมื่อขึ้นวันใหม่
+        }
+
+        let formattedText = m.text ? m.text.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold text-[#e4e5e7]">$1</span>') : '';
+        let isMentioned = false;
         
+        const sortedUsernames = Object.keys(usersData).sort((a, b) => b.length - a.length);
         sortedUsernames.forEach((username) => {
             const escapedName = username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const mentionRegex = new RegExp(`@${escapedName}(?![a-zA-Z0-9_ก-๙])`, 'g');
@@ -1068,21 +1095,28 @@ let isMentioned = false;
             if (mentionRegex.test(formattedText)) {
                 if (username === currentUsername) {
                     isMentioned = true;
-                    formattedText = formattedText.replace(mentionRegex, `<span class="bg-[#5865F2]/40 text-[#dbdee1] font-bold px-1.5 py-0.5 rounded-md border border-[#5865F2]/50">@${username}</span>`);
+                    // 🌟 ไฮไลต์ชื่อตอนโดนแท็กแบบมีแสง Glow
+                    formattedText = formattedText.replace(mentionRegex, `<span class="bg-[#5865F2]/20 text-[#dbdee1] font-bold px-1.5 py-0.5 rounded border border-[#5865F2]/40 shadow-[0_0_8px_rgba(88,101,242,0.2)]">@${username}</span>`);
                 } else {
-                    formattedText = formattedText.replace(mentionRegex, `<span class="text-[#5865F2] font-bold hover:underline cursor-pointer" onclick="showUserProfile('${username}')">@${username}</span>`);
+                    formattedText = formattedText.replace(mentionRegex, `<span class="text-[#5865F2] font-bold hover:underline cursor-pointer transition-colors hover:text-[#4752C4]" onclick="showUserProfile('${username}')">@${username}</span>`);
                 }
             }
         });
-        const rowHighlight = isMentioned ? "bg-[#5865F2]/10 border-l-[3px] border-[#5865F2] hover:bg-[#5865F2]/20" : "hover:bg-[#2b2d31]/50 border-l-[3px] border-transparent";
 
+        // 🌟 2. แถบไฮไลต์ข้อความ (สีเหลืองทองแบบ Discord ผสมนีออน)
+        const isMyReply = m.replyTo && m.replyTo.senderName === currentUsername;
+        let rowHighlight = (isMentioned || isMyReply) 
+            ? "bg-[#f59e0b]/10 border-l-[3px] border-[#f59e0b] shadow-[inset_4px_0_15px_rgba(245,158,11,0.05)]" 
+            : "hover:bg-[#2b2d31]/40 border-l-[3px] border-transparent";
+
+        // ระบบข้อความบอท
         if (m.senderName === "🤖 System Bot") {
             if (formattedText.includes("ยินดีต้อนรับสมาชิกใหม่")) {
                 let cleanName = formattedText.split('**')[1] || "ใครบางคน";
-                chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 hover:bg-[#2b2d31]/50 border-l-[3px] border-transparent px-2 md:px-4 py-2.5 mt-2 -mx-2 md:-mx-4 group transition duration-150 items-start"><div class="w-8 md:w-10 flex justify-center mt-1"><i class="ph-bold ph-arrow-right text-[#23a559] text-[18px]"></i></div><div class="min-w-0 flex-1"><p class="text-[#949ba4] text-[14px] leading-relaxed"><span class="text-[#dbdee1] font-bold">${cleanName}</span> เพิ่งสไลด์เข้ามาในเซิร์ฟเวอร์! <span class="text-[10px] text-[#5c6069] ml-2 font-medium">${timeString}</span></p><button onclick="sendWave()" class="mt-2.5 flex items-center space-x-2 bg-[#2b2d31] hover:bg-[#35373c] text-[#dbdee1] px-3 py-1.5 rounded-md text-[13px] font-bold transition shadow-sm"><span class="text-[16px]">👋</span> <span>โบกมือทักทาย!</span></button></div></div>`);
+                chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 hover:bg-[#2b2d31]/50 border-l-[3px] border-transparent px-4 py-2.5 mt-2 -mx-4 group transition items-start"><div class="w-10 flex justify-center mt-1"><i class="ph-bold ph-arrow-right text-[#23a559] text-[18px]"></i></div><div class="min-w-0 flex-1"><p class="text-[#949ba4] text-[14px]"><span class="text-[#dbdee1] font-bold">${cleanName}</span> เพิ่งสไลด์เข้ามาในเซิร์ฟเวอร์! <span class="text-[10px] text-[#5c6069] ml-2">${timeString}</span></p><button onclick="sendWave()" class="mt-2.5 flex items-center space-x-2 bg-[#2b2d31] hover:bg-[#35373c] text-[#dbdee1] px-3 py-1.5 rounded-md text-[13px] font-bold transition border border-white/5"><span class="text-[16px]">👋</span> <span>โบกมือทักทาย!</span></button></div></div>`);
                 lastSender = "system_bot_join"; return;
             } else if (formattedText.includes("กระโดดเข้ามา") || formattedText.includes("ออกจากห้องนั่งเล่น")) { return; }
-            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 hover:bg-[#2b2d31]/50 px-2 md:px-4 py-3 mt-4 -mx-2 md:-mx-4 group transition duration-150 relative items-center border-l-[3px] border-transparent hover:border-[#5865F2]"><div class="w-8 md:w-10 h-8 md:h-10 rounded-full bg-[#5865F2] flex items-center justify-center flex-shrink-0 shadow-lg"><i class="ph-fill ph-robot text-white text-[20px]"></i></div><div class="min-w-0 flex-1 pb-1"><div class="flex items-baseline space-x-2"><span class="font-extrabold text-[12px] text-[#5865F2] uppercase tracking-wider">System</span><span class="text-[10px] md:text-[11px] text-[#6d717a] font-medium">${timeString}</span></div><p class="text-[#949ba4] mt-1 text-[13px] md:text-[14px] leading-relaxed">${formattedText}</p></div></div>`);
+            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-4 hover:bg-[#2b2d31]/50 px-4 py-3 mt-4 -mx-4 group transition relative items-center border-l-[3px] border-transparent hover:border-[#5865F2]"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-[#5865F2] to-[#4752C4] flex items-center justify-center flex-shrink-0 shadow-lg border border-white/10"><i class="ph-fill ph-robot text-white text-[20px]"></i></div><div class="min-w-0 flex-1 pb-1"><div class="flex items-baseline space-x-2"><span class="font-extrabold text-[12px] text-[#5865F2] uppercase tracking-wider bg-[#5865F2]/10 px-2 py-0.5 rounded">System</span><span class="text-[11px] text-[#6d717a] font-medium">${timeString}</span></div><p class="text-[#949ba4] mt-1 text-[14px] leading-relaxed">${formattedText}</p></div></div>`);
             lastSender = "system_bot"; return; 
         }
 
@@ -1090,45 +1124,70 @@ let isMentioned = false;
         let msgFrameUrl = usersData[m.senderName] ? usersData[m.senderName].profileFrame : '';
         let frameHTML = msgFrameUrl ? `<img src="${msgFrameUrl}" class="absolute w-[135%] h-[135%] max-w-none pointer-events-none z-10 drop-shadow-sm">` : '';
 
-        let contentHTML = formattedText ? `<p class="text-[#dbdee1] mt-0.5 leading-relaxed text-[14px] md:text-[15px]">${formattedText}</p>` : '';
-        if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" onload="const c = this.closest('.overflow-y-auto'); if(c) c.scrollTop = c.scrollHeight;" onclick="openLightbox('${m.imageUrl}')" class="mt-2 rounded-lg max-w-[80%] md:max-w-sm shadow-sm cursor-zoom-in border border-[#2b2d31]">`;
-        
+        let contentHTML = formattedText ? `<p class="text-[#dbdee1] mt-0.5 leading-relaxed text-[15px]">${formattedText}</p>` : '';
+
+// 🌟 เพิ่มตรงนี้: ถ้าข้อความนี้ถูกแก้ไข ให้แสดงป้าย (แก้ไขแล้ว) ต่อท้าย
+if (m.isEdited) {
+    contentHTML += ` <span class="text-[10px] text-[#949ba4] italic">(แก้ไขแล้ว)</span>`;
+}
+
+if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" onload="const c = this.closest('.overflow-y-auto'); if(c) c.scrollTop = c.scrollHeight;" onclick="openLightbox('${m.imageUrl}')" class="mt-2 rounded-xl max-w-[80%] md:max-w-sm shadow-md cursor-zoom-in border border-white/10 hover:border-white/20 transition-colors">`;
         let reactsHTML = '';
         if (m.reactions && Object.keys(m.reactions).length > 0) {
             reactsHTML = `<div class="flex flex-wrap gap-1.5 mt-2">`;
             Object.entries(m.reactions).forEach(([emoji, usersArr]) => {
                 const count = usersArr.length, hasReacted = usersArr.includes(currentUserId);
                 const activeStyle = hasReacted ? 'bg-[#5865F2]/20 border-[#5865F2]/50 text-[#dbdee1]' : 'bg-[#2b2d31] border-[#1e1f22] text-[#80848e] hover:bg-[#35373c]';
-                if (count > 0) reactsHTML += `<div class="border rounded-md px-1.5 py-0.5 text-[12px] flex items-center cursor-pointer transition ${activeStyle}" onclick="toggleReaction('${m.id}', '${emoji}')">${emoji} <span class="ml-1 font-bold ${hasReacted ? 'text-[#5865F2]' : ''}">${count}</span></div>`;
+                if (count > 0) reactsHTML += `<div class="border rounded-md px-1.5 py-0.5 text-[12px] flex items-center cursor-pointer transition shadow-sm ${activeStyle}" onclick="toggleReaction('${m.id}', '${emoji}')">${emoji} <span class="ml-1 font-bold ${hasReacted ? 'text-[#5865F2]' : ''}">${count}</span></div>`;
             });
             reactsHTML += `</div>`;
         }
 
+        // 🌟 3. อัปเกรดเส้นการตอบกลับ (Reply Thread) ให้ดูโค้งสวยงามและอ่านง่าย
         let replyBlockHTML = ''; let isReply = !!m.replyTo;
         if (isReply) {
             const replyAvatar = usersData[m.replyTo.senderName] ? usersData[m.replyTo.senderName].avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(m.replyTo.senderName)}`;
-            replyBlockHTML = `<div class="flex items-center space-x-1.5 mb-1 opacity-70 hover:opacity-100 cursor-pointer transition select-none"><div class="w-4 h-4 border-l-2 border-t-2 border-[#4e5058] rounded-tl-md ml-3 mt-1"></div><img src="${replyAvatar}" class="w-4 h-4 rounded-full object-cover opacity-80"><span class="text-[11px] font-bold text-[#e4e5e7]">@${m.replyTo.senderName}</span><span class="text-[11px] text-[#b5bac1] truncate max-w-[150px] md:max-w-xs">${m.replyTo.text}</span></div>`;
+            replyBlockHTML = `
+                <div class="flex items-center mb-1 opacity-70 hover:opacity-100 cursor-pointer transition select-none group/reply relative -ml-1">
+                    <div class="w-8 h-4 border-l-2 border-t-2 border-[#4e5058] rounded-tl-xl ml-5 mt-3 group-hover/reply:border-[#949ba4] transition-colors"></div>
+                    <img src="${replyAvatar}" class="w-4 h-4 rounded-full object-cover ml-2 mr-1.5 shadow-sm">
+                    <span class="text-[12px] font-bold text-[#e4e5e7] hover:underline mr-1">@${m.replyTo.senderName}</span>
+                    <span class="text-[12px] text-[#b5bac1] truncate max-w-[200px] md:max-w-md">${m.replyTo.text}</span>
+                </div>`;
         }
 
         const safeTextForReply = m.text ? m.text.replace(/'/g, "\\'").replace(/"/g, "&quot;") : 'ส่งรูปภาพ 🖼️';
         const replyBtn = `<div class="w-px h-4 bg-[#35373c] mx-1"></div><button onclick="setReply('${m.id}', '${m.senderName}', '${safeTextForReply}')" class="reaction-btn hover:bg-[#35373c] text-[#80848e] hover:text-[#dbdee1] rounded p-1 text-[16px]" title="ตอบกลับ"><i class="ph ph-arrow-bend-up-left"></i></button>`;
+        
+        // 🌟 1. ประกาศตัวแปร editBtn ตรงนี้ (ต่อจาก replyBtn)
+        const editBtn = (m.senderName === currentUsername) ? `<div class="w-px h-4 bg-[#35373c] mx-1"></div><button onclick="startEditMsg('${m.id}', '${safeTextForReply}')" class="reaction-btn hover:bg-[#35373c] text-[#80848e] hover:text-[#dbdee1] rounded p-1 text-[16px]" title="แก้ไขข้อความ"><i class="ph ph-pencil-simple"></i></button>` : '';
+        
         const adminDeleteBtn = (currentUserRole === 'Admin') ? `<div class="w-px h-4 bg-[#35373c] mx-1"></div><button onclick="deleteChatMsg('${m.id}')" class="reaction-btn hover:bg-[#da373c]/20 text-[#da373c] rounded p-1 text-[16px]" title="ลบข้อความ"><i class="ph-fill ph-trash"></i></button>` : '';
-        const actionMenuUI = `<div class="reaction-bar absolute -top-5 right-6 bg-[#2b2d31] border border-[#1e1f22] rounded-lg p-1 shadow-xl flex items-center space-x-0.5 z-20 opacity-0 group-hover:opacity-100 transition-opacity"><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[15px]" onclick="toggleReaction('${m.id}', '👍')">👍</button><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[15px]" onclick="toggleReaction('${m.id}', '❤️')">❤️</button><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[15px]" onclick="toggleReaction('${m.id}', '😂')">😂</button><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[15px]" onclick="toggleReaction('${m.id}', '🔥')">🔥</button><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[15px]" onclick="toggleReaction('${m.id}', '✅')">✅</button>${replyBtn}${adminDeleteBtn}</div>`;
-
+        
+        // 🌟 2. นำ ${editBtn} มาใส่ต่อท้ายในตัวแปร actionMenuUI ตรงนี้ครับ
+        const actionMenuUI = `<div class="reaction-bar absolute -top-4 right-4 bg-[#2b2d31] border border-white/5 rounded-lg p-0.5 shadow-lg flex items-center space-x-0.5 z-20 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0 backdrop-blur-md"><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[15px] hover:scale-110 transition-transform" onclick="toggleReaction('${m.id}', '👍')">👍</button><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[15px] hover:scale-110 transition-transform" onclick="toggleReaction('${m.id}', '❤️')">❤️</button><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[15px] hover:scale-110 transition-transform" onclick="toggleReaction('${m.id}', '😂')">😂</button><button class="reaction-btn hover:bg-[#35373c] rounded p-1 text-[15px] hover:scale-110 transition-transform" onclick="toggleReaction('${m.id}', '🔥')">🔥</button>${replyBtn}${editBtn}${adminDeleteBtn}</div>`;
         if (lastSender === m.senderName && !isReply) {
-            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-3 md:space-x-4 ${rowHighlight} px-2 md:px-4 py-0.5 -mx-2 md:-mx-4 group transition duration-150 relative"><div class="w-8 md:w-10 flex-shrink-0 text-right"><span class="text-[9px] md:text-[10px] text-[#5c6069] opacity-0 group-hover:opacity-100 transition leading-relaxed font-medium">${timeString}</span></div><div class="min-w-0 flex-1 pb-0.5 pr-10">${contentHTML}${reactsHTML}</div>${actionMenuUI}</div>`);
+            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex space-x-4 ${rowHighlight} px-4 py-0.5 -mx-4 group transition relative"><div class="w-10 flex-shrink-0 text-right"><span class="text-[10px] text-[#5c6069] opacity-0 group-hover:opacity-100 transition font-medium">${timeString}</span></div><div class="min-w-0 flex-1 pb-0.5 pr-10">${contentHTML}${reactsHTML}</div>${actionMenuUI}</div>`);
         } else {
-            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex flex-col ${rowHighlight} px-2 md:px-4 py-2 mt-4 -mx-2 md:-mx-4 group transition duration-150 relative">${replyBlockHTML}<div class="flex space-x-3 md:space-x-4">
-                <div class="relative flex-shrink-0 flex items-center justify-center w-8 h-8 md:w-10 md:h-10 cursor-pointer" onclick="showUserProfile('${m.senderName}')">
-                    <img src="${msgAvatarUrl}" class="w-full h-full rounded-full object-cover opacity-95 hover:opacity-80 transition absolute z-0">
+            chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex flex-col ${rowHighlight} px-4 py-2 mt-4 -mx-4 group transition relative">${replyBlockHTML}<div class="flex space-x-4">
+                <div class="relative flex-shrink-0 flex items-center justify-center w-10 h-10 cursor-pointer" onclick="showUserProfile('${m.senderName}')">
+                    <img src="${msgAvatarUrl}" class="w-full h-full rounded-full object-cover opacity-95 hover:opacity-80 transition absolute z-0 shadow-sm">
                     ${frameHTML}
                 </div>
-                <div class="min-w-0 flex-1 pb-0.5 pr-10"><div class="flex items-baseline space-x-2"><span onclick="showUserProfile('${m.senderName}')" class="font-medium text-[14px] md:text-[15px] text-[#e4e5e7] tracking-wide hover:underline cursor-pointer">${m.senderName}</span><span class="text-[10px] md:text-[11px] text-[#80848e] font-medium">${timeString}</span></div>${contentHTML}${reactsHTML}</div></div>${actionMenuUI}</div>`);
+                <div class="min-w-0 flex-1 pb-0.5 pr-10"><div class="flex items-baseline space-x-2"><span onclick="showUserProfile('${m.senderName}')" class="font-bold text-[15px] text-[#e4e5e7] hover:underline cursor-pointer">${m.senderName}</span><span class="text-[11px] text-[#80848e] font-medium">${timeString}</span></div>${contentHTML}${reactsHTML}</div></div>${actionMenuUI}</div>`);
         }
+        if (m.isEdited) {
+    contentHTML += ` <span class="text-[10px] text-[#949ba4] italic">(แก้ไขแล้ว)</span>`;
+}
         lastSender = m.senderName;
     });
+    
     chatContainer.insertAdjacentHTML('beforeend', '<div class="h-4 w-full flex-shrink-0"></div>'); 
-    setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 150);
+    
+    // ดันหน้าจอลงไปล่างสุดเฉพาะตอนที่ผู้ใช้อยู่ล่างสุดอยู่แล้ว
+    if (isAtBottom) {
+        setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 50);
+    }
 }
 
 if(chatInput) {
@@ -3314,6 +3373,22 @@ window.leaveMusicRoom = () => {
         if(views['music-room']) views['music-room'].classList.add('hidden');
         if(views['chat']) views['chat'].classList.remove('hidden');
     }
+};
+// ==========================================
+// ✏️ ระบบแก้ไขข้อความแชท (Edit Message)
+// ==========================================
+window.startEditMsg = (msgId, currentText) => {
+    const newText = prompt("แก้ไขข้อความของคุณ:", currentText);
+    if (newText === null || newText.trim() === "") return;
+    
+    updateDoc(doc(db, "messages", msgId), {
+        text: newText.trim(),
+        isEdited: true // 🌟 ป้ายกำกับว่าแก้ไขแล้ว
+    }).then(() => {
+        showToast("แก้ไขข้อความสำเร็จ", "success");
+    }).catch(() => {
+        showToast("เกิดข้อผิดพลาดในการแก้ไข", "error");
+    });
 };
 
 // === END OF FILE ===
