@@ -133,8 +133,9 @@
 
         // ถ้ามีคนล็อกอินค้างไว้ ให้เด้งเข้าแอปเลยไม่ต้องล็อกอินซ้ำ
         onAuthStateChanged(auth, (user) => {
-            // ปิดการเด้งอัตโนมัติ เพื่อให้ระบบสร้างฐานข้อมูลเสร็จก่อน
-            // if (user) { window.location.href = "app.html"; }
+            if (user) { 
+                window.location.href = "app.html"; 
+            }
         });
 
         // ระบบสลับแท็บ Login / Register
