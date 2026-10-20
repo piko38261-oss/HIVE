@@ -192,6 +192,27 @@ if(btnLogout) {
         signOut(auth); 
     });
 }
+// ==========================================
+// 🌟 เพิ่มระบบตรวจจับการปิดแท็บ/ปิดเบราว์เซอร์อัตโนมัติ
+// ==========================================
+const handleAppClosing = () => {
+    if (currentUserId) {
+        // เมื่อปิดแท็บ ให้เปลี่ยนสถานะเป็นออฟไลน์และตัดการเชื่อมต่อทุกอย่างทันที
+        updateDoc(doc(db, "users", currentUserId), { 
+            status: 'offline', 
+            inVoice: false, 
+            agoraUid: null, 
+            isSharingScreen: false, 
+            isVideoOn: false, 
+            isTyping: false 
+        }).catch(() => {});
+    }
+};
+
+// ตรวจจับเหตุการณ์ตอนกำลังจะปิดแท็บ (บนคอมพิวเตอร์)
+window.addEventListener('beforeunload', handleAppClosing);
+// ตรวจจับเหตุการณ์ตอนสลับแอปหรือพับหน้าจอ (บนมือถือ/แท็บเล็ต)
+window.addEventListener('pagehide', handleAppClosing);
 
 // ==========================================
 // 📡 5. ระบบดึงข้อมูลจากฐานข้อมูล 
