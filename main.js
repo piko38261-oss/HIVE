@@ -270,8 +270,9 @@ function startDatabaseListeners() {
                 isVideoOn: u.isVideoOn, 
                 profileFrame: frameUrl,
                 cardTheme: u.cardTheme || '',
-                cardDeco: u.cardDeco || ''
-            }; 
+                cardDeco: u.cardDeco || '',
+                customRoles: u.customRoles || [] // 🌟 เพิ่มบรรทัดนี้: รองรับยศพิเศษหลายๆ ยศ
+            };
             if (u.isTyping && u.typingChannel === activeChannel && id !== currentUserId) peopleTyping.push(userName);
             
             const isOnline = u.status === 'online', statusColor = isOnline ? 'bg-[#23a559]' : 'bg-[#5c6069]';
@@ -520,12 +521,45 @@ window.showUserProfile = (userName) => {
     const pStatus = document.getElementById('profile-card-status'); if(pStatus) pStatus.textContent = u.customStatus || 'ไม่ได้ตั้งสถานะ'; 
     
     let badges = ''; 
-    if(u.role === 'Admin') badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#da373c] mr-2 shadow-[0_0_8px_#da373c]"></div> Admin</span>'; 
-    else badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2"><div class="w-2.5 h-2.5 rounded-full bg-[#5865F2] mr-2 shadow-[0_0_8px_#5865F2]"></div> Member</span>'; 
-    if (u.avatar.toLowerCase().includes('.gif') || u.banner.toLowerCase().includes('.gif') || u.profileFrame || u.cardTheme || u.cardDeco) { 
-        badges += '<span class="inline-flex items-center bg-gradient-to-r from-pink-500 to-purple-500 border border-white/20 px-3 py-1.5 rounded-lg text-[12px] text-white font-bold shadow-[0_0_15px_rgba(236,72,153,0.5)] animate-pulse"><i class="ph-fill ph-sparkle mr-1.5"></i> VIP</span>'; 
+    // ยศหลัก (Admin / Member)
+    if(u.role === 'Admin') badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2 mb-2"><div class="w-2.5 h-2.5 rounded-full bg-[#da373c] mr-2 shadow-[0_0_8px_#da373c]"></div> Admin</span>'; 
+    else badges += '<span class="inline-flex items-center bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-[12px] text-white shadow-inner mr-2 mb-2"><div class="w-2.5 h-2.5 rounded-full bg-[#5865F2] mr-2 shadow-[0_0_8px_#5865F2]"></div> Member</span>'; 
+    
+    // 🌟 ระบบยศพิเศษ (Custom Roles) - รองรับการตกแต่งเอง
+    if (u.customRoles && u.customRoles.length > 0) {
+        u.customRoles.forEach(roleData => {
+            // รองรับข้อมูลแบบเก่า (String) และแบบใหม่ (Object ที่มีสี/ไอคอน)
+            let rName = typeof roleData === 'string' ? roleData : roleData.name;
+            let rColor = typeof roleData === 'string' ? '#5865F2' : (roleData.color || '#5865F2');
+            let rIcon = typeof roleData === 'string' ? 'ph-star' : (roleData.icon || 'ph-star');
+
+            // สร้างพื้นหลังโปร่งใส 15% จากสี HEX ที่เลือก
+            let hex = rColor.replace('#', '');
+            if (hex.length === 3) hex = hex.split('').map(x => x+x).join('');
+            let r = parseInt(hex.substring(0,2), 16) || 88;
+            let g = parseInt(hex.substring(2,4), 16) || 101;
+            let b = parseInt(hex.substring(4,6), 16) || 242;
+            let bgRgba = `rgba(${r}, ${g}, ${b}, 0.15)`;
+
+            let iconHtml = `<i class="ph-fill ${rIcon} mr-1.5 drop-shadow-md" style="color: ${rColor}"></i>`;
+            const actionClass = currentUserRole === 'Admin' ? 'hover:bg-red-500/20 hover:border-red-500/50 hover:text-white cursor-pointer transition-all' : '';
+            const onClickAttr = currentUserRole === 'Admin' ? `onclick="removeCustomRole('${userName}', '${rName}')" title="แอดมิน: คลิกลบยศ"` : '';
+
+            badges += `<span ${onClickAttr} class="inline-flex items-center px-3 py-1.5 rounded-lg text-[12px] font-bold shadow-sm mr-2 mb-2 border ${actionClass}" style="background-color: ${bgRgba}; border-color: ${rColor}40; color: ${rColor};">${iconHtml}${rName}</span>`;
+        });
     }
-    const pBadges = document.getElementById('profile-card-badges'); if(pBadges) pBadges.innerHTML = badges; 
+
+    // ยศ VIP
+    if (u.avatar.toLowerCase().includes('.gif') || u.banner.toLowerCase().includes('.gif') || u.profileFrame || u.cardTheme || u.cardDeco) { 
+        badges += '<span class="inline-flex items-center bg-gradient-to-r from-pink-500 to-purple-500 border border-white/20 px-3 py-1.5 rounded-lg text-[12px] text-white font-bold shadow-[0_0_15px_rgba(236,72,153,0.5)] animate-pulse mr-2 mb-2"><i class="ph-fill ph-sparkle mr-1.5"></i> VIP</span>'; 
+    }
+
+    // 🌟 ปุ่มเพิ่มยศ (แสดงเฉพาะแอดมิน)
+    if (currentUserRole === 'Admin') {
+        badges += `<button onclick="assignNewRole('${userName}')" class="inline-flex items-center bg-white/5 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded-lg text-[12px] text-[#dbdee1] transition mr-2 mb-2 border-dashed cursor-pointer" title="มอบยศให้ผู้ใช้นี้"><i class="ph-bold ph-plus mr-1"></i> เพิ่มยศ</button>`;
+    }
+
+    const pBadges = document.getElementById('profile-card-badges'); if(pBadges) pBadges.innerHTML = badges;
     
     const activitySection = document.getElementById('profile-card-activity');
     if (activitySection) {
@@ -608,23 +642,110 @@ const frameOptions = [
     { id: 'fire', name: 'ไฟลุก', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='none' stroke='%23ef4444' stroke-width='4'/><circle cx='50' cy='50' r='48' fill='none' stroke='%23f97316' stroke-width='2' stroke-dasharray='5 5'/></svg>" },
     { id: 'cyber', name: 'ไซเบอร์', url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='5' y='5' width='90' height='90' rx='45' fill='none' stroke='%2306b6d4' stroke-width='4'/><path d='M 10 50 L 90 50' stroke='%2306b6d4' stroke-width='1' opacity='0.5'/></svg>" }
 ];
+// ==========================================
+// 🌟 ฟังก์ชันจัดการยศโดย Admin (แบบตกแต่งเอง)
+// ==========================================
+window.assignNewRole = (targetUserName) => {
+    // 1. สร้างหน้าต่าง Modal เลือกยศและสีเด้งขึ้นมา
+    const modalId = 'admin-role-modal';
+    let existingModal = document.getElementById(modalId);
+    if(existingModal) existingModal.remove();
 
-window.renderFrameOptions = (currentUrl) => {
-    const container = document.getElementById('frame-selector');
-    if(!container) return;
-    container.innerHTML = '';
-    frameOptions.forEach(f => {
-        const isSelected = (currentUrl || '') === f.url;
-        const ringClass = isSelected ? 'ring-2 ring-[#5865F2] bg-[#35373c]' : 'hover:ring-1 ring-gray-500 bg-[#1e1f22]';
-        let imgHTML = f.url ? `<img src="${f.url}" class="absolute w-[130%] h-[130%] max-w-none z-10 pointer-events-none drop-shadow-md">` : '';
-        const curAvatar = document.getElementById('current-user-avatar');
-        const avatarSrc = curAvatar ? curAvatar.src : '';
-        const div = document.createElement('div');
-        div.className = "flex flex-col items-center cursor-pointer group flex-shrink-0";
-        div.innerHTML = `<div class="w-14 h-14 rounded-xl flex items-center justify-center relative mb-2 transition-all ${ringClass}"><img src="${avatarSrc}" class="w-8 h-8 rounded-full opacity-80 absolute z-0 object-cover">${imgHTML}</div><span class="text-[10px] ${isSelected ? 'text-[#dbdee1]' : 'text-gray-500 group-hover:text-gray-300'} font-bold">${f.name}</span>`;
-        div.onclick = () => { const selFrame = document.getElementById('settings-selected-frame'); if(selFrame) selFrame.value = f.url; renderFrameOptions(f.url); };
-        container.appendChild(div);
+    const modalHtml = `
+    <div id="${modalId}" class="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
+        <div class="bg-[#2b2d31] rounded-3xl w-full max-w-sm border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden">
+            <div class="p-5 border-b border-white/5 bg-[#1e1f22]">
+                <h3 class="text-white font-extrabold text-[16px]"><i class="ph-fill ph-magic-wand mr-2 text-[#5865F2]"></i>ออกแบบยศให้ ${targetUserName}</h3>
+            </div>
+            <div class="p-6 space-y-5">
+                <div>
+                    <label class="block text-[11px] font-bold text-[#949ba4] uppercase mb-2 tracking-wider">ชื่อยศ (Role Name)</label>
+                    <input type="text" id="role-name-input" class="w-full bg-[#111214] border border-[#35373c] rounded-xl px-4 py-3 text-[14px] text-white outline-none focus:border-[#5865F2] transition" placeholder="เช่น: ฝ่ายบัญชี, Developer, ตัวตึง">
+                </div>
+                <div class="flex space-x-4">
+                    <div class="flex-1">
+                        <label class="block text-[11px] font-bold text-[#949ba4] uppercase mb-2 tracking-wider">สีของยศ</label>
+                        <input type="color" id="role-color-input" class="w-full h-12 bg-[#111214] border border-[#35373c] rounded-xl cursor-pointer p-1" value="#f59e0b">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-[11px] font-bold text-[#949ba4] uppercase mb-2 tracking-wider">ไอคอน (Icon)</label>
+                        <select id="role-icon-input" class="w-full h-12 bg-[#111214] border border-[#35373c] rounded-xl px-3 text-[14px] text-white outline-none cursor-pointer">
+                            <option value="ph-star">⭐ ดาว</option>
+                            <option value="ph-crown">👑 มงกุฎ</option>
+                            <option value="ph-shield-check">🛡️ โล่</option>
+                            <option value="ph-code">💻 โค้ด</option>
+                            <option value="ph-game-controller">🎮 เกม</option>
+                            <option value="ph-palette">🎨 ศิลปะ</option>
+                            <option value="ph-music-notes">🎵 เพลง</option>
+                            <option value="ph-heart">❤️ หัวใจ</option>
+                            <option value="ph-fire">🔥 ไฟ</option>
+                            <option value="ph-sparkle">✨ ประกาย</option>
+                            <option value="ph-leaf">🌿 ใบไม้</option>
+                            <option value="ph-sword">⚔️ ดาบ</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="p-5 bg-[#1e1f22] flex justify-end space-x-3 border-t border-white/5">
+                <button onclick="document.getElementById('${modalId}').remove()" class="px-5 py-2.5 text-[13px] font-bold text-[#949ba4] hover:text-white transition">ยกเลิก</button>
+                <button onclick="saveCustomRole('${targetUserName}')" class="px-6 py-2.5 text-[13px] font-bold bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-xl transition shadow-lg">ประทับตรายศ</button>
+            </div>
+        </div>
+    </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+// 2. ฟังก์ชันเซฟยศลงฐานข้อมูล
+window.saveCustomRole = async (targetUserName) => {
+    const u = usersData[targetUserName];
+    if (!u) return;
+    
+    const nameInput = document.getElementById('role-name-input').value.trim();
+    const colorInput = document.getElementById('role-color-input').value;
+    const iconInput = document.getElementById('role-icon-input').value;
+
+    if (!nameInput) { showToast("กรุณาใส่ชื่อยศด้วยครับ", "error"); return; }
+
+    let currentRoles = u.customRoles || [];
+    
+    // เช็กว่ามียศนี้อยู่แล้วไหม (เช็กจากชื่อยศ)
+    const exists = currentRoles.find(r => (typeof r === 'string' ? r === nameInput : r.name === nameInput));
+    if (exists) { showToast("ผู้ใช้นี้มียศชื่อนี้อยู่แล้ว", "info"); return; }
+
+    // บันทึกยศเป็น Object ที่เก็บทั้ง ชื่อ, สี, ไอคอน
+    currentRoles.push({ name: nameInput, color: colorInput, icon: iconInput });
+
+    try {
+        await updateDoc(doc(db, "users", u.id), { customRoles: currentRoles });
+        document.getElementById('admin-role-modal').remove();
+        showToast(`มอบยศ "${nameInput}" สำเร็จ!`, "success");
+        setTimeout(() => showUserProfile(targetUserName), 200);
+    } catch (e) {
+        showToast("เกิดข้อผิดพลาดในการมอบยศ", "error");
+    }
+};
+
+// 3. ฟังก์ชันแอดมินกดลบยศ (อัปเดตให้รองรับ Object)
+window.removeCustomRole = async (targetUserName, roleName) => {
+    if (!confirm(`คุณต้องการถอดยศ "${roleName}" ออกจาก ${targetUserName} ใช่หรือไม่?`)) return;
+    const u = usersData[targetUserName];
+    if (!u) return;
+    
+    let currentRoles = u.customRoles || [];
+    // กรองเอาตัวที่ชื่อตรงกับที่กดลบ ออกจากระบบ
+    currentRoles = currentRoles.filter(r => {
+        if (typeof r === 'string') return r !== roleName;
+        return r.name !== roleName;
     });
+    
+    try {
+        await updateDoc(doc(db, "users", u.id), { customRoles: currentRoles });
+        showToast(`ถอดยศ "${roleName}" สำเร็จ!`, "success");
+        setTimeout(() => showUserProfile(targetUserName), 200); 
+    } catch (e) {
+        showToast("เกิดข้อผิดพลาดในการถอดยศ", "error");
+    }
 };
 
 const openSettingsHandler = (e) => { 
