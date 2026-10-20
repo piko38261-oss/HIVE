@@ -228,31 +228,41 @@ const zones = { 'todo': document.getElementById('todo'), 'in_progress': document
 function startDatabaseListeners() {
     let isInitialLoad = true;
     onSnapshot(query(collection(db, "messages"), orderBy("timestamp", "asc")), (snapshot) => { 
-        allMessages = []; snapshot.forEach((docSnap) => { allMessages.push({ id: docSnap.id, ...docSnap.data() }); }); renderMessages(); 
-        if (activeChannel === 'game_draw') scrollToBottom('game-chat-container'); else scrollToBottom('chat-container');
-        if (!isInitialLoad) { 
-            snapshot.docChanges().forEach((change) => { 
-                if (change.type === "added") { 
-                    const m = change.doc.data(); 
-                    if (m.senderName !== currentUsername) { 
-                        if (m.channel !== activeChannel) { unreadCounts[m.channel] = (unreadCounts[m.channel] || 0) + 1; updateUnreadBadge(m.channel); }
-                        const isTagged = m.text && m.text.includes(`@${currentUsername}`);
-                        if (isTagged) { 
-                            sfxPing.play().catch(()=>{}); 
-                            // ยิง Desktop Notification เด้งที่มุมจอ OS
-                            if ("Notification" in window && Notification.permission === "granted") {
-                                new Notification(`มีคนแท็กคุณใน HIVE Workspace!`, {
-                                    body: `${m.senderName}: ${m.text}`,
-                                    icon: 'https://ui-avatars.com/api/?name=H&background=5865F2&color=fff'
-                                });
-                            }
-                        } else if (m.channel === activeChannel) { 
-                            sfxMsg.play().catch(()=>{}); 
+        allMessages = []; 
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added") {
+                const m = change.doc.data();
+                allMessages.push({ id: change.doc.id, ...m });
+                
+                if (!isInitialLoad && m.senderName !== currentUsername) {
+                    // 🌟 เงื่อนไขใหม่: ถ้าเราไม่ได้อยู่ในห้องที่ข้อความนั้นถูกส่งมา หรือเรากำลังเปิดหน้าจออื่นอยู่
+                    if (m.channel !== activeChannel || document.hidden) {
+                        unreadCounts[m.channel] = (unreadCounts[m.channel] || 0) + 1;
+                        updateUnreadBadge(m.channel);
+                    }
+
+                    const isTagged = m.text && m.text.includes(`@${currentUsername}`);
+                    if (isTagged) { 
+                        sfxPing.play().catch(()=>{}); 
+                        if ("Notification" in window && Notification.permission === "granted") {
+                            new Notification(`มีคนแท็กคุณใน HIVE Workspace!`, {
+                                body: `${m.senderName}: ${m.text}`,
+                                icon: 'https://ui-avatars.com/api/?name=H&background=5865F2&color=fff'
+                            });
                         }
-                    } 
-                } 
-            }); 
-        }
+                    } else if (m.channel !== activeChannel) { 
+                        sfxMsg.play().catch(()=>{}); 
+                    }
+                }
+            } else if (change.type === "modified" || change.type === "removed") {
+                // จัดการกรณีข้อความถูกแก้ไขหรือลบ
+                allMessages = [];
+                snapshot.forEach((docSnap) => { allMessages.push({ id: docSnap.id, ...docSnap.data() }); });
+            }
+        });
+        
+        renderMessages(); 
+        if (activeChannel === 'game_draw') scrollToBottom('game-chat-container'); else scrollToBottom('chat-container');
         isInitialLoad = false;
     });
 
@@ -1196,9 +1206,6 @@ if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" onload="const c = this.
                 </div>
                 <div class="min-w-0 flex-1 pb-0.5 pr-10"><div class="flex items-baseline space-x-2"><span onclick="showUserProfile('${m.senderName}')" class="font-bold text-[15px] text-[#e4e5e7] hover:underline cursor-pointer">${m.senderName}</span><span class="text-[11px] text-[#80848e] font-medium">${timeString}</span></div>${contentHTML}${reactsHTML}</div></div>${actionMenuUI}</div>`);
         }
-        if (m.isEdited) {
-    contentHTML += ` <span class="text-[10px] text-[#949ba4] italic">(แก้ไขแล้ว)</span>`;
-}
         lastSender = m.senderName;
     });
     
