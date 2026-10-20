@@ -24,7 +24,7 @@ const GEMINI_API_KEY = "AIzaSyCifkioB2z1Ho9LAGSFBYWtV-kM4bgtzhw";
 // ==========================================
 // ⚙️ 2. ประกาศตัวแปร DOM และ Globals ไว้บนสุด
 // ==========================================
-const rtcClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+const rtcClient = AgoraRTC.createClient({ mode: "rtc", codec: "h264" });
 let localTracks = { audioTrack: null, videoTrack: null }, screenTrack = null, screenAudioTrack = null;
 let isMuted = false, isDeafened = false, isSharingScreen = false, isVideoOn = false, myNumericUid = null;
 let currentUserId = null, currentUsername = "Guest", currentUserRole = "Member"; 
@@ -390,7 +390,7 @@ function startDatabaseListeners() {
 
     onSnapshot(doc(db, "appData", "spyGame"), (d) => { if(d.exists()) { currentSpyData = d.data(); renderSpyGame(); } });
 
-    onSnapshot(collection(db, "tasks"), (snapshot) => { 
+   onSnapshot(collection(db, "tasks"), (snapshot) => { 
         Object.values(zones).forEach(z => { if(z) z.innerHTML = ''; }); 
         snapshot.forEach((docSnap) => { 
             const d = docSnap.data(), id = docSnap.id, s = d.status || 'todo'; 
@@ -399,7 +399,21 @@ function startDatabaseListeners() {
             if(d.tag && d.tag.includes('Music')) tC = "bg-pink-500/10 text-pink-400 border border-pink-500/20"; 
             if(d.tag && d.tag.includes('Video')) tC = "bg-purple-500/10 text-purple-400 border border-purple-500/20"; 
             if(d.tag && d.tag.includes('Design')) tC = "bg-[#23a559]/10 text-[#23a559] border border-[#23a559]/20"; 
-            const cardHTML = `<div draggable="true" data-id="${id}" class="task-card bg-[#1e1f22] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${s === 'done' ? 'border-[#4e5058] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out]"><div class="flex space-x-2 mb-2.5"><span class="${tC} text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center"><i class="ph-fill ph-tag text-[10px] mr-1"></i>${d.tag}</span></div><p class="text-[13px] md:text-[14px] font-medium text-[#dbdee1] ${s === 'done' ? 'line-through text-[#80848e]' : ''} leading-snug">${d.title}</p></div>`; 
+            
+            // 🌟 ปรับปรุง: เพิ่มปุ่มลบถังขยะ (opacity-0 group-hover:opacity-100) ลงไปในการ์ด
+            const cardHTML = `
+            <div draggable="true" data-id="${id}" class="task-card bg-[#1e1f22] p-3 rounded-lg shadow-sm cursor-move hover:shadow-md hover:-translate-y-0.5 transition duration-200 mb-2 border-l-4 ${s === 'done' ? 'border-[#4e5058] opacity-50' : 'border-[#5865F2]'} group animate-[fadeIn_0.3s_ease-out] relative">
+                <div class="flex justify-between items-start mb-2.5">
+                    <span class="${tC} text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center">
+                        <i class="ph-fill ph-tag text-[10px] mr-1"></i>${d.tag}
+                    </span>
+                    <button onclick="deleteTask('${id}')" class="opacity-0 group-hover:opacity-100 text-[#80848e] hover:text-[#da373c] transition-all p-1 -mt-1 -mr-1" title="ลบงานนี้">
+                        <i class="ph-fill ph-trash text-[14px]"></i>
+                    </button>
+                </div>
+                <p class="text-[13px] md:text-[14px] font-medium text-[#dbdee1] ${s === 'done' ? 'line-through text-[#80848e]' : ''} leading-snug">${d.title}</p>
+            </div>`; 
+            
             if (zones[s]) zones[s].insertAdjacentHTML('beforeend', cardHTML); 
         }); 
         document.querySelectorAll('.task-card').forEach(c => { 
@@ -1343,13 +1357,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     label.classList.add('border-transparent', 'hover:bg-[#2b2d31]');
                 }
             });
-            if (denoiserProcessor) {
+           if (denoiserProcessor) {
                 if (savedNoiseSetting === 'none') {
                     await denoiserProcessor.disable();
                     showToast("ปิดระบบตัดเสียงรบกวนแล้ว", "info");
                 } else {
+                    try { denoiserProcessor.setLevel("HIGH"); } catch(e){} // 🌟 บังคับ HIGH ทุกครั้งที่เปิด
                     await denoiserProcessor.enable();
-                    showToast("เปิด AI ตัดเสียงรบกวนแล้ว", "success");
+                    showToast("เปิด AI ตัดเสียงรบกวนขั้นสูงสุดแล้ว", "success");
                 }
             }
         };
@@ -1431,26 +1446,42 @@ async function joinVoice() {
         
         try {
             const savedMic = localStorage.getItem('hive_selected_mic');
-            const micConfig = { AEC: true, ANS: true, AGC: true };
+            // 🌟 1. ปรับแต่ง Profile ไมค์ให้โฟกัสเฉพาะ "เสียงพูดมนุษย์" เพื่อตัดย่านความถี่ต่ำของลมออก
+            const micConfig = { 
+                AEC: true, 
+                ANS: true, 
+                AGC: true, 
+                encoderConfig: "speech_standard" // 👈 เปลี่ยนจาก high_quality เป็น speech_standard
+            };
             if (savedMic) micConfig.microphoneId = savedMic;
             localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack(micConfig); 
             if (savedMicVolume !== 100) localTracks.audioTrack.setVolume(savedMicVolume);
 
+            // 🌟 2. อัปเกรด AI Denoiser ให้ทำงานร่วมกัน
             try {
                 if (!denoiserExtension) {
                     denoiserExtension = new window.AIDenoiser.AIDenoiserExtension({
-                        assetsPath: "https://cdn.jsdelivr.net/npm/agora-extension-ai-denoiser@1.1.0/external/"
+                        assetsPath: "https://unpkg.com/agora-extension-ai-denoiser@1.1.0/external/"
                     });
                     AgoraRTC.registerExtension(denoiserExtension);
                 }
                 denoiserProcessor = denoiserExtension.createProcessor();
+                
+                try { denoiserProcessor.setLevel("HIGH"); } catch(e){}
+
                 localTracks.audioTrack.pipe(denoiserProcessor).pipe(localTracks.audioTrack.processorDestination);
-                if (savedNoiseSetting === 'ai') await denoiserProcessor.enable();
-            } catch (aiErr) {}
+                
+                if (savedNoiseSetting === 'ai') {
+                    await denoiserProcessor.enable();
+                    console.log("✅ AI Denoiser Enabled (HIGH Level + Speech Standard)");
+                }
+            } catch (aiErr) {
+                console.warn("⚠️ AI Denoiser failed, fallback to native ANS", aiErr);
+            }
 
             await rtcClient.publish(localTracks.audioTrack); 
             await localTracks.audioTrack.setMuted(isMuted);
-        } catch (micErr) { 
+        } catch (micErr) {
             isMuted = true; 
             showToast("เข้าร่วมแบบ 'ฟังอย่างเดียว' (เบราว์เซอร์บล็อกไมค์ / ไม่พบไมค์)", "info");
         }
@@ -1483,7 +1514,6 @@ async function joinVoice() {
         if(joinBtn) joinBtn.classList.remove('hidden');
     } 
 }
-
 if(camBtn) {
     camBtn.onclick = async () => {
         if (isSharingScreen) { showToast("กรุณาปิดแชร์หน้าจอก่อนเปิดกล้องครับ", "error"); return; }
@@ -1558,11 +1588,16 @@ if(ssBtn) {
         if (!isSharingScreen) { 
             try { 
                 const selectedVal = qualitySelect ? qualitySelect.value : "1080p_1";
-                let encoderConfig = { width: 1920, height: 1080, frameRate: 30, bitrateMax: 3000 };
-                if (selectedVal.includes("720")) encoderConfig = { width: 1280, height: 720, frameRate: 30, bitrateMax: 2000 };
-                else if (selectedVal === "1080p_60") encoderConfig = { width: 1920, height: 1080, frameRate: 60, bitrateMax: 4500 }; 
-                const res = await AgoraRTC.createScreenVideoTrack({ encoderConfig: encoderConfig, optimizationMode: "motion" }, "auto"); 
-                if (Array.isArray(res)) { screenTrack = res[0]; screenAudioTrack = res[1]; await rtcClient.publish([screenTrack, screenAudioTrack]); } else { screenTrack = res; await rtcClient.publish(screenTrack); } 
+                // 🌟 เพิ่ม bitrateMin เพื่อล็อกคุณภาพไม่ให้ร่วงลงไปต่ำเกินไป และปรับเพดานให้เหมาะสม
+                let encoderConfig = { width: 1920, height: 1080, frameRate: 30, bitrateMin: 1500, bitrateMax: 3500 };
+                if (selectedVal.includes("720")) encoderConfig = { width: 1280, height: 720, frameRate: 30, bitrateMin: 1000, bitrateMax: 2500 };
+                else if (selectedVal === "1080p_60") encoderConfig = { width: 1920, height: 1080, frameRate: 60, bitrateMin: 2500, bitrateMax: 5000 }; 
+                
+                const res = await AgoraRTC.createScreenVideoTrack({ 
+                    encoderConfig: encoderConfig, 
+                    optimizationMode: "motion" // บังคับให้เน้นเฟรมเรต (FPS) เป็นหลัก ภาพจะไม่กระตุกเวลาเน็ตแกว่ง
+                }, "auto"); 
+                if (Array.isArray(res)) { screenTrack = res[0]; screenAudioTrack = res[1]; await rtcClient.publish([screenTrack, screenAudioTrack]); } else { screenTrack = res; await rtcClient.publish(screenTrack); }
                 isSharingScreen = true; await updateDoc(doc(db, "users", currentUserId), { isSharingScreen: true }); 
                 if (ssWrapper) ssWrapper.classList.replace('bg-[#2b2d31]', 'bg-[#23a559]');
                 if(sIco) sIco.className = "ph-fill ph-screencast text-[20px] md:text-[24px] text-white"; 
@@ -1643,6 +1678,17 @@ if(bottomDeafenBtn) bottomDeafenBtn.onclick = toggleDeafen;
 // ==========================================
 // 📋 12. Task Board & Service Worker
 // ==========================================
+// 🌟 สิ่งที่ต้องเพิ่ม: ฟังก์ชันลบงานในกระดาน
+window.deleteTask = async (taskId) => {
+    if (confirm("คุณแน่ใจหรือไม่ว่าต้องการลบงานนี้?")) {
+        try {
+            await deleteDoc(doc(db, "tasks", taskId));
+            showToast("ลบงานเรียบร้อยแล้ว!", "success");
+        } catch (e) {
+            showToast("เกิดข้อผิดพลาดในการลบงาน", "error");
+        }
+    }
+};
 Object.keys(zones).forEach(s => { 
     const z = zones[s]; 
     if(z) {
@@ -1763,7 +1809,17 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
                 ytContainer.innerHTML = `<div id="actual-yt-player" class="w-full h-full"></div>`;
                 if (window.YT && window.YT.Player) {
                     ytPlayer = new YT.Player('actual-yt-player', {
-                        height: '100%', width: '100%', videoId: data.videoId, playerVars: { 'autoplay': 1, 'controls': 1 },
+                        height: '100%', 
+                        width: '100%', 
+                        videoId: data.videoId, 
+                        playerVars: { 
+                            'autoplay': 1, 
+                            'controls': 1,
+                            'modestbranding': 1, // 🌟 ลดการแสดงผลโลโก้ YouTube ที่กินเครื่อง
+                            'rel': 0, // 🌟 ป้องกันการโหลดวิดีโอแนะนำล่วงหน้า (ลดการกินเน็ต)
+                            'iv_load_policy': 3, // 🌟 ปิดป๊อปอัปคำอธิบายประกอบ
+                            'vq': 'hd1080' // 🌟 บังคับขอคุณภาพระดับ 1080p เป็นค่าเริ่มต้น
+                        },
                         events: {
                             'onReady': () => {
                                 ytPlayer.seekTo(data.currentTime || 0);
