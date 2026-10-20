@@ -939,7 +939,27 @@
     <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/agora-extension-ai-denoiser@1.1.0/index.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
-<!-- 🌟 บังคับโหลดไฟล์ main.js เวอร์ชันใหม่ล่าสุดทุกครั้งอัตโนมัติ (Cache Busting) -->
+
+    <!-- 🌟 เพิ่มสคริปต์ดักคลิกปุ่มตั้งค่าตรงนี้ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const openSettingsTriggers = [
+                document.getElementById('open-settings-btn'),
+                document.getElementById('mini-profile-btn')
+            ];
+            openSettingsTriggers.forEach(btn => {
+                if (btn) {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const modal = document.getElementById('settings-modal');
+                        if (modal) modal.classList.remove('hidden');
+                    });
+                }
+            });
+        });
+    </script>
+
+    <!-- 🌟 บังคับโหลดไฟล์ main.js เวอร์ชันใหม่ล่าสุดทุกครั้งอัตโนมัติ (Cache Busting) -->
     <script type="module">
         import(`./main.js?v=${Date.now()}`);
     </script>
