@@ -1702,10 +1702,16 @@ const wpHost = document.getElementById('wp-host');
 
 let ytPlayer = null, syncInterval = null, isSettingState = false, lastVideoId = "";
 
-if (toggleWpBtn && wpControls) toggleWpBtn.onclick = () => wpControls.classList.toggle('hidden');
+if (toggleWpBtn && wpControls) {
+    toggleWpBtn.onclick = () => {
+        if (!amIInVoice) { showToast("ต้องเข้าร่วมห้องเสียงก่อนถึงจะใช้งานได้ครับ", "error"); return; } // 🌟 บล็อกคนนอก
+        wpControls.classList.toggle('hidden');
+    };
+}
 
 if (startWpBtn) {
     startWpBtn.onclick = async () => {
+        if (!amIInVoice) { showToast("ต้องเข้าร่วมห้องเสียงก่อนครับ", "error"); return; } // 🌟 บล็อกคนนอก
         const url = wpLinkInput.value.trim();
         if (!url) { showToast("กรุณาใส่ลิงก์ YouTube ด้วยครับ", "error"); return; }
         let videoId = "";
@@ -1725,12 +1731,13 @@ if (startWpBtn) {
 
 if (closeWpBtn) {
     closeWpBtn.onclick = async () => {
+        if (!amIInVoice) { showToast("ต้องเข้าร่วมห้องเสียงก่อนครับ", "error"); return; } // 🌟 บล็อกคนนอก
         try { await setDoc(doc(db, "appData", "watchParty"), { isActive: false }, { merge: true }); } catch(err) {}
     };
 }
 
 async function broadcastPlayerState() {
-    if (!ytPlayer || isSettingState) return;
+    if (!ytPlayer || isSettingState || !amIInVoice) return; // 🌟 สำคัญสุด: ถ้ายังไม่เข้าห้องเสียง ห้ามส่งคำสั่งหยุดคลิปไปกวนคนอื่น
     try {
         const currentTime = ytPlayer.getCurrentTime();
         const playerState = ytPlayer.getPlayerState();
@@ -1746,6 +1753,10 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
         if (data.isActive && data.videoId) {
             if(wpStage) { wpStage.classList.remove('hidden'); wpStage.classList.add('flex'); }
             if(wpHost) wpHost.textContent = data.hostName;
+
+            // 🌟 ล็อกไม่ให้คนนอกกดหน้าจอ YouTube ได้
+            const ytWrap = document.getElementById('yt-wrapper');
+            if (ytWrap) ytWrap.style.pointerEvents = amIInVoice ? 'auto' : 'none';
 
             if (!ytPlayer || lastVideoId !== data.videoId) {
                 lastVideoId = data.videoId;
@@ -1792,6 +1803,14 @@ onSnapshot(doc(db, "appData", "watchParty"), (d) => {
         }
     }
 });
+
+// 🌟 ตัวตรวจสอบสถานะ: ถ้าผู้ใช้อยู่ในห้องเสียงถึงจะปลดล็อกให้กดคลิปได้
+setInterval(() => {
+    const ytWrap = document.getElementById('yt-wrapper');
+    if (ytWrap) {
+        ytWrap.style.pointerEvents = amIInVoice ? 'auto' : 'none';
+    }
+}, 1000);
 
 // ==========================================
 // 🛍️ 14. ระบบร้านค้าตกแต่งโปรไฟล์ (HIVE Shop)
@@ -2718,36 +2737,25 @@ const musicDb = getDatabase(app, "https://hive-workspace-f373c-default-rtdb.asia
 
 let musicRoomActiveRef = null;
 let musicPlayerObj = null;
-let lastMusicVideoId = ""; // 🌟 ตัวแปรใหม่สำหรับเช็คไม่ให้โหลดเพลงซ้ำเวลาคนกดเพิ่มคิว
+let lastMusicVideoId = ""; 
+let currentMusicState = { queue: [], currentPlaying: null }; // 🌟 ตัวแปรเก็บสถานะเพลงล่าสุด
 
 views['music-room'] = document.getElementById('view-music-room');
 
+// 🌟 แก้ไขระบบสลับหน้าจอ: จะไม่ปิดเพลงถ้าเปลี่ยนหน้าต่าง ต้องกด "ออกจากห้อง" เท่านั้นเพลงถึงจะดับ
 document.querySelectorAll('.nav-btn').forEach(btn => {
     const originalOnClick = btn.onclick;
     btn.onclick = (e) => {
         if(originalOnClick) originalOnClick(e);
         const view = btn.getAttribute('data-view');
+        
+        // ถ้ากดมาหน้าห้องเพลง ให้เข้าร่วมห้อง (ถ้ายังไม่ได้เข้า)
         if (view === 'music-room') {
-            initMusicRoomRealtime();
-        } else {
-            if (musicRoomActiveRef) {
-                remove(musicRoomActiveRef);
-                musicRoomActiveRef = null;
+            if (!musicRoomActiveRef) {
+                initMusicRoomRealtime();
             }
-            if (musicPlayerObj && typeof musicPlayerObj.destroy === 'function') {
-                musicPlayerObj.destroy();
-                musicPlayerObj = null;
-            }
-            lastMusicVideoId = ""; // 🌟 รีเซ็ต ID เพลงเมื่อออกจากห้อง
-            
-            const iframeWrapper = document.getElementById('music-player-iframe-wrapper');
-            if (iframeWrapper) {
-                iframeWrapper.innerHTML = '';
-                iframeWrapper.classList.add('hidden');
-            }
-            const placeholder = document.getElementById('music-player-placeholder');
-            if (placeholder) placeholder.classList.remove('hidden');
         }
+        // *ลบคำสั่งทำลายเครื่องเล่นออกทั้งหมด เพลงจะได้เล่นเป็น Background ต่อไปเมื่อเปลี่ยนหน้าจอ*
     };
 });
 
@@ -2799,24 +2807,29 @@ function initMusicRoomRealtime() {
             listContainer.appendChild(div);
         });
     });
+
+    // 🌟 บังคับอัปเดตเครื่องเล่นเพลงทันทีสำหรับคนที่เพิ่งกดเข้าห้อง
+    updateMusicPlayerUI(currentMusicState.currentPlaying);
 }
 
 onValue(ref(musicDb, 'music_room/state'), (snapshot) => {
-    const data = snapshot.val() || { queue: [], currentPlaying: null };
-    let queue = data.queue || [];
-    let currentPlaying = data.currentPlaying;
+    currentMusicState = snapshot.val() || { queue: [], currentPlaying: null };
+    let queue = currentMusicState.queue || [];
+    let currentPlaying = currentMusicState.currentPlaying;
 
-    const musicRoomView = document.getElementById('view-music-room');
-    const isInMusicRoom = musicRoomView && !musicRoomView.classList.contains('hidden');
+    // 🌟 เช็คสถานะว่าผู้ใช้คนนี้ "ได้เข้าร่วมห้องเพลงแล้วหรือยัง"
+    const isJoinedMusicRoom = musicRoomActiveRef !== null;
 
-    if (!currentPlaying && queue.length > 0 && isInMusicRoom) {
+    if (!currentPlaying && queue.length > 0 && isJoinedMusicRoom) {
         currentPlaying = queue.shift();
-        currentPlaying.startTime = Date.now(); // 🌟 บันทึกเวลาเริ่มเล่นของเพลงอัตโนมัติ
+        currentPlaying.startTime = Date.now();
         set(ref(musicDb, 'music_room/state'), { queue, currentPlaying });
     }
 
     updateMusicQueueUI(queue);
-    updateMusicPlayerUI(isInMusicRoom ? currentPlaying : null);
+    
+    // 🌟 ส่ง null ให้คนนอกห้อง เพื่อให้เงียบสนิท ส่งสถานะจริงให้คนในห้องเพื่อเล่นเพลง
+    updateMusicPlayerUI(isJoinedMusicRoom ? currentPlaying : null);
 });
 
 function extractMusicYouTubeId(urlOrQuery) {
@@ -2851,17 +2864,15 @@ window.addMusicSongToQueue = async () => {
         requester: currentUsername
     };
 
-    const snapshot = await new Promise(resolve => onValue(ref(musicDb, 'music_room/state'), resolve, { onlyOnce: true }));
-    const currentState = snapshot.val() || { queue: [], currentPlaying: null };
-    let queue = currentState.queue || [];
-    let currentPlaying = currentState.currentPlaying;
+    let queue = currentMusicState.queue || [];
+    let currentPlaying = currentMusicState.currentPlaying;
 
     queue.push(songItem);
     if(input) input.value = '';
 
     if (!currentPlaying) {
         currentPlaying = queue.shift();
-        currentPlaying.startTime = Date.now(); // 🌟 บันทึกเวลาเริ่มเล่นสำหรับเพลงแรก
+        currentPlaying.startTime = Date.now();
         appendMusicBotChat(`🎶 กำลังเล่นเพลง: <span class="text-emerald-400 font-bold">${currentPlaying.title}</span>`);
     } else {
         appendMusicBotChat(`🤖 เพิ่มเพลง <span class="text-indigo-300 font-semibold">"${songItem.title}"</span> เข้าสู่คิวลำดับที่ ${queue.length} แล้วครับ!`);
@@ -2871,10 +2882,8 @@ window.addMusicSongToQueue = async () => {
 };
 
 window.skipMusicSong = async () => {
-    const snapshot = await new Promise(resolve => onValue(ref(musicDb, 'music_room/state'), resolve, { onlyOnce: true }));
-    const currentState = snapshot.val() || { queue: [], currentPlaying: null };
-    let queue = currentState.queue || [];
-    let currentPlaying = currentState.currentPlaying;
+    let queue = currentMusicState.queue || [];
+    let currentPlaying = currentMusicState.currentPlaying;
 
     if (currentPlaying) {
         appendMusicBotChat(`⏭️ ข้ามเพลง <span class="text-gray-300">"${currentPlaying.title}"</span>`);
@@ -2882,7 +2891,7 @@ window.skipMusicSong = async () => {
 
     if (queue.length > 0) {
         currentPlaying = queue.shift();
-        currentPlaying.startTime = Date.now(); // 🌟 บันทึกเวลาเริ่มเล่นสำหรับเพลงถัดไป
+        currentPlaying.startTime = Date.now();
         appendMusicBotChat(`🎶 กำลังเล่นเพลง: <span class="text-emerald-400 font-bold">${currentPlaying.title}</span>`);
     } else {
         currentPlaying = null;
@@ -2927,7 +2936,7 @@ function updateMusicPlayerUI(currentPlaying) {
         if(titleEl) titleEl.innerText = 'ไม่มีเพลงกำลังเล่น';
         if(requesterEl) requesterEl.innerText = 'เพิ่มเพลงเพื่อเริ่มความสนุกกันเลย!';
         musicPlayerObj = null;
-        lastMusicVideoId = ""; // 🌟 รีเซ็ต ID เพลงเมื่อคิวว่าง
+        lastMusicVideoId = ""; 
         return;
     }
 
@@ -2935,7 +2944,6 @@ function updateMusicPlayerUI(currentPlaying) {
     if(iframeWrapper) {
         iframeWrapper.classList.remove('hidden');
         
-        // 🌟 เช็คว่าถ้าวิดีโอที่ให้เล่นยังเป็นคลิปเดิม จะไม่สร้าง Iframe ใหม่ (ทำให้เพิ่มเพลงแล้วไม่กระตุก)
         if (lastMusicVideoId !== currentPlaying.videoId) {
             lastMusicVideoId = currentPlaying.videoId;
             const thumbnailUrl = `https://img.youtube.com/vi/${currentPlaying.videoId}/maxresdefault.jpg`;
@@ -2958,7 +2966,6 @@ function updateMusicPlayerUI(currentPlaying) {
                         musicPlayerObj = new YT.Player('hive-yt-audio-player', {
                             events: {
                                 'onReady': (event) => {
-                                    // 🌟 เมื่อโหลดเพลเยอร์เสร็จ ให้เช็คเวลาที่เริ่มเล่นและกรอไปที่วิปัจจุบัน (Sync เวลาสำหรับคนมาทีหลัง)
                                     if (currentPlaying.startTime) {
                                         const elapsedSeconds = (Date.now() - currentPlaying.startTime) / 1000;
                                         if (elapsedSeconds > 2) {
@@ -3080,6 +3087,7 @@ onValue(ref(musicDb, 'music_room/chat_messages'), (snapshot) => {
     chatBox.scrollTop = chatBox.scrollHeight;
 });
 
+// 🌟 กดออกจากห้องเมื่อไหร่ เพลงจะหยุดและทำลาย Iframe ทิ้งทันที
 window.leaveMusicRoom = () => {
     if (musicRoomActiveRef) {
         remove(musicRoomActiveRef);
@@ -3091,7 +3099,7 @@ window.leaveMusicRoom = () => {
         musicPlayerObj.destroy();
         musicPlayerObj = null;
     }
-    lastMusicVideoId = ""; // 🌟 รีเซ็ต ID
+    lastMusicVideoId = ""; 
     
     const iframeWrapper = document.getElementById('music-player-iframe-wrapper');
     if (iframeWrapper) {
