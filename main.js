@@ -235,7 +235,18 @@ function startDatabaseListeners() {
                     if (m.senderName !== currentUsername) { 
                         if (m.channel !== activeChannel) { unreadCounts[m.channel] = (unreadCounts[m.channel] || 0) + 1; updateUnreadBadge(m.channel); }
                         const isTagged = m.text && m.text.includes(`@${currentUsername}`);
-                        if (isTagged) { sfxPing.play().catch(()=>{}); } else if (m.channel === activeChannel) { sfxMsg.play().catch(()=>{}); }
+                        if (isTagged) { 
+                            sfxPing.play().catch(()=>{}); 
+                            // ยิง Desktop Notification เด้งที่มุมจอ OS
+                            if ("Notification" in window && Notification.permission === "granted") {
+                                new Notification(`มีคนแท็กคุณใน HIVE Workspace!`, {
+                                    body: `${m.senderName}: ${m.text}`,
+                                    icon: 'https://ui-avatars.com/api/?name=H&background=5865F2&color=fff'
+                                });
+                            }
+                        } else if (m.channel === activeChannel) { 
+                            sfxMsg.play().catch(()=>{}); 
+                        }
                     } 
                 } 
             }); 
@@ -873,13 +884,14 @@ async function uploadImage(file, type) {
 }
 
 async function uploadImageRaw(file, type) { 
-    showToast(`กำลังอัปโหลดไฟล์ GIF ${type === 'avatar' ? 'โปรไฟล์' : 'ภาพปก'}... ⏳`, "info"); 
+    showToast(`กำลังส่งไฟล์ GIF ${type === 'avatar' ? 'โปรไฟล์' : 'ภาพปก'} ไปยังเซิร์ฟเวอร์... ⏳`, "info"); 
     const wrap = document.getElementById(`settings-${type}-wrapper`);
     if(wrap) wrap.classList.add('opacity-50', 'pointer-events-none'); 
 
     try { 
         const fd = new FormData(); 
         fd.append("image", file); 
+        // อัปโหลดตรงผ่าน ImgBB API ทันที ไม่ต้องผ่าน Canvas บีบอัดภาพ
         const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: fd }); 
         const r = await res.json(); 
         
@@ -894,10 +906,16 @@ async function uploadImageRaw(file, type) {
                 const p1 = document.getElementById('settings-banner-preview'); 
                 if(p1) { p1.src = r.data.url; p1.classList.remove('hidden'); }
             } 
-            showToast("อัปโหลดภาพเคลื่อนไหวสำเร็จ!", "success"); 
-        } else { showToast("อัปโหลดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", "error"); }
-    } catch(err) { showToast("เกิดข้อผิดพลาดในการอัปโหลดไฟล์ GIF", "error"); } 
-    finally { if(wrap) wrap.classList.remove('opacity-50', 'pointer-events-none'); } 
+            showToast("อัปโหลดภาพเคลื่อนไหว GIF สำเร็จ! ✨", "success"); 
+        } else { 
+            showToast("อัปโหลดไม่สำเร็จ ไฟล์อาจใหญ่เกินไป", "error"); 
+        }
+    } catch(err) { 
+        showToast("เกิดข้อผิดพลาดในการอัปโหลดไฟล์ GIF", "error"); 
+    } 
+    finally { 
+        if(wrap) wrap.classList.remove('opacity-50', 'pointer-events-none'); 
+    } 
 }
 
 const btnSaveSettings = document.getElementById('save-settings-btn');
