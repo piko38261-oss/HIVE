@@ -21,7 +21,7 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a";
 const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
-const GEMINI_API_KEY = "AIzaSyCifkioB2z1Ho9LAGSFBYWtV-kM4bgtzhw"; 
+const GEMINI_API_KEY = "AQ.Ab8RN6LPmxSqh0tLnNsTpk3RXTLwVVyBNacqmDr-CXkt-N7Giw"; 
 
 // ==========================================
 // ⚙️ 2. ประกาศตัวแปร DOM และ Globals ไว้บนสุด
@@ -110,7 +110,7 @@ async function getWordFromAI(gameType = "draw") {
             const randomCat = categories[Math.floor(Math.random() * categories.length)];
             promptText = `สุ่มคำศัพท์ภาษาไทย 1 คำ ในหมวดหมู่ "${randomCat}" สำหรับเล่นเกม Spyfall ขอคำที่คนทั่วไปรู้จักดี (Seed: ${randomSeed}) ห้ามมีเครื่องหมายใดๆ ตอบมาแค่คำศัพท์เพียวๆ 1 คำ`; 
         }
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, { 
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
             method: "POST", 
             headers: { "Content-Type": "application/json" }, 
             body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], generationConfig: { temperature: 1.5 } }) 
@@ -328,7 +328,7 @@ function startDatabaseListeners() {
                     <div onclick="showUserProfile('${userName}')" class="flex items-center space-x-3 cursor-pointer px-3 py-2.5 rounded-xl transition group relative overflow-hidden shadow-sm border border-white/5 mb-2 min-h-[56px] ${!isOnline ? 'opacity-60' : ''}" style="${memberBannerStyle}">
                         <div class="absolute inset-0 ${memberBannerOverlay} z-0"></div>
                         <div class="relative flex-shrink-0 flex items-center justify-center w-9 h-9 z-10">
-                            <img src="${userAvatar}" class="w-9 h-9 rounded-full object-cover opacity-95 absolute z-0">
+                            <img src="${userAvatar}" loading="lazy" class="w-9 h-9 rounded-full object-cover opacity-95 absolute z-0">
                             ${renderFrameHtml}
                             <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 ${statusColor} rounded-full border-[3px] border-[#151619] z-20"></div>
                         </div>
@@ -1161,7 +1161,7 @@ if (m.isEdited) {
     contentHTML += ` <span class="text-[10px] text-[#949ba4] italic">(แก้ไขแล้ว)</span>`;
 }
 
-if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" onload="const c = this.closest('.overflow-y-auto'); if(c) c.scrollTop = c.scrollHeight;" onclick="openLightbox('${m.imageUrl}')" class="mt-2 rounded-xl max-w-[80%] md:max-w-sm shadow-md cursor-zoom-in border border-white/10 hover:border-white/20 transition-colors">`;
+if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" loading="lazy" onload="const c = this.closest('.overflow-y-auto'); if(c) c.scrollTop = c.scrollHeight;" onclick="openLightbox('${m.imageUrl}')" class="mt-2 rounded-xl max-w-[80%] md:max-w-sm shadow-md cursor-zoom-in border border-white/10 hover:border-white/20 transition-colors">`;
         let reactsHTML = '';
         if (m.reactions && Object.keys(m.reactions).length > 0) {
             reactsHTML = `<div class="flex flex-wrap gap-1.5 mt-2">`;
@@ -1201,7 +1201,7 @@ if (m.imageUrl) contentHTML += `<img src="${m.imageUrl}" onload="const c = this.
         } else {
             chatContainer.insertAdjacentHTML('beforeend', `<div class="chat-msg-row flex flex-col ${rowHighlight} px-4 py-2 mt-4 -mx-4 group transition relative">${replyBlockHTML}<div class="flex space-x-4">
                 <div class="relative flex-shrink-0 flex items-center justify-center w-10 h-10 cursor-pointer" onclick="showUserProfile('${m.senderName}')">
-                    <img src="${msgAvatarUrl}" class="w-full h-full rounded-full object-cover opacity-95 hover:opacity-80 transition absolute z-0 shadow-sm">
+                    <img src="${msgAvatarUrl}" loading="lazy" class="w-full h-full rounded-full object-cover opacity-95 hover:opacity-80 transition absolute z-0 shadow-sm">
                     ${frameHTML}
                 </div>
                 <div class="min-w-0 flex-1 pb-0.5 pr-10"><div class="flex items-baseline space-x-2"><span onclick="showUserProfile('${m.senderName}')" class="font-bold text-[15px] text-[#e4e5e7] hover:underline cursor-pointer">${m.senderName}</span><span class="text-[11px] text-[#80848e] font-medium">${timeString}</span></div>${contentHTML}${reactsHTML}</div></div>${actionMenuUI}</div>`);
@@ -1256,26 +1256,38 @@ async function sendAnyMessage(inputEl, channelStr) {
             await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUsername, drawerName: currentUsername, word: randomWord, channel: activeChannel, timestamp: serverTimestamp() });
             botReply = `🎨 **${currentUsername}** ท้าประลองเกมทายภาพ!\nรีบสลับหน้าจอไปดูที่แท็บ **"🎮 ทายคำจากภาพ"** แล้วพิมพ์คำตอบเลย! (AI เป็นคนคิดคำนะรอบนี้)`; 
         } 
-        // 🌟 โค้ด AI Assistant วางต่อตรงนี้อย่างถูกต้อง
-        else if(txt.startsWith('/ask ')) {
+       else if(txt.startsWith('/ask ')) {
             const prompt = txt.substring(5).trim();
             if(!prompt) { showToast("พิมพ์คำถามหลัง /ask ด้วยครับ", "error"); return; }
             
+            // ส่งข้อความหลอกๆ ว่าบอทกำลังคิด
             await addDoc(collection(db, "messages"), { text: `🧠 กำลังคิดคำตอบสำหรับ: "${prompt}"...`, senderName: "🤖 AI Assistant", channel: channelStr, timestamp: serverTimestamp() });
             
             try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, { 
+                // เปลี่ยนเป็นเครื่องหมาย ` (Backtick) ทั้งหน้าและหลังลิงก์
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
                     method: "POST", 
                     headers: { "Content-Type": "application/json" }, 
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) 
                 });
+                
                 const data = await res.json();
+                
+                // เช็กว่ามีคำตอบกลับมาหรือไม่
                 if (data.candidates && data.candidates[0]) {
                     const aiReply = data.candidates[0].content.parts[0].text;
                     await addDoc(collection(db, "messages"), { text: aiReply, senderName: "🤖 AI Assistant", channel: channelStr, timestamp: serverTimestamp() });
+                } 
+                // ถ้า API ฟ้อง Error ให้บอทพิมพ์บอกในแชทเลย
+                else if (data.error) {
+                    console.error("Gemini API Error:", data.error);
+                    await addDoc(collection(db, "messages"), { text: `❌ ระบบ AI ขัดข้อง (API Key อาจมีปัญหา):\n${data.error.message}`, senderName: "🤖 AI Assistant", channel: channelStr, timestamp: serverTimestamp() });
+                } else {
+                    await addDoc(collection(db, "messages"), { text: "❌ AI ไม่ตอบสนอง กรุณาลองใหม่", senderName: "🤖 AI Assistant", channel: channelStr, timestamp: serverTimestamp() });
                 }
             } catch (err) {
-                await addDoc(collection(db, "messages"), { text: "❌ ขออภัย ระบบ AI ขัดข้อง", senderName: "🤖 AI Assistant", channel: channelStr, timestamp: serverTimestamp() });
+                console.error("Fetch Error:", err);
+                await addDoc(collection(db, "messages"), { text: "❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ AI ได้", senderName: "🤖 AI Assistant", channel: channelStr, timestamp: serverTimestamp() });
             }
             return;
         }
@@ -1388,7 +1400,7 @@ if(fileInput) {
 // ==========================================
 // 🌟 ฟีเจอร์ค้นหาและส่งภาพ GIF (GIPHY)
 // ==========================================
-const GIPHY_API_KEY = "OiCCzC65qYjo2BjRa9GDUaew49jW5cwF";
+const GIPHY_API_KEY = "dc6zaTOxFJmzC";
 const gifBtn = document.getElementById('gif-btn');
 const gifMenu = document.getElementById('gif-picker-menu');
 const gifSearch = document.getElementById('gif-search-input');

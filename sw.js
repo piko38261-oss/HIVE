@@ -36,15 +36,22 @@ self.addEventListener('activate', event => {
   );
 });
 
-// 3. ดึงไฟล์เวอร์ชันใหม่ล่าสุดจากเซิร์ฟเวอร์ก่อนเสมอ (Network-First)
+// 3. ดึงไฟล์เวอร์ชันใหม่ล่าสุดจากเซิร์ฟเวอร์ก่อนเสมอ (Network-First) เฉพาะไฟล์ภายในระบบ
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+
+  const requestUrl = new URL(event.request.url);
+
+  // 🌟 ปล่อยผ่านคำขอไปยัง API ภายนอก (GIPHY, Google Gemini, Firebase อื่นๆ) ไม่ให้ Service Worker มายุ่ง
+  if (!requestUrl.origin.includes(self.location.origin)) {
+    return;
+  }
 
   event.respondWith(
     fetch(event.request, { cache: 'no-store' })
       .then(networkResponse => {
         // อัปเดตไฟล์ใหม่ล่าสุดเก็บสำรองไว้ใน Cache เผื่อตอนเน็ตหลุด
-        if (networkResponse && networkResponse.status === 200 && event.request.url.startsWith(self.location.origin)) {
+        if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
         }
@@ -55,28 +62,4 @@ self.addEventListener('fetch', event => {
         return caches.match(event.request);
       })
   );
-});
-
-// 4. ระบบจัดการคลิกแจ้งเตือนและปุ่มวางสายห้องเสียง (จากโค้ดเดิมของคุณ)
-self.addEventListener('notificationclick', event => {
-  if (event.action === 'leave_call') {
-    event.notification.close(); 
-    event.waitUntil(
-      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-        windowClients.forEach(client => {
-          client.postMessage({ command: 'leave_voice' });
-        });
-      })
-    );
-  } else {
-    event.waitUntil(
-      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-        for (let i = 0; i < windowClients.length; i++) {
-          const client = windowClients[i];
-          if (client.url && 'focus' in client) return client.focus();
-        }
-        if (clients.openWindow) return clients.openWindow('/'); 
-      })
-    );
-  }
 });
