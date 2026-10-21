@@ -21,7 +21,7 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const IMGBB_API_KEY = "6b400d48dc08e690c88a8b32f3cef56a";
 const AGORA_APP_ID = "8d7eec85ee1949d491e1dc191f265ed2"; 
-const GEMINI_API_KEY = "AQ.Ab8RN6LPmxSqh0tLnNsTpk3RXTLwVVyBNacqmDr-CXkt-N7Giw"; 
+const GEMINI_API_KEY = "AIzaSyC7H6X9e05r09F0ZIF709xJnkIr9af8tjg"; 
 
 // ==========================================
 // ⚙️ 2. ประกาศตัวแปร DOM และ Globals ไว้บนสุด
