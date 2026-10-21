@@ -320,9 +320,12 @@
                     </div>
                     
                     <div class="bg-[#383a40] rounded-lg p-1 flex items-center relative z-10 border border-transparent focus-within:border-[#5865F2]/50 shadow-sm transition-colors">
-                        <button id="attach-btn" class="w-10 h-10 flex items-center justify-center text-[#b5bac1] hover:text-[#dbdee1] hover:bg-[#404249] rounded-full transition mx-1">
+                       <button id="attach-btn" class="w-10 h-10 flex items-center justify-center text-[#b5bac1] hover:text-[#dbdee1] hover:bg-[#404249] rounded-full transition mx-1">
                             <i class="ph-fill ph-plus-circle text-[22px]"></i>
-                        </button>
+                    </button>
+                        <button id="gif-btn" class="w-10 h-10 flex items-center justify-center text-[#b5bac1] hover:text-white hover:bg-[#404249] rounded-full transition font-extrabold text-[12px]">
+                             GIF
+                    </button>
                         <input type="file" id="file-input" class="hidden" >
                         
                         <div class="flex-1 relative">
@@ -332,8 +335,18 @@
                                     <li class="px-3 py-2 hover:bg-[#35373c] cursor-pointer flex items-center" data-cmd="/roll"><i class="ph-fill ph-dice-five mr-2 text-[#23a559]"></i>/roll - ทอยลูกเต๋า 1-100</li>
                                     <li class="px-3 py-2 hover:bg-[#35373c] cursor-pointer flex items-center" data-cmd="/coin"><i class="ph-fill ph-coin mr-2 text-yellow-500"></i>/coin - โยนเหรียญหัวก้อย</li>
                                     <li class="px-3 py-2 hover:bg-[#35373c] cursor-pointer flex items-center text-[#da373c]" data-cmd="/clear"><i class="ph-fill ph-trash mr-2"></i>/clear - ล้างแชท (Admin)</li>
+                                    <li class="px-3 py-2 hover:bg-[#35373c] cursor-pointer flex items-center text-[#5865F2]" data-cmd="/ask"><i class="ph-fill ph-robot mr-2"></i>/ask - ถามคำถาม AI Assistant</li>
                                 </ul>
                             </div>
+                            <div id="gif-picker-menu" class="hidden absolute bottom-full left-0 mb-2 w-72 md:w-80 bg-[#2b2d31] border border-[#1e1f22] rounded-lg shadow-2xl z-50 flex flex-col overflow-hidden animate-[slideUpFade_0.1s_ease-out]">
+                    <div class="p-2 border-b border-[#1e1f22]">
+                        <input type="text" id="gif-search-input" placeholder="ค้นหา GIF..." class="w-full bg-[#1e1f22] text-[#dbdee1] placeholder-[#80848e] px-3 py-1.5 rounded-md outline-none text-[13px] border border-transparent focus:border-[#5865F2] transition">
+                    </div>
+                    <div id="gif-grid" class="p-2 grid grid-cols-2 gap-1.5 h-48 overflow-y-auto custom-scrollbar">
+                        <!-- รูป GIF จะถูกโหลดมาใส่ตรงนี้ -->
+                    </div>
+                    <div class="p-1 bg-[#1e1f22] text-center text-[9px] text-[#80848e] font-bold uppercase tracking-wider">Powered by GIPHY</div>
+                </div>
                             <input type="text" id="chat-input" placeholder="ส่งข้อความ หรือพิมพ์ / เพื่อใช้คำสั่งบอท" class="w-full bg-transparent text-[#dbdee1] placeholder-[#80848e] px-2 py-3 outline-none text-[15px]">
                         </div>
                         <button id="send-btn" class="w-10 h-10 flex items-center justify-center text-[#5865F2] hover:text-[#4752C4] bg-[#5865F2]/10 hover:bg-[#5865F2]/20 rounded-md transition mx-1 disabled:opacity-50">

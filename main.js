@@ -1255,10 +1255,34 @@ async function sendAnyMessage(inputEl, channelStr) {
             await setDoc(doc(db, "appData", "gameWhiteboard"), { image: "", updatedBy: "System", timestamp: serverTimestamp() }, { merge: true });
             await setDoc(doc(db, "appData", "drawGame"), { isActive: true, drawerId: currentUsername, drawerName: currentUsername, word: randomWord, channel: activeChannel, timestamp: serverTimestamp() });
             botReply = `🎨 **${currentUsername}** ท้าประลองเกมทายภาพ!\nรีบสลับหน้าจอไปดูที่แท็บ **"🎮 ทายคำจากภาพ"** แล้วพิมพ์คำตอบเลย! (AI เป็นคนคิดคำนะรอบนี้)`; 
-        } else { showToast("ไม่รู้จักคำสั่งนี้", "error"); return; }
+        } 
+        // 🌟 โค้ด AI Assistant วางต่อตรงนี้อย่างถูกต้อง
+        else if(txt.startsWith('/ask ')) {
+            const prompt = txt.substring(5).trim();
+            if(!prompt) { showToast("พิมพ์คำถามหลัง /ask ด้วยครับ", "error"); return; }
+            
+            await addDoc(collection(db, "messages"), { text: `🧠 กำลังคิดคำตอบสำหรับ: "${prompt}"...`, senderName: "🤖 AI Assistant", channel: channelStr, timestamp: serverTimestamp() });
+            
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, { 
+                    method: "POST", 
+                    headers: { "Content-Type": "application/json" }, 
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) 
+                });
+                const data = await res.json();
+                if (data.candidates && data.candidates[0]) {
+                    const aiReply = data.candidates[0].content.parts[0].text;
+                    await addDoc(collection(db, "messages"), { text: aiReply, senderName: "🤖 AI Assistant", channel: channelStr, timestamp: serverTimestamp() });
+                }
+            } catch (err) {
+                await addDoc(collection(db, "messages"), { text: "❌ ขออภัย ระบบ AI ขัดข้อง", senderName: "🤖 AI Assistant", channel: channelStr, timestamp: serverTimestamp() });
+            }
+            return;
+        }
+        else { showToast("ไม่รู้จักคำสั่งนี้", "error"); return; }
+        
         await addDoc(collection(db, "messages"), { text: botReply, senderName: "🤖 System Bot", channel: channelStr, timestamp: serverTimestamp() }); return;
     }
-    
     let isCorrect = false, isAlmost = false;
     if (channelStr === 'game_draw' && currentDrawGame && currentDrawGame.isActive && currentDrawGame.drawerId !== currentUsername) {
         const guess = txt.toLowerCase(); 
@@ -1361,6 +1385,85 @@ if(fileInput) {
         } 
     };
 }
+// ==========================================
+// 🌟 ฟีเจอร์ค้นหาและส่งภาพ GIF (GIPHY)
+// ==========================================
+const GIPHY_API_KEY = "OiCCzC65qYjo2BjRa9GDUaew49jW5cwF";
+const gifBtn = document.getElementById('gif-btn');
+const gifMenu = document.getElementById('gif-picker-menu');
+const gifSearch = document.getElementById('gif-search-input');
+const gifGrid = document.getElementById('gif-grid');
+let gifTimeout = null;
+
+if (gifBtn && gifMenu) {
+    gifBtn.onclick = (e) => {
+        e.preventDefault();
+        gifMenu.classList.toggle('hidden');
+        if (!gifMenu.classList.contains('hidden')) {
+            fetchGifs(); 
+            if(gifSearch) gifSearch.focus();
+        }
+    };
+}
+
+if (gifSearch) {
+    gifSearch.addEventListener('input', () => {
+        clearTimeout(gifTimeout);
+        gifTimeout = setTimeout(() => fetchGifs(gifSearch.value), 500); 
+    });
+}
+
+async function fetchGifs(query = "") {
+    if(!gifGrid) return;
+    gifGrid.innerHTML = '<div class="col-span-2 text-center py-4 text-[#80848e]"><i class="ph-fill ph-spinner animate-spin text-2xl"></i></div>';
+    try {
+        const endpoint = query.trim() 
+            ? `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=20&rating=g`
+            : `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=20&rating=g`;
+        
+        const res = await fetch(endpoint);
+        const data = await res.json();
+        
+        gifGrid.innerHTML = '';
+        if(data.data && data.data.length > 0) {
+            data.data.forEach(gif => {
+                const previewUrl = gif.images.fixed_height_small.url;
+                const sendUrl = gif.images.original.url; 
+                
+                const img = document.createElement('img');
+                img.src = previewUrl;
+                img.className = "w-full h-20 object-cover rounded cursor-pointer hover:opacity-80 transition";
+                img.onclick = async () => {
+                    gifMenu.classList.add('hidden');
+                    await addDoc(collection(db, "messages"), { 
+                        text: "", 
+                        imageUrl: sendUrl, 
+                        senderName: currentUsername, 
+                        channel: activeChannel, 
+                        timestamp: serverTimestamp(), 
+                        reactions: {}, 
+                        replyTo: replyingTo 
+                    });
+                    replyingTo = null;
+                    const rBanner = document.getElementById('reply-banner');
+                    if(rBanner) rBanner.classList.add('hidden');
+                };
+                gifGrid.appendChild(img);
+            });
+        } else {
+            gifGrid.innerHTML = '<div class="col-span-2 text-center py-4 text-[#80848e] text-xs">ไม่พบ GIF ที่ค้นหา</div>';
+        }
+    } catch(e) {
+        gifGrid.innerHTML = '<div class="col-span-2 text-center py-4 text-[#da373c] text-xs">โหลดไม่สำเร็จ</div>';
+    }
+}
+
+// กดพื้นที่ว่างๆ ให้ซ่อนหน้าต่าง GIF
+document.addEventListener('click', (e) => {
+    if (gifMenu && !gifMenu.contains(e.target) && e.target !== gifBtn && !gifBtn.contains(e.target)) {
+        gifMenu.classList.add('hidden');
+    }
+});
 // ==========================================
 // 🎨 9. ระบบวาดรูป และ เกมทายภาพ
 // ==========================================
